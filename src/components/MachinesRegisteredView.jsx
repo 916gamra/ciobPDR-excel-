@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CustomSelect from './CustomSelect';
 import {
   Cpu,
   Plus,
@@ -39,47 +40,93 @@ export default function MachinesRegisteredView({
     ? templates
     : templates.filter((t) => t.id_family === mchFamilyFilter);
 
-  const filteredMachines = machines.filter((m) => {
-    if (mchFamilyFilter !== 'ALL' && m.id_family !== mchFamilyFilter) return false;
-    if (mchTemplateFilter !== 'ALL' && m.id_templates !== mchTemplateFilter) return false;
-    if (mchZoneFilter !== 'ALL' && m.id_zone_default !== mchZoneFilter) return false;
-    if (mchSearch) {
-      const q = mchSearch.toLowerCase();
-      return (
-        m.id_machine_registered.toLowerCase().includes(q) ||
-        m.designation.toLowerCase().includes(q) ||
-        m.id_family.toLowerCase().includes(q) ||
-        m.id_templates.toLowerCase().includes(q) ||
-        (m.id_zone_default && m.id_zone_default.toLowerCase().includes(q))
-      );
-    }
-    return true;
-  });
+  const filteredMachines = machines
+    .filter((m) => {
+      if (mchFamilyFilter !== 'ALL' && m.id_family !== mchFamilyFilter) return false;
+      if (mchTemplateFilter !== 'ALL' && m.id_templates !== mchTemplateFilter) return false;
+      if (mchZoneFilter !== 'ALL' && m.id_zone_default !== mchZoneFilter) return false;
+      if (mchSearch) {
+        const q = mchSearch.toLowerCase();
+        return (
+          m.id_machine_registered.toLowerCase().includes(q) ||
+          m.designation.toLowerCase().includes(q) ||
+          m.id_family.toLowerCase().includes(q) ||
+          m.id_templates.toLowerCase().includes(q) ||
+          (m.id_zone_default && m.id_zone_default.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const codeA = String(a.id_machine_registered || '');
+      const codeB = String(b.id_machine_registered || '');
+      return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+    });
 
   return (
     <div className="space-y-4">
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-emerald-600 font-semibold text-xs uppercase tracking-wider">
-            <Cpu className="w-4 h-4" />
-            <span>Twin Principal Machines • Catalogue Global</span>
-          </div>
-          <h2 className="text-lg font-bold text-slate-900 mt-1">
-            Machines Registered (Équipements & Lignes)
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+            <Cpu className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>Machines Registered (Équipements & Lignes)</span>
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-1">
             Tableau centralisé miroir de Stock. Intègre <b className="text-cyan-600">Famille</b>, <b className="text-amber-600">Template</b>, <b className="text-purple-600">Zone</b> et <b className="text-blue-600">Technicien</b> avec badges interactifs.
           </p>
         </div>
 
         <button
           onClick={onOpenAddMachine}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-400 text-slate-950 hover:bg-emerald-300 transition shadow-sm flex-shrink-0"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          <span>+ Nouvelle Machine Registered</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span>Nouvelle Machine Registered</span>
         </button>
+      </div>
+
+      {/* Excel Formula Guidance Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Liaison Famille (D)</div>
+            <div className="text-[11px] font-mono font-semibold text-cyan-700 mt-0.5">
+              =[@id_family] → Family!B:B
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-cyan-50 text-cyan-700">Liaison D</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Liaison Template (E)</div>
+            <div className="text-[11px] font-mono font-semibold text-amber-700 mt-0.5">
+              =[@id_templates] → Template!B:B
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700">Liaison E</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Liaison Zone Défaut (F)</div>
+            <div className="text-[11px] font-mono font-semibold text-purple-700 mt-0.5">
+              =[@id_zone_default] → Zone!B:B
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700">Liaison F</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Interventions / Sorties</div>
+            <div className="text-[11px] font-mono font-semibold text-rose-700 mt-0.5">
+              =COUNTIF(Mvt[Machine], [@id_machine])
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700">Traçabilité</span>
+        </div>
       </div>
 
       {/* Filter Bar with Cascading Selects */}
@@ -98,49 +145,52 @@ export default function MachinesRegisteredView({
           </div>
 
           {/* Family Filter */}
-          <select
-            value={mchFamilyFilter}
-            onChange={(e) => {
-              setMchFamilyFilter(e.target.value);
-              setMchTemplateFilter('ALL');
-            }}
-            className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700"
-          >
-            <option value="ALL">Toutes les Familles ({families.length})</option>
-            {families.map((f) => (
-              <option key={f.id_family} value={f.id_family}>
-                {f.libelle} ({f.id_family})
-              </option>
-            ))}
-          </select>
+          <div className="w-48">
+            <CustomSelect
+              value={mchFamilyFilter}
+              onChange={(val) => {
+                setMchFamilyFilter(val);
+                setMchTemplateFilter('ALL');
+              }}
+              options={[
+                { value: 'ALL', label: `Toutes les Familles (D) (${families.length})` },
+                ...families.map((f) => ({
+                  value: f.id_family,
+                  label: `[D] ${f.libelle} (${f.id_family})`
+                }))
+              ]}
+            />
+          </div>
 
           {/* Cascading Template Filter */}
-          <select
-            value={mchTemplateFilter}
-            onChange={(e) => setMchTemplateFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700"
-          >
-            <option value="ALL">Tous les Templates ({availableTemplates.length})</option>
-            {availableTemplates.map((t) => (
-              <option key={t.id_templates} value={t.id_templates}>
-                {t.libelle} ({t.id_templates})
-              </option>
-            ))}
-          </select>
+          <div className="w-52">
+            <CustomSelect
+              value={mchTemplateFilter}
+              onChange={(val) => setMchTemplateFilter(val)}
+              options={[
+                { value: 'ALL', label: `Tous les Templates (E) (${availableTemplates.length})` },
+                ...availableTemplates.map((t) => ({
+                  value: t.id_templates,
+                  label: `[E] ${t.libelle} (${t.id_templates})`
+                }))
+              ]}
+            />
+          </div>
 
           {/* Zone Filter */}
-          <select
-            value={mchZoneFilter}
-            onChange={(e) => setMchZoneFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700"
-          >
-            <option value="ALL">Toutes les Zones ({zones.length})</option>
-            {zones.map((z) => (
-              <option key={z.id_zone} value={z.id_zone}>
-                {z.libelle} ({z.id_zone})
-              </option>
-            ))}
-          </select>
+          <div className="w-48">
+            <CustomSelect
+              value={mchZoneFilter}
+              onChange={(val) => setMchZoneFilter(val)}
+              options={[
+                { value: 'ALL', label: `Toutes les Zones (F) (${zones.length})` },
+                ...zones.map((z) => ({
+                  value: z.id_zone,
+                  label: `[F] ${z.libelle} (${z.id_zone})`
+                }))
+              ]}
+            />
+          </div>
 
           {(mchFamilyFilter !== 'ALL' || mchTemplateFilter !== 'ALL' || mchZoneFilter !== 'ALL' || mchSearch) && (
             <button
@@ -164,18 +214,42 @@ export default function MachinesRegisteredView({
 
       {/* Main Table with Sticky Header, Zebra & Scroll 60vh */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        {/* Top Info Header Bar inside Card */}
+        <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+          <div className="font-bold text-slate-800 text-[13px]">
+            Machines_Registered • Ordre Excel Row 3 : B→H
+          </div>
+          <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
+            id_machine_registered | designation | id_family | id_templates | id_zone_default | technician | status
+          </div>
+        </div>
+
         <div className="max-h-[60vh] overflow-y-auto overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse min-w-[900px]">
-            <thead className="sticky top-0 bg-slate-100 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200 z-10 shadow-2xs">
+            <thead className="sticky top-0 bg-slate-50/90 backdrop-blur-xs text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200 z-10 shadow-2xs">
               <tr>
-                <th className="py-3 px-4">Cde (Code Machine = Ref)</th>
-                <th className="py-3 px-4">Désignation</th>
-                <th className="py-3 px-3">Family</th>
-                <th className="py-3 px-3">Template</th>
-                <th className="py-3 px-3">Zone</th>
-                <th className="py-3 px-3">Technician</th>
-                <th className="py-3 px-3 text-center">Status</th>
-                <th className="py-3 px-4 text-right">Interventions</th>
+                <th className="py-2.5 px-4">
+                  <span>CDE CODE</span> <span className="text-slate-400 font-normal text-[10px]">(B)</span>
+                </th>
+                <th className="py-2.5 px-4">
+                  <span>DÉSIGNATION</span> <span className="text-slate-400 font-normal text-[10px]">(C) primary</span>
+                </th>
+                <th className="py-2.5 px-3">
+                  <span>FAMILY</span> <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+                </th>
+                <th className="py-2.5 px-3">
+                  <span>TEMPLATE</span> <span className="text-slate-400 font-normal text-[10px]">(E)</span>
+                </th>
+                <th className="py-2.5 px-3">
+                  <span>ZONE</span> <span className="text-slate-400 font-normal text-[10px]">(F)</span>
+                </th>
+                <th className="py-2.5 px-3">
+                  <span>TECHNICIAN</span> <span className="text-slate-400 font-normal text-[10px]">(G)</span>
+                </th>
+                <th className="py-2.5 px-3 text-center">
+                  <span>STATUS</span> <span className="text-slate-400 font-normal text-[10px]">(H)</span>
+                </th>
+                <th className="py-2.5 px-4 text-right">Interventions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -212,11 +286,11 @@ export default function MachinesRegisteredView({
                           setMchFamilyFilter(m.id_family);
                           setMchTemplateFilter('ALL');
                         }}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200 text-[11px] font-semibold hover:bg-cyan-100 transition"
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200 text-[11px] font-mono font-bold hover:bg-cyan-100 transition"
                         title="Filtrer par cette Famille"
                       >
                         <FolderTree className="w-3 h-3 text-cyan-600" />
-                        <span>{fam ? fam.libelle : m.id_family}</span>
+                        <span>{m.id_family}</span>
                       </button>
                     </td>
 

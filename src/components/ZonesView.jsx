@@ -34,25 +34,55 @@ export default function ZonesView({
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-purple-600 font-semibold text-xs uppercase tracking-wider">
-            <MapPin className="w-4 h-4" />
-            <span>Niveau 1 Équipes • Cartographie des Secteurs & Ateliers</span>
-          </div>
-          <h2 className="text-lg font-bold text-slate-900 mt-1">
-            Zones & Ateliers de Production
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+            <MapPin className="w-5 h-5 text-purple-600 shrink-0" />
+            <span>Zones & Ateliers de Production</span>
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-1">
             Point de départ du workflow. Cliquez sur <b className="text-blue-600">Nb Techs</b>, <b className="text-indigo-600">Nb Ops</b> ou <b className="text-emerald-600">Nb Machines</b> pour naviguer vers les listes filtrées.
           </p>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-purple-400 text-slate-950 hover:bg-purple-300 transition shadow-sm"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          <span>+ Nouvelle Zone</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span>Nouvelle Zone</span>
         </button>
+      </div>
+
+      {/* Excel Formula Guidance Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule D (Techniciens Affectés)</div>
+            <div className="text-[11px] font-mono font-semibold text-blue-700 mt-0.5">
+              =COUNTIF(Techniciens!D:D, [@id_zone])
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700">Calcul D</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule E (Opérations Définies)</div>
+            <div className="text-[11px] font-mono font-semibold text-indigo-700 mt-0.5">
+              =COUNTIF(Operations!D:D, [@id_zone])
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700">Calcul E</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule F (Machines Installées)</div>
+            <div className="text-[11px] font-mono font-semibold text-emerald-700 mt-0.5">
+              =COUNTIF(Machines!F:F, [@id_zone])
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">Calcul F</span>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -74,14 +104,34 @@ export default function ZonesView({
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        {/* Top Info Header Bar inside Card */}
+        <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+          <div className="font-bold text-slate-800 text-[13px]">
+            Zones • Ordre Excel Row 3 : B→F
+          </div>
+          <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
+            id_zone | libelle | nb_techniciens | nb_operations | nb_machines
+          </div>
+        </div>
+
         <table className="w-full text-left text-xs border-collapse">
-          <thead className="bg-slate-100 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
+          <thead className="bg-slate-50/90 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
             <tr>
-              <th className="py-3 px-4">Code Zone</th>
-              <th className="py-3 px-4">Libellé Secteur / Atelier</th>
-              <th className="py-3 px-4">Techniciens Affectés</th>
-              <th className="py-3 px-4">Opérations Définies</th>
-              <th className="py-3 px-4">Machines Installées</th>
+              <th className="py-2.5 px-4">
+                <span>CODE ZONE</span> <span className="text-slate-400 font-normal text-[10px]">(B)</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>LIBELLÉ SECTEUR / ATELIER</span> <span className="text-slate-400 font-normal text-[10px]">(C) primary</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>TECHNICIENS AFFECTÉS</span> <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>OPÉRATIONS DÉFINIES</span> <span className="text-slate-400 font-normal text-[10px]">(E)</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>MACHINES INSTALLÉES</span> <span className="text-slate-400 font-normal text-[10px]">(F)</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

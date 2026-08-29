@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CustomSelect from './CustomSelect';
 import { Users, Plus, Search, MapPin, Sparkles, ArrowRight } from 'lucide-react';
 
 export default function TechniciansView({
@@ -63,14 +64,11 @@ export default function TechniciansView({
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-blue-600 font-semibold text-xs uppercase tracking-wider">
-            <Users className="w-4 h-4" />
-            <span>Niveau 2 Équipes (Auto-Généré) • Intervenants & Techniciens</span>
-          </div>
-          <h2 className="text-lg font-bold text-slate-900 mt-1">
-            Techniciens de Maintenance
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+            <Users className="w-5 h-5 text-blue-600 shrink-0" />
+            <span>Techniciens de Maintenance</span>
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-1">
             Génération automatique du matricule (<b className="text-blue-600">TECH-01, TECH-02...</b>) sans risque d'erreur de saisie manuelle.
           </p>
         </div>
@@ -80,11 +78,44 @@ export default function TechniciansView({
             setForm({ nom: '', id_zone: zones[0]?.id_zone || '', specialite: '' });
             setShowAddModal(true);
           }}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-blue-400 text-slate-950 hover:bg-blue-300 transition shadow-sm"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          <span>+ Nouveau Technicien</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span>Nouveau Technicien</span>
         </button>
+      </div>
+
+      {/* Excel Formula Guidance Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule B (Auto-ID Matricule)</div>
+            <div className="text-[11px] font-mono font-semibold text-blue-700 mt-0.5">
+              ="TECH-" & TEXT(ROW()-3, "00")
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700">Formule B</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule D (Zone Principale)</div>
+            <div className="text-[11px] font-mono font-semibold text-purple-700 mt-0.5">
+              =[@id_zone] → Zone!B:B
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700">Liaison D</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule F (Interventions / Sorties)</div>
+            <div className="text-[11px] font-mono font-semibold text-emerald-700 mt-0.5">
+              =COUNTIF(Mvt[Technicien], [@nom])
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">Calcul F</span>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -101,18 +132,19 @@ export default function TechniciansView({
             />
           </div>
 
-          <select
-            value={techZoneFilter}
-            onChange={(e) => setTechZoneFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700"
-          >
-            <option value="ALL">Toutes les Zones ({zones.length})</option>
-            {zones.map((z) => (
-              <option key={z.id_zone} value={z.id_zone}>
-                {z.libelle} ({z.id_zone})
-              </option>
-            ))}
-          </select>
+          <div className="w-52">
+            <CustomSelect
+              value={techZoneFilter}
+              onChange={(val) => setTechZoneFilter(val)}
+              options={[
+                { value: 'ALL', label: `Toutes les Zones (D) (${zones.length})` },
+                ...zones.map((z) => ({
+                  value: z.id_zone,
+                  label: `[D] ${z.libelle} (${z.id_zone})`
+                }))
+              ]}
+            />
+          </div>
 
           {techZoneFilter !== 'ALL' && (
             <button
@@ -131,14 +163,34 @@ export default function TechniciansView({
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        {/* Top Info Header Bar inside Card */}
+        <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+          <div className="font-bold text-slate-800 text-[13px]">
+            Technicians • Ordre Excel Row 3 : B→F
+          </div>
+          <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
+            id_technician | nom | id_zone | specialite | nb_sorties
+          </div>
+        </div>
+
         <table className="w-full text-left text-xs border-collapse">
-          <thead className="bg-slate-100 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
+          <thead className="bg-slate-50/90 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
             <tr>
-              <th className="py-3 px-4">ID Auto</th>
-              <th className="py-3 px-4">Nom du Technicien</th>
-              <th className="py-3 px-4">Zone Principale (Liaison)</th>
-              <th className="py-3 px-4">Spécialité & Compétence</th>
-              <th className="py-3 px-4 text-right">Nb Sorties / Interventions</th>
+              <th className="py-2.5 px-4">
+                <span>ID TECHNICIEN</span> <span className="text-slate-400 font-normal text-[10px]">(B)</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>NOM DU TECHNICIEN</span> <span className="text-slate-400 font-normal text-[10px]">(C) primary</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>ZONE PRINCIPALE</span> <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>SPÉCIALITÉ & COMPÉTENCE</span> <span className="text-slate-400 font-normal text-[10px]">(E)</span>
+              </th>
+              <th className="py-2.5 px-4 text-right">
+                <span>NB SORTIES / INTERVENTIONS</span> <span className="text-slate-400 font-normal text-[10px]">(F)</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -223,18 +275,15 @@ export default function TechniciansView({
                     <span>Créer Zone</span>
                   </button>
                 </div>
-                <select
+                <CustomSelect
                   value={form.id_zone}
-                  onChange={(e) => setForm({ ...form, id_zone: e.target.value })}
-                  className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium"
-                  required
-                >
-                  {zones.map((z) => (
-                    <option key={z.id_zone} value={z.id_zone}>
-                      {z.libelle} ({z.id_zone})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setForm({ ...form, id_zone: val })}
+                  options={zones.map((z) => ({
+                    value: z.id_zone,
+                    label: `${z.libelle} (${z.id_zone})`
+                  }))}
+                  placeholder="-- Sélectionner une Zone --"
+                />
               </div>
 
               <div>

@@ -39,15 +39,19 @@
 
 ### ب. حركات المخزون (`Mouvements`)
 - `id`: معرف الحركة.
+- `code_bon`: رقم وصل الطلب/الصرف (مثال: `Bon-001`).
 - `date`: تاريخ العملية (`YYYY-MM-DD`).
 - `ref`: مرجع المقال المستخدم.
 - `quantite`: الكمية المصروفة أو المدخلة.
 - `type`: نوع الحركة (`Sortie` أو `Entrée`).
-- `action_id`: نوع التدخل (`PREVENTIVE`, `CORRECTIVE`, `MACHINE`, إلخ).
-- `technicien`: اسم أو معرف الفني القائم بالعملية.
-- `id_zone`: المنطقة المعنية.
-- `id_machine_registered`: الآلة المعنية بالتدخل.
-- `operation`: نوع العملية المنفذة.
+- `action_id`: نوع وفلتر التدخل (`CORRECTIVE`, `PREVENTIVE`, `AMELIORATIVE`, `USAGE`, `REAPPRO`, `RETOUR`, `INVENTAIRE`).
+- `usage_type`: المستفيد في حالة الاستعمال الشخصي (`technician`, `operation`, `chef`).
+- `technicien`: اسم أو معرف الفني القائم بالعملية أو المستلم/الطلب.
+- `id_zone`: المنطقة المعنية (تُستنتج تلقائياً في حالة الـ `USAGE` وتُعطل في الـ `Entrée`).
+- `id_machine_registered`: الآلة المعنية بالتدخل (تُخفى تلقائياً عند اختيار `USAGE` أو `Entrée`).
+- `operation`: نوع العملية أو المشرف المعني (يُخفى في الـ `CORRECTIVE` و `Entrée`).
+- `fournisseur`: اسم المورد في حالة الـ `Entrée` (Réapprovisionnement).
+- `emplacement_reception`: مكان التخزين/المستودع في حالة الـ `Entrée`.
 - `commentaire`: ملاحظات أو سبب التدخل.
 
 ### ج. الآلات المسجلة (`Machines_Registered`)
@@ -59,15 +63,27 @@
 - `technician`: الفني المسؤول.
 - `status`: حالة التشغيل (`En service`, `En maintenance`, `Arrêt`).
 
+### د. العمليات والمشرفين (`Operations & Chefs`)
+- `id_operation`: رمز العملية أو المشرف المولد تلقائياً (`OP-01, OP-02...` للمشغلين أو `CHEF-01, CHEF-02...` لرؤساء الفرق).
+- `nom`: اسم أو وصف العملية أو المشرف.
+- `id_zone`: منطقة التدخل أو التواجد.
+- `type_profil`: نوع الحساب/الملف (`OPERATEUR` أو `CHEF`).
+- معادلة Auto-ID للمشغل: `="OP-" & TEXT(COUNTIF(Op[Type],"OPERATEUR")+1, "00")`
+- معادلة Auto-ID للرئيس: `="CHEF-" & TEXT(COUNTIF(Op[Type],"CHEF")+1, "00")`
+
 ---
 
 ## 🎨 3. معايير واجهة المستخدم والتصميم (UI & Styling Rules)
 
-- **التباين العالي والألوان المتناسقة:**
-  - الشريط الجانبي (`Sidebar`): ذو خلفية داكنة راقية (`bg-slate-900`)، مع تباين قوي ومميز للتبويب النشط بخلفية بيضاء نقية (`bg-white text-slate-900 font-bold`).
-  - البطاقات العلوية (`Top Banners`): خلفية بيضاء (`bg-white border-slate-200 shadow-xs`) لتطابق شريط الفلاتر والجداول بدون تدرجات داكنة مشوشة.
-- **الأيقونات:**
-  - استخدام أيقونات SVG حصراً من مكتبة `lucide-react`.
+- **التباين العالي ودعم تبديل وضع الشريط الجانبي (Dark / Light Sidebar Switcher):**
+  - الشريط الجانبي (`Sidebar`): يدعم التبديل الفوري بين الوضع الداكن الفاخر (`Dark: bg-slate-900 border-slate-800 text-white`) والوضع الفاتح الأنيق (`Light: bg-white border-slate-200 text-slate-800`) مع حفظ الاختيار في `localStorage`.
+  - تباين قوي وموحد للتبويب النشط: خلفية بيضاء بخط داكن عريض في الوضع الداكن، وخلفية داكنة مع خط أبيض في الوضع الفاتح لجميع التبويبات بدون تشتيت لوني.
+  - البطاقات العلوية (`Top Banners`): خلفية بيضاء (`bg-white border-slate-200 shadow-xs`) لتطابق شريط الفلاتر والجداول.
+- **الأيقونات المعبرة:**
+  - `Machines Registered`: أيقونة المصنع والمنشأة الصناعية (`Factory`).
+  - `Families`: أيقونة المجموعات الصندوقية (`Boxes`).
+  - `Operations`: أيقونة قائمة المهام والإجراءات الميدانية (`ClipboardList`).
+  - استخدام أيقونات SVG حصراً (أوفلاين 100%) من مكتبة `lucide-react` وشعار التطبيق SVG مدمج.
   - يمنع استخدام الرموز التعبيرية (Emojis) كأيقونات أساسية في عناصر التحكم أو القوائم.
 
 ---

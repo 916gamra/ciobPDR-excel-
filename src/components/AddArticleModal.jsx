@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Package, Plus, X } from 'lucide-react';
+import CustomSelect from './CustomSelect';
 
 export default function AddArticleModal({
   isOpen,
@@ -104,17 +105,15 @@ export default function AddArticleModal({
                   <span>Nouveau Type</span>
                 </button>
               </div>
-              <select
+              <CustomSelect
                 value={form.id_type}
-                onChange={(e) => setForm({ ...form, id_type: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
-              >
-                {types.map((t) => (
-                  <option key={t.id_type} value={t.id_type}>
-                    {t.libelle} ({t.id_type})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setForm({ ...form, id_type: val })}
+                options={types.map((t) => ({
+                  value: t.id_type,
+                  label: `${t.libelle} (${t.id_type})`
+                }))}
+                placeholder="-- Sélectionner un Type --"
+              />
             </div>
           </div>
 

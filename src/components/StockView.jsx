@@ -1,9 +1,10 @@
 import React from 'react';
+import CustomSelect from './CustomSelect';
+import SortieEntreeIcon from './SortieEntreeIcon';
 import {
   Search,
   Filter,
   Plus,
-  ArrowDownUp,
   AlertTriangle,
   CheckCircle2,
   XCircle,
@@ -51,6 +52,27 @@ export default function StockView({
 }) {
   return (
     <div className="space-y-4">
+      {/* Top Banner */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+            <Package className="w-5 h-5 text-cyan-600 shrink-0" />
+            <span>Stock Actuel & Articles (Catalogue Pièces)</span>
+          </h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Tableau central miroir de Stock. Calcul temps réel : <b className="text-emerald-700 font-mono">Stock Actuel = Initial (E) + Entrées (F) - Sorties (G)</b> et détection automatique des <b className="text-amber-600">Alertes (J)</b>.
+          </p>
+        </div>
+
+        <button
+          onClick={onOpenAddArticle}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Nouvel Article</span>
+        </button>
+      </div>
+
       {/* Excel Formula Preview Banner Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
@@ -126,22 +148,24 @@ export default function StockView({
           </div>
 
           {/* Type Filter */}
-          <select
-            value={stockTypeFilter}
-            onChange={(e) => setStockTypeFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 focus:bg-white focus:outline-none"
-          >
-            <option value="ALL">Tous les Types ({types.length})</option>
-            {types.map((t) => {
-              const val = typeof t === 'string' ? t : (t.id_type || t.libelle);
-              const label = typeof t === 'string' ? t : (t.libelle || t.id_type);
-              return (
-                <option key={val} value={val}>
-                  {label}
-                </option>
-              );
-            })}
-          </select>
+          <div className="w-56">
+            <CustomSelect
+              value={stockTypeFilter}
+              onChange={(val) => setStockTypeFilter(val)}
+              options={[
+                { value: 'ALL', label: `Tous les Types (D) (${types.length})` },
+                ...types.map((t) => {
+                  const val = typeof t === 'string' ? t : (t.id_type || t.libelle);
+                  const label = typeof t === 'string' ? t : (t.libelle || t.id_type);
+                  return {
+                    value: val,
+                    label: `[D] ${label}`
+                  };
+                })
+              ]}
+              compact={false}
+            />
+          </div>
 
           {/* Alert Toggle */}
           <button
@@ -170,33 +194,66 @@ export default function StockView({
           )}
         </div>
 
-        {/* Action Button */}
-        <button
-          onClick={onOpenAddArticle}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Nouvel Article</span>
-        </button>
+        {/* Total Count Badge/Text */}
+        <div className="text-xs text-slate-500 font-medium shrink-0">
+          Total : <b className="text-slate-900">{filteredStock.length}</b> / <b className="text-slate-900">{stockItems.length}</b> articles
+        </div>
       </div>
 
       {/* Main Stock Twin Table with Sticky Header, Zebra & Scroll 60vh */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        {/* Top Info Header Bar inside Card */}
+        <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+          <div className="font-bold text-slate-800 text-[13px]">
+            Stock_Actuel • Ordre Excel Row 3 : B→K
+          </div>
+          <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
+            Ref | Désignation | Type | Initial | Entrées | Sorties | Actuel | Seuil | Alerte | Emplacement
+          </div>
+        </div>
+
         <div className="max-h-[60vh] overflow-y-auto overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse min-w-[980px]">
-            <thead className="sticky top-0 bg-slate-100 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200 z-10 shadow-2xs">
+            <thead className="sticky top-0 bg-slate-50/90 backdrop-blur-xs text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200 z-10 shadow-2xs">
               <tr>
-                <th className="py-3 px-3">Ref</th>
-                <th className="py-3 px-3">Désignation</th>
-                <th className="py-3 px-3">Type</th>
-                <th className="py-3 px-2 text-right">Initial</th>
-                <th className="py-3 px-2 text-right">Entrées</th>
-                <th className="py-3 px-2 text-right">Sorties</th>
-                <th className="py-3 px-2 text-right">Actuel</th>
-                <th className="py-3 px-2 text-right">Seuil</th>
-                <th className="py-3 px-3 text-center">Alerte</th>
-                <th className="py-3 px-3">Empl.</th>
-                <th className="py-3 px-3 text-center">Action</th>
+                <th className="py-2.5 px-3">
+                  <span>REF</span> <span className="text-slate-400 font-normal text-[10px]">(B)</span>
+                </th>
+                <th className="py-2.5 px-3">
+                  <span>DÉSIGNATION</span> <span className="text-slate-400 font-normal text-[10px]">(C) primary</span>
+                </th>
+                <th className="py-2.5 px-3">
+                  <span>TYPE</span> <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+                </th>
+                <th className="py-2 px-2 text-right">
+                  <div>INITIAL</div>
+                  <div className="text-[9.5px] text-slate-400 font-normal">(E)</div>
+                </th>
+                <th className="py-2 px-2 text-right text-emerald-700">
+                  <div>ENTRÉES</div>
+                  <div className="text-[9.5px] text-emerald-600 font-normal">(F)</div>
+                </th>
+                <th className="py-2 px-2 text-right text-rose-700">
+                  <div>SORTIES</div>
+                  <div className="text-[9.5px] text-rose-600 font-normal">(G)</div>
+                </th>
+                <th className="py-2 px-2 text-right">
+                  <div>ACTUEL</div>
+                  <div className="text-[9.5px] text-slate-400 font-normal">(H)</div>
+                </th>
+                <th className="py-2 px-2 text-right">
+                  <div>SEUIL</div>
+                  <div className="text-[9.5px] text-slate-400 font-normal">(I)</div>
+                </th>
+                <th className="py-2 px-3 text-center">
+                  <div>ALERTE</div>
+                  <div className="text-[9.5px] text-slate-400 font-normal">(J)</div>
+                </th>
+                <th className="py-2 px-3">
+                  <div>EMPLACEMENT</div>
+                  <div className="text-[9.5px] text-slate-400 font-normal">(K)</div>
+                </th>
+                <th className="py-2.5 px-3 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -292,7 +349,7 @@ export default function StockView({
                         onClick={() => onQuickSortie(item)}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-black text-white text-[11px] font-medium transition shadow-xs"
                       >
-                        <ArrowDownUp className="w-3 h-3" />
+                        <SortieEntreeIcon className="w-3.5 h-3.5" />
                         <span>Sortie</span>
                       </button>
                     </td>

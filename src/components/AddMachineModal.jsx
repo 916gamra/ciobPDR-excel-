@@ -1,13 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Cpu, Plus, X } from 'lucide-react';
+import CustomSelect from './CustomSelect';
+
+function generateMachineCode(selectedTemplateId, existingMachines = []) {
+  if (!selectedTemplateId) return 'MCH-01';
+  
+  // Clean prefix from selected template ID (e.g. DET -> DET, TPL-RCF100 -> RCF100)
+  const prefix = selectedTemplateId.replace(/^TPL-?/i, '').toUpperCase().replace(/[^A-Z0-9]/g, '') || 'MCH';
+  
+  let maxIndex = 0;
+  existingMachines.forEach((m) => {
+    const code = String(m.id_machine_registered || '').toUpperCase();
+    const tpl = String(m.id_templates || '').toUpperCase();
+    if (code.startsWith(prefix) || tpl === selectedTemplateId.toUpperCase()) {
+      const match = code.match(/\d+$/);
+      if (match) {
+        const num = parseInt(match[0], 10);
+        if (num > maxIndex) maxIndex = num;
+      }
+    }
+  });
+
+  const nextNum = maxIndex + 1;
+  return `${prefix}-${String(nextNum).padStart(2, '0')}`;
+}
 
 export default function AddMachineModal({
   isOpen,
   onClose,
-  families,
-  templates,
-  zones,
-  technicians,
+  families = [],
+  templates = [],
+  zones = [],
+  technicians = [],
+  machines = [],
   onAddMachine,
   onOpenAddFamilyModal,
   onOpenAddTemplateModal,
@@ -24,12 +49,52 @@ export default function AddMachineModal({
     status: 'En Service'
   });
 
+  useEffect(() => {
+    if (isOpen) {
+      const initialFam = families[0]?.id_family || '';
+      const relTemplates = initialFam ? templates.filter((t) => t.id_family === initialFam) : templates;
+      const initialTpl = relTemplates[0]?.id_templates || templates[0]?.id_templates || '';
+      const autoCode = generateMachineCode(initialTpl, machines);
+
+      setForm({
+        id_machine_registered: autoCode,
+        designation: '',
+        id_family: initialFam,
+        id_templates: initialTpl,
+        id_zone_default: zones[0]?.id_zone || '',
+        technician: technicians[0]?.id_technician || '',
+        status: 'En Service'
+      });
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   // Cascading templates according to selected family
   const availableTemplates = form.id_family
     ? templates.filter((t) => t.id_family === form.id_family)
     : templates;
+
+  const handleFamilyChange = (newFam) => {
+    const relTpl = templates.filter((t) => t.id_family === newFam);
+    const newTpl = relTpl[0]?.id_templates || '';
+    const autoCode = generateMachineCode(newTpl, machines);
+    setForm((prev) => ({
+      ...prev,
+      id_family: newFam,
+      id_templates: newTpl,
+      id_machine_registered: autoCode
+    }));
+  };
+
+  const handleTemplateChange = (newTpl) => {
+    const autoCode = generateMachineCode(newTpl, machines);
+    setForm((prev) => ({
+      ...prev,
+      id_templates: newTpl,
+      id_machine_registered: autoCode
+    }));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -116,25 +181,15 @@ export default function AddMachineModal({
                   <span>Nouvelle</span>
                 </button>
               </div>
-              <select
+              <CustomSelect
                 value={form.id_family}
-                onChange={(e) => {
-                  const newFam = e.target.value;
-                  const relTpl = templates.filter((t) => t.id_family === newFam);
-                  setForm({
-                    ...form,
-                    id_family: newFam,
-                    id_templates: relTpl[0]?.id_templates || ''
-                  });
-                }}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
-              >
-                {families.map((f) => (
-                  <option key={f.id_family} value={f.id_family}>
-                    {f.libelle} ({f.id_family})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleFamilyChange(val)}
+                options={families.map((f) => ({
+                  value: f.id_family,
+                  label: `${f.libelle} (${f.id_family})`
+                }))}
+                placeholder="-- Choisir Famille --"
+              />
             </div>
 
             {/* Template with '+' Button */}
@@ -152,17 +207,15 @@ export default function AddMachineModal({
                   <span>Nouveau</span>
                 </button>
               </div>
-              <select
+              <CustomSelect
                 value={form.id_templates}
-                onChange={(e) => setForm({ ...form, id_templates: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
-              >
-                {(availableTemplates.length > 0 ? availableTemplates : templates).map((t) => (
-                  <option key={t.id_templates} value={t.id_templates}>
-                    {t.libelle} ({t.id_templates})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleTemplateChange(val)}
+                options={(availableTemplates.length > 0 ? availableTemplates : templates).map((t) => ({
+                  value: t.id_templates,
+                  label: `${t.libelle} (${t.id_templates})`
+                }))}
+                placeholder="-- Choisir Modèle --"
+              />
             </div>
           </div>
 
@@ -182,17 +235,15 @@ export default function AddMachineModal({
                   <span>Nouvelle</span>
                 </button>
               </div>
-              <select
+              <CustomSelect
                 value={form.id_zone_default}
-                onChange={(e) => setForm({ ...form, id_zone_default: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
-              >
-                {zones.map((z) => (
-                  <option key={z.id_zone} value={z.id_zone}>
-                    {z.libelle} ({z.id_zone})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setForm({ ...form, id_zone_default: val })}
+                options={zones.map((z) => ({
+                  value: z.id_zone,
+                  label: `${z.libelle} (${z.id_zone})`
+                }))}
+                placeholder="-- Choisir Zone --"
+              />
             </div>
 
             {/* Technician with '+' Button */}
@@ -210,17 +261,15 @@ export default function AddMachineModal({
                   <span>Nouveau</span>
                 </button>
               </div>
-              <select
+              <CustomSelect
                 value={form.technician}
-                onChange={(e) => setForm({ ...form, technician: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
-              >
-                {technicians.map((t) => (
-                  <option key={t.id_technician} value={t.id_technician}>
-                    {t.id_technician} - {t.nom} ({t.id_zone})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setForm({ ...form, technician: val })}
+                options={technicians.map((t) => ({
+                  value: t.id_technician,
+                  label: `${t.id_technician} - ${t.nom} (${t.id_zone})`
+                }))}
+                placeholder="-- Choisir Technicien --"
+              />
             </div>
           </div>
 
@@ -228,15 +277,15 @@ export default function AddMachineModal({
             <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
               Statut Opérationnel
             </label>
-            <select
+            <CustomSelect
               value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-              className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
-            >
-              <option value="En Service">En Service</option>
-              <option value="En Maintenance">En Maintenance</option>
-              <option value="Hors Service">Hors Service</option>
-            </select>
+              onChange={(val) => setForm({ ...form, status: val })}
+              options={[
+                { value: 'En Service', label: 'En Service', badge: 'Actif', badgeColor: 'bg-emerald-100 text-emerald-800' },
+                { value: 'En Maintenance', label: 'En Maintenance', badge: 'Entretien', badgeColor: 'bg-amber-100 text-amber-800' },
+                { value: 'Hors Service', label: 'Hors Service', badge: 'Arrêt', badgeColor: 'bg-rose-100 text-rose-800' }
+              ]}
+            />
           </div>
 
           <div className="flex gap-2 pt-3">

@@ -34,25 +34,55 @@ export default function TypeView({
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-cyan-600 font-semibold text-xs uppercase tracking-wider">
-            <Tag className="w-4 h-4" />
-            <span>Niveau 1 • Nomenclature Parent (Family)</span>
-          </div>
-          <h2 className="text-lg font-bold text-slate-900 mt-1">
-            Types d'Articles (Types & Catégories)
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+            <Tag className="w-5 h-5 text-cyan-600 shrink-0" />
+            <span>Types d'Articles (Types & Catégories)</span>
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-1">
             Équivalent des <b className="text-cyan-600">Families</b> pour les machines (ex: Foret, Vis, Roulement). Cliquez sur <b className="text-indigo-600">Nb Désignations</b> pour voir les modèles ou <b className="text-cyan-600">Nb Articles</b> pour le Stock.
           </p>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-cyan-400 text-slate-950 hover:bg-cyan-300 transition shadow-sm"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          <span>+ Nouveau Type</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span>Nouveau Type</span>
         </button>
+      </div>
+
+      {/* Excel Formula Guidance Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule D (Nb Désignations)</div>
+            <div className="text-[11px] font-mono font-semibold text-indigo-700 mt-0.5">
+              =COUNTIF(Designations!C:C, [@id_type])
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700">Calcul D</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule E (Nb Articles Stockés)</div>
+            <div className="text-[11px] font-mono font-semibold text-cyan-700 mt-0.5">
+              =COUNTIF(Stock_Actuel!D:D, [@id_type])
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-cyan-50 text-cyan-700">Calcul E</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Liaison Stock (Nomenclature)</div>
+            <div className="text-[11px] font-mono font-semibold text-emerald-700 mt-0.5">
+              =SUMIF(Stock!D:D, [@id_type], Stock!H:H)
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">Somme Pièces</span>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -74,13 +104,31 @@ export default function TypeView({
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        {/* Top Info Header Bar inside Card */}
+        <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+          <div className="font-bold text-slate-800 text-[13px]">
+            Types • Ordre Excel Row 3 : B→E
+          </div>
+          <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
+            id_type | libelle | nb_designations | nb_articles
+          </div>
+        </div>
+
         <table className="w-full text-left text-xs border-collapse">
-          <thead className="bg-slate-100 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
+          <thead className="bg-slate-50/90 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
             <tr>
-              <th className="py-3 px-4">ID / Type</th>
-              <th className="py-3 px-4">Libellé du Type</th>
-              <th className="py-3 px-4">Nb Désignations (Templates)</th>
-              <th className="py-3 px-4">Nb Articles (Stock Actuel)</th>
+              <th className="py-2.5 px-4">
+                <span>ID TYPE</span> <span className="text-slate-400 font-normal text-[10px]">(B)</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>LIBELLÉ DU TYPE</span> <span className="text-slate-400 font-normal text-[10px]">(C) primary</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>NB DÉSIGNATIONS</span> <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>NB ARTICLES</span> <span className="text-slate-400 font-normal text-[10px]">(E)</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

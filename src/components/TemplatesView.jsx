@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CustomSelect from './CustomSelect';
 import { Layers, Plus, Search, ArrowRight, FolderTree, Cpu } from 'lucide-react';
 
 export default function TemplatesView({
@@ -36,15 +37,12 @@ export default function TemplatesView({
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-amber-600 font-semibold text-xs uppercase tracking-wider">
-            <Layers className="w-4 h-4" />
-            <span>Niveau 2 Machines (Élément Enfant) • Modèles & Variantes</span>
-          </div>
-          <h2 className="text-lg font-bold text-slate-900 mt-1">
-            Templates de Machines (Modèles Spécifiques)
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+            <Layers className="w-5 h-5 text-amber-600 shrink-0" />
+            <span>Templates de Machines (Modèles Spécifiques)</span>
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Rattaché à une <b className="text-cyan-600">Famille Parente</b>. Cliquez sur <b className="text-amber-600">Nb Machines</b> pour filtrer précisément : <span className="font-mono text-amber-200">Family = Famille parente + Template = Ce modèle</span>.
+          <p className="text-xs text-slate-500 mt-1">
+            Rattaché à une <b className="text-cyan-600">Famille Parente</b>. Cliquez sur <b className="text-amber-600">Nb Machines</b> pour filtrer précisément : <span className="font-mono text-amber-700">Family = Famille parente + Template = Ce modèle</span>.
           </p>
         </div>
 
@@ -53,11 +51,44 @@ export default function TemplatesView({
             setForm({ id_templates: '', libelle: '', id_family: families[0]?.id_family || '' });
             setShowAddModal(true);
           }}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-amber-400 text-slate-950 hover:bg-amber-300 transition shadow-sm"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          <span>+ Nouveau Template</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span>Nouveau Template</span>
         </button>
+      </div>
+
+      {/* Excel Formula Guidance Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule C (Famille Parente)</div>
+            <div className="text-[11px] font-mono font-semibold text-cyan-700 mt-0.5">
+              =[@id_family] (Liaison Clé)
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-cyan-50 text-cyan-700">Liaison C</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule D (Nb Machines Registered)</div>
+            <div className="text-[11px] font-mono font-semibold text-amber-700 mt-0.5">
+              =COUNTIF(Machines!E:E, [@id_templates])
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700">Calcul D</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule En Service (Statut)</div>
+            <div className="text-[11px] font-mono font-semibold text-emerald-700 mt-0.5">
+              =COUNTIFS(Machines!E:E, [@id_templates], Machines!H:H, "En service")
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">COUNTIFS</span>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -74,18 +105,19 @@ export default function TemplatesView({
             />
           </div>
 
-          <select
-            value={templateFamilyFilter}
-            onChange={(e) => setTemplateFamilyFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700"
-          >
-            <option value="ALL">Toutes les Familles Parentes ({families.length})</option>
-            {families.map((f) => (
-              <option key={f.id_family} value={f.id_family}>
-                {f.libelle} ({f.id_family})
-              </option>
-            ))}
-          </select>
+          <div className="w-56">
+            <CustomSelect
+              value={templateFamilyFilter}
+              onChange={(val) => setTemplateFamilyFilter(val)}
+              options={[
+                { value: 'ALL', label: `Toutes les Familles Parentes (D) (${families.length})` },
+                ...families.map((f) => ({
+                  value: f.id_family,
+                  label: `[D] ${f.libelle} (${f.id_family})`
+                }))
+              ]}
+            />
+          </div>
 
           {templateFamilyFilter !== 'ALL' && (
             <button
@@ -104,13 +136,31 @@ export default function TemplatesView({
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        {/* Top Info Header Bar inside Card */}
+        <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+          <div className="font-bold text-slate-800 text-[13px]">
+            Templates • Ordre Excel Row 3 : B→E
+          </div>
+          <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
+            id_templates | libelle | id_family | nb_machines
+          </div>
+        </div>
+
         <table className="w-full text-left text-xs border-collapse">
-          <thead className="bg-slate-100 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
+          <thead className="bg-slate-50/90 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
             <tr>
-              <th className="py-3 px-4">ID Template</th>
-              <th className="py-3 px-4">Libellé du Modèle</th>
-              <th className="py-3 px-4">Famille Parente (Liaison)</th>
-              <th className="py-3 px-4">Nb Machines (Filtre Combiné)</th>
+              <th className="py-2.5 px-4">
+                <span>ID TEMPLATE</span> <span className="text-slate-400 font-normal text-[10px]">(B)</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>LIBELLÉ DU MODÈLE</span> <span className="text-slate-400 font-normal text-[10px]">(C) primary</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>FAMILLE PARENTE</span> <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+              </th>
+              <th className="py-2.5 px-4">
+                <span>NB MACHINES</span> <span className="text-slate-400 font-normal text-[10px]">(E)</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -131,11 +181,11 @@ export default function TemplatesView({
                   <td className="py-3 px-4">
                     <button
                       onClick={() => onNavigateToFamilyFiltered(t.id_family)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200 text-xs font-medium hover:bg-cyan-100 transition"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200 text-xs font-mono font-bold hover:bg-cyan-100 transition"
                       title="Voir cette Famille Parente"
                     >
                       <FolderTree className="w-3 h-3 text-cyan-600" />
-                      <span>{fam ? fam.libelle : t.id_family}</span>
+                      <span>{t.id_family}</span>
                     </button>
                   </td>
                   <td className="py-3 px-4">
@@ -202,18 +252,15 @@ export default function TemplatesView({
                     <span>Créer Famille</span>
                   </button>
                 </div>
-                <select
+                <CustomSelect
                   value={form.id_family}
-                  onChange={(e) => setForm({ ...form, id_family: e.target.value })}
-                  className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium"
-                  required
-                >
-                  {families.map((f) => (
-                    <option key={f.id_family} value={f.id_family}>
-                      {f.libelle} ({f.id_family})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setForm({ ...form, id_family: val })}
+                  options={families.map((f) => ({
+                    value: f.id_family,
+                    label: `${f.libelle} (${f.id_family})`
+                  }))}
+                  placeholder="-- Choisir Famille --"
+                />
               </div>
 
               <div className="flex gap-2 pt-3">

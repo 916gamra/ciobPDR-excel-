@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CustomSelect from './CustomSelect';
 import { Layers, Plus, Search, ArrowRight, Package, Tag, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 
 const TYPE_STYLES = {
@@ -127,14 +128,11 @@ export default function DesignationView({
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-indigo-600 font-semibold text-xs uppercase tracking-wider">
-            <Layers className="w-4 h-4" />
-            <span>Niveau 2 • Catalogue Désignations (Templates)</span>
-          </div>
-          <h2 className="text-lg font-bold text-slate-900 mt-1">
-            Désignations d'Articles
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
+            <Layers className="w-5 h-5 text-indigo-600 shrink-0" />
+            <span>Désignations d'Articles</span>
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-1">
             Équivalent des <b className="text-indigo-600">Templates</b> pour les machines: chaque Désignation est rattachée à un <b className="text-cyan-600">Type (Family)</b>.
           </p>
         </div>
@@ -145,11 +143,44 @@ export default function DesignationView({
             handleTypeSelect(initialType);
             setShowAddModal(true);
           }}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-black transition shadow-sm"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          <span>+ Nouvelle Désignation</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span>Nouvelle Désignation</span>
         </button>
+      </div>
+
+      {/* Excel Formula Guidance Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule C (Type Parente)</div>
+            <div className="text-[11px] font-mono font-semibold text-cyan-700 mt-0.5">
+              =[@id_type] (Clé Type)
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-cyan-50 text-cyan-700">Liaison C</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule D (Nb Articles Stock)</div>
+            <div className="text-[11px] font-mono font-semibold text-indigo-700 mt-0.5">
+              =COUNTIF(Stock_Actuel!C:C, [@designation])
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700">Calcul D</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule E (Quantité en Stock)</div>
+            <div className="text-[11px] font-mono font-semibold text-emerald-700 mt-0.5">
+              =SUMIF(Stock!C:C, [@designation], Stock!H:H)
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">Somme E</span>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -166,22 +197,23 @@ export default function DesignationView({
             />
           </div>
 
-          <select
-            value={desigTypeFilter}
-            onChange={(e) => setDesigTypeFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-700"
-          >
-            <option value="ALL">Tous les Types ({types.length})</option>
-            {types.map((t) => {
-              const val = typeof t === 'string' ? t : (t.id_type || t.libelle);
-              const label = typeof t === 'string' ? t : (t.libelle || t.id_type);
-              return (
-                <option key={val} value={val}>
-                  {label}
-                </option>
-              );
-            })}
-          </select>
+          <div className="w-52">
+            <CustomSelect
+              value={desigTypeFilter}
+              onChange={(val) => setDesigTypeFilter(val)}
+              options={[
+                { value: 'ALL', label: `Tous les Types (D) (${types.length})` },
+                ...types.map((t) => {
+                  const val = typeof t === 'string' ? t : (t.id_type || t.libelle);
+                  const label = typeof t === 'string' ? t : (t.libelle || t.id_type);
+                  return {
+                    value: val,
+                    label: `[D] ${label}`
+                  };
+                })
+              ]}
+            />
+          </div>
 
           {desigTypeFilter !== 'ALL' && (
             <button
@@ -200,17 +232,39 @@ export default function DesignationView({
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+        {/* Top Info Header Bar inside Card */}
+        <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+          <div className="font-bold text-slate-800 text-[13px]">
+            Désignations • Ordre Excel Row 3 : B→G
+          </div>
+          <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
+            ref | designation | type | stockActuel | alerte | emplacement
+          </div>
+        </div>
+
         <div className="overflow-x-auto max-h-[70vh]">
           <table className="w-full text-left text-xs border-collapse">
-            <thead className="sticky top-0 bg-slate-100 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
+            <thead className="sticky top-0 bg-slate-50/90 backdrop-blur-xs text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
               <tr>
-                <th className="py-3 px-4">ID / Ref</th>
-                <th className="py-3 px-4 min-w-[220px]">Désignation d'Article</th>
-                <th className="py-3 px-4">Type Parent</th>
-                <th className="py-3 px-3 text-right">Stock Actuel</th>
-                <th className="py-3 px-3 text-center">État</th>
-                <th className="py-3 px-4">Emplacement</th>
-                <th className="py-3 px-4 text-center">Action</th>
+                <th className="py-2.5 px-4">
+                  <span>REF / ID</span> <span className="text-slate-400 font-normal text-[10px]">(B)</span>
+                </th>
+                <th className="py-2.5 px-4 min-w-[220px]">
+                  <span>DÉSIGNATION</span> <span className="text-slate-400 font-normal text-[10px]">(C) primary</span>
+                </th>
+                <th className="py-2.5 px-4">
+                  <span>TYPE</span> <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+                </th>
+                <th className="py-2.5 px-3 text-right">
+                  <span>STOCK ACTUEL</span> <span className="text-slate-400 font-normal text-[10px]">(E)</span>
+                </th>
+                <th className="py-2.5 px-3 text-center">
+                  <span>ÉTAT</span> <span className="text-slate-400 font-normal text-[10px]">(F)</span>
+                </th>
+                <th className="py-2.5 px-4">
+                  <span>EMPLACEMENT</span> <span className="text-slate-400 font-normal text-[10px]">(G)</span>
+                </th>
+                <th className="py-2.5 px-4 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -316,23 +370,19 @@ export default function DesignationView({
                     + Créer un Type
                   </button>
                 </div>
-                <select
+                <CustomSelect
                   value={form.id_type}
-                  onChange={(e) => handleTypeSelect(e.target.value)}
-                  className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium"
-                  required
-                >
-                  <option value="" disabled>-- Sélectionner un Type --</option>
-                  {types.map((t) => {
+                  onChange={(val) => handleTypeSelect(val)}
+                  options={types.map((t) => {
                     const val = typeof t === 'string' ? t : (t.id_type || t.libelle);
                     const label = typeof t === 'string' ? t : (t.libelle || t.id_type);
-                    return (
-                      <option key={val} value={val}>
-                        {label}
-                      </option>
-                    );
+                    return {
+                      value: val,
+                      label: label
+                    };
                   })}
-                </select>
+                  placeholder="-- Sélectionner un Type --"
+                />
               </div>
 
               <div>

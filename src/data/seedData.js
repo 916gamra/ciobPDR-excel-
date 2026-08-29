@@ -113,10 +113,13 @@ export const INITIAL_TECHNICIANS = [
 ];
 
 export const INITIAL_OPERATIONS = [
-  { id_operation: 'OP-01', nom: 'Anas - DET', id_zone: 'ZONE-DET' },
-  { id_operation: 'OP-02', nom: 'Maintenance Préventive L1', id_zone: 'ZONE-EMB' },
-  { id_operation: 'OP-03', nom: 'Changement Outils Fraisage', id_zone: 'ZONE-USI' },
-  { id_operation: 'OP-04', nom: 'Contrôle Niveaux & Graissage', id_zone: 'ZONE-ATEL' }
+  { id_operation: 'OP-01', nom: 'Anas - DET', id_zone: 'ZONE-DET', type_profil: 'OPERATEUR' },
+  { id_operation: 'OP-02', nom: 'Maintenance Préventive L1', id_zone: 'ZONE-EMB', type_profil: 'OPERATEUR' },
+  { id_operation: 'OP-03', nom: 'Changement Outils Fraisage', id_zone: 'ZONE-USI', type_profil: 'OPERATEUR' },
+  { id_operation: 'OP-04', nom: 'Contrôle Niveaux & Graissage', id_zone: 'ZONE-ATEL', type_profil: 'OPERATEUR' },
+  { id_operation: 'CHEF-01', nom: 'Supervision & Validation DET', id_zone: 'ZONE-DET', type_profil: 'CHEF' },
+  { id_operation: 'CHEF-02', nom: 'Chef d\'Équipe Lignes & Usinage', id_zone: 'ZONE-USI', type_profil: 'CHEF' },
+  { id_operation: 'CHEF-03', nom: 'Chef d\'Atelier Maintenance Centrale', id_zone: 'ZONE-ATEL', type_profil: 'CHEF' }
 ];
 
 export function mapItemToTypeAndDiag(designation = '') {

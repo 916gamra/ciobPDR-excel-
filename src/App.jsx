@@ -29,6 +29,7 @@ import OperationsView from './components/OperationsView';
 import SortieRapideView from './components/SortieRapideView';
 import NexusView from './components/NexusView';
 import GuideView from './components/GuideView';
+import SettingsView from './components/SettingsView';
 
 import AddArticleModal from './components/AddArticleModal';
 import AddMachineModal from './components/AddMachineModal';
@@ -579,8 +580,8 @@ export default function App() {
         handleExportExcel={handleExportExcel}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
+      {/* Main Content Area - Full Fluid Width to maximize screen usage */}
+      <main className="flex-1 p-4 md:p-6 lg:p-8 w-full">
         {currentTab === 'dashboard' && (
           <DashboardView
             stockItems={stockItems}
@@ -758,6 +759,8 @@ export default function App() {
         )}
 
         {currentTab === 'guide' && <GuideView />}
+
+        {currentTab === 'settings' && <SettingsView />}
       </main>
 
       {/* Quick Add Modals */}
@@ -779,6 +782,7 @@ export default function App() {
         templates={templates}
         zones={zones}
         technicians={technicians}
+        machines={machines}
         onAddMachine={handleAddMachine}
         onOpenAddFamilyModal={() => {
           setShowAddMachineModal(false);

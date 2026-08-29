@@ -1,8 +1,8 @@
 import React from 'react';
+import SortieEntreeIcon from './SortieEntreeIcon';
 import {
   Package,
   Cpu,
-  ArrowDownUp,
   AlertTriangle,
   XCircle,
   CheckCircle2,
@@ -109,6 +109,49 @@ export default function DashboardView({
         </div>
       </div>
 
+      {/* Excel Formula Guidance Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule Entrées (F)</div>
+            <div className="text-[11px] font-mono font-semibold text-blue-700 mt-0.5">
+              =SUMIFS(Qté, Ref, [@Ref], "Entrée")
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700">Calcul F</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule Sorties (G)</div>
+            <div className="text-[11px] font-mono font-semibold text-rose-700 mt-0.5">
+              =SUMIFS(Qté, Ref, [@Ref], "Sortie")
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700">Calcul G</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule Actuel (H)</div>
+            <div className="text-[11px] font-mono font-bold text-emerald-700 mt-0.5">
+              =[@[Initial]] + [@Entrees] - [@Sorties]
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">Calcul H</span>
+        </div>
+
+        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule Alerte (J)</div>
+            <div className="text-[11px] font-mono font-semibold text-amber-700 mt-0.5">
+              =IF(H&lt;=0, "RUPTURE", IF(H&lt;=I, "ALERTE", "OK"))
+            </div>
+          </div>
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700">Calcul J</span>
+        </div>
+      </div>
+
       {/* Main Watchlist & Recent Flux */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Watchlist Ruptures & Alertes */}
@@ -200,7 +243,7 @@ export default function DashboardView({
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <ArrowDownUp className="w-4 h-4 text-cyan-600" />
+              <SortieEntreeIcon className="w-4 h-4 shrink-0" strokeWidth={2.25} />
               <span>Derniers Mouvements</span>
             </h3>
             <button
