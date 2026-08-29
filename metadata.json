@@ -1,0 +1,6 @@
+{
+  "name": "CIOB GMAO Light UI Excel",
+  "description": "Application CIOB GMAO Light UI Excel avec Twin Tables, recalcul dynamique des formules Excel en temps réel et compatibilité 100% Offline",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
