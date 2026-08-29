@@ -12,6 +12,28 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+const TYPE_STYLES = {
+  Foret: 'bg-amber-50 text-amber-700 border-amber-200',
+  Tenaille: 'bg-slate-100 text-slate-700 border-slate-200',
+  Cheville: 'bg-violet-50 text-violet-700 border-violet-200',
+  Poinçon: 'bg-rose-50 text-rose-700 border-rose-200',
+  Vis: 'bg-blue-50 text-blue-700 border-blue-200',
+  Raccord: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  Roulement: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Courroie: 'bg-orange-50 text-orange-700 border-orange-200',
+  Capteur: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  teflon: 'bg-teal-50 text-teal-700 border-teal-200',
+};
+
+function getTypeStyle(typeStr) {
+  if (!typeStr) return 'bg-cyan-50 text-cyan-800 border-cyan-200';
+  const clean = String(typeStr).trim();
+  const key = Object.keys(TYPE_STYLES).find(
+    (k) => k.toLowerCase() === clean.toLowerCase()
+  );
+  return TYPE_STYLES[key] || 'bg-cyan-50 text-cyan-800 border-cyan-200';
+}
+
 export default function StockView({
   stockItems,
   filteredStock,
@@ -19,17 +41,13 @@ export default function StockView({
   setStockSearch,
   stockTypeFilter,
   setStockTypeFilter,
-  stockDiagFilter,
-  setStockDiagFilter,
   stockAlertOnly,
   setStockAlertOnly,
   types,
-  diagnostics,
   onOpenAddArticle,
   onQuickSortie,
   stockKPIs,
-  onNavigateToType,
-  onNavigateToDiag
+  onNavigateToType
 }) {
   return (
     <div className="space-y-4">
@@ -114,25 +132,15 @@ export default function StockView({
             className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 focus:bg-white focus:outline-none"
           >
             <option value="ALL">Tous les Types ({types.length})</option>
-            {types.map((t) => (
-              <option key={t.id_type} value={t.id_type}>
-                {t.libelle} ({t.id_type})
-              </option>
-            ))}
-          </select>
-
-          {/* Diagnostic Filter */}
-          <select
-            value={stockDiagFilter}
-            onChange={(e) => setStockDiagFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 focus:bg-white focus:outline-none"
-          >
-            <option value="ALL">Tous les Diagnostics ({diagnostics.length})</option>
-            {diagnostics.map((d) => (
-              <option key={d.id_diag} value={d.id_diag}>
-                {d.libelle} ({d.id_diag})
-              </option>
-            ))}
+            {types.map((t) => {
+              const val = typeof t === 'string' ? t : (t.id_type || t.libelle);
+              const label = typeof t === 'string' ? t : (t.libelle || t.id_type);
+              return (
+                <option key={val} value={val}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
 
           {/* Alert Toggle */}
@@ -148,11 +156,10 @@ export default function StockView({
             <span>Alertes / Ruptures ({stockKPIs.ruptures + stockKPIs.alertes})</span>
           </button>
 
-          {(stockTypeFilter !== 'ALL' || stockDiagFilter !== 'ALL' || stockAlertOnly || stockSearch) && (
+          {(stockTypeFilter !== 'ALL' || stockAlertOnly || stockSearch) && (
             <button
               onClick={() => {
                 setStockTypeFilter('ALL');
-                setStockDiagFilter('ALL');
                 setStockAlertOnly(false);
                 setStockSearch('');
               }}
@@ -182,7 +189,6 @@ export default function StockView({
                 <th className="py-3 px-3">Ref</th>
                 <th className="py-3 px-3">Désignation</th>
                 <th className="py-3 px-3">Type</th>
-                <th className="py-3 px-3">Diagnostic</th>
                 <th className="py-3 px-2 text-right">Initial</th>
                 <th className="py-3 px-2 text-right">Entrées</th>
                 <th className="py-3 px-2 text-right">Sorties</th>
@@ -195,8 +201,7 @@ export default function StockView({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredStock.slice(0, 300).map((item, idx) => {
-                const typeObj = types.find((t) => t.id_type === item.id_type);
-                const diagObj = diagnostics.find((d) => d.id_diag === item.id_diag);
+                const typeObj = types.find((t) => t.id_type === item.id_type || t.libelle === item.type);
                 
                 return (
                   <tr
@@ -213,33 +218,19 @@ export default function StockView({
                       {item.designation}
                     </td>
 
-                    {/* Type (Badge Cyan) */}
+                    {/* Type (Badge) */}
                     <td className="py-2.5 px-3 whitespace-nowrap">
                       <button
                         onClick={() => {
-                          if (item.id_type) {
-                            setStockTypeFilter(item.id_type);
+                          const filterVal = item.type || item.id_type;
+                          if (filterVal) {
+                            setStockTypeFilter(filterVal);
                           }
                         }}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200 text-[11px] font-semibold hover:bg-cyan-100 transition"
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold transition ${getTypeStyle(item.type)}`}
                         title="Filtrer par ce Type"
                       >
-                        <span>{typeObj ? typeObj.libelle : item.type || item.id_type}</span>
-                      </button>
-                    </td>
-
-                    {/* Diagnostic (Badge Amber) */}
-                    <td className="py-2.5 px-3 whitespace-nowrap">
-                      <button
-                        onClick={() => {
-                          if (item.id_diag) {
-                            setStockDiagFilter(item.id_diag);
-                          }
-                        }}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold hover:bg-amber-100 transition"
-                        title="Filtrer par ce Diagnostic"
-                      >
-                        <span>{diagObj ? diagObj.libelle : item.diagnostic || item.id_diag}</span>
+                        <span>{item.type || (typeObj ? typeObj.libelle : item.id_type)}</span>
                       </button>
                     </td>
 

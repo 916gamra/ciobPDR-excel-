@@ -18,9 +18,10 @@ export default function Header({
       case 'stock':
         return 'Stock Actuel • Colonnes Excel exactes';
       case 'types':
-        return 'Types d\'Articles • Nomenclature';
+        return 'Types d\'Articles • Nomenclature Parent';
+      case 'designations':
       case 'diagnostics':
-        return 'Diagnostics & Motifs • Nomenclature';
+        return 'Désignations d\'Articles • Catalogue (Templates)';
       case 'machines':
         return 'Machines Registered • Twin Principal';
       case 'families':
@@ -47,9 +48,10 @@ export default function Header({
       case 'stock':
         return 'Source: /mnt/data/gmao_light_data.json • SUMIFS =E+F-G recalculé en JS';
       case 'types':
-        return 'Niveau parent des articles — cliquez sur "Nb Articles" pour filtrer le Stock';
+        return 'Niveau parent des articles (Family) — cliquez sur "Nb Désignations" ou "Nb Articles"';
+      case 'designations':
       case 'diagnostics':
-        return 'Motifs et diagnostics associés aux types — liaison intelligente vers le Stock';
+        return 'Catalogue des modèles d\'articles (Templates) avec ID/Ref, Désignation et Type parent';
       case 'machines':
         return 'Catalogue complet des équipements avec liaison Famille, Template, Zone et Technicien';
       case 'families':

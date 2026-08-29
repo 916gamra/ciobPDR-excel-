@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Tag, Plus, Search, ArrowRight, Package, AlertCircle } from 'lucide-react';
+import { Tag, Plus, Search, ArrowRight, Package, Layers } from 'lucide-react';
 
 export default function TypeView({
-  types,
-  diagnostics,
-  stockItems,
+  types = [],
+  designations = [],
+  stockItems = [],
   onAddType,
   onNavigateToStockFiltered,
-  onNavigateToDiagFiltered
+  onNavigateToDesignationsFiltered
 }) {
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -16,7 +16,9 @@ export default function TypeView({
   const filtered = types.filter((t) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return t.id_type.toLowerCase().includes(q) || t.libelle.toLowerCase().includes(q);
+    const id = String(t.id_type || '').toLowerCase();
+    const lib = String(t.libelle || '').toLowerCase();
+    return id.includes(q) || lib.includes(q);
   });
 
   const handleSubmit = (e) => {
@@ -34,13 +36,13 @@ export default function TypeView({
         <div>
           <div className="flex items-center gap-2 text-cyan-600 font-semibold text-xs uppercase tracking-wider">
             <Tag className="w-4 h-4" />
-            <span>Niveau 1 • Nomenclature Articles</span>
+            <span>Niveau 1 • Nomenclature Parent (Family)</span>
           </div>
           <h2 className="text-lg font-bold text-slate-900 mt-1">
-            Types d'Articles (Familles de Pièces)
+            Types d'Articles (Types & Catégories)
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Cliquez sur <b className="text-cyan-600">Nb Articles</b> pour ouvrir le Stock filtré, ou sur <b className="text-amber-600">Nb Diagnostics</b> pour voir les motifs rattachés.
+            Équivalent des <b className="text-cyan-600">Families</b> pour les machines (ex: Foret, Vis, Roulement). Cliquez sur <b className="text-indigo-600">Nb Désignations</b> pour voir les modèles ou <b className="text-cyan-600">Nb Articles</b> pour le Stock.
           </p>
         </div>
 
@@ -59,7 +61,7 @@ export default function TypeView({
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Rechercher un type (ID, libellé)..."
+            placeholder="Rechercher un type (Foret, Vis, Roulement...)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full h-9 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none"
@@ -75,47 +77,57 @@ export default function TypeView({
         <table className="w-full text-left text-xs border-collapse">
           <thead className="bg-slate-100 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
             <tr>
-              <th className="py-3 px-4">ID Type</th>
+              <th className="py-3 px-4">ID / Type</th>
               <th className="py-3 px-4">Libellé du Type</th>
-              <th className="py-3 px-4">Nb Articles (Stock)</th>
-              <th className="py-3 px-4">Nb Diagnostics Associés</th>
+              <th className="py-3 px-4">Nb Désignations (Templates)</th>
+              <th className="py-3 px-4">Nb Articles (Stock Actuel)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.map((t) => {
-              const articleCount = stockItems.filter((s) => s.id_type === t.id_type).length;
-              const diagCount = diagnostics.filter((d) => d.id_type === t.id_type).length;
+              const typeVal = t.id_type || t.libelle;
+              const desigCount = designations.filter(
+                (d) =>
+                  (d.id_type && d.id_type.toLowerCase() === typeVal.toLowerCase()) ||
+                  (d.type && d.type.toLowerCase() === typeVal.toLowerCase())
+              ).length;
+
+              const articleCount = stockItems.filter(
+                (s) =>
+                  (s.id_type && s.id_type.toLowerCase() === typeVal.toLowerCase()) ||
+                  (s.type && s.type.toLowerCase() === typeVal.toLowerCase())
+              ).length;
 
               return (
-                <tr key={t.id_type} className="even:bg-slate-50/50 odd:bg-white hover:bg-slate-100/60 transition">
+                <tr key={typeVal} className="even:bg-slate-50/50 odd:bg-white hover:bg-slate-100/60 transition">
                   <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                    <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
-                      {t.id_type}
+                    <span className="px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-800 border border-cyan-200 text-[11px]">
+                      {typeVal}
                     </span>
                   </td>
                   <td className="py-3 px-4 font-semibold text-slate-800 text-[13px]">
-                    {t.libelle}
+                    {t.libelle || typeVal}
                   </td>
                   <td className="py-3 px-4">
                     <button
-                      onClick={() => onNavigateToStockFiltered(t.id_type)}
+                      onClick={() => onNavigateToDesignationsFiltered && onNavigateToDesignationsFiltered(typeVal)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 text-xs font-semibold transition group shadow-2xs"
+                      title="Voir les Désignations (Templates) liées à ce Type"
+                    >
+                      <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>{desigCount} désignations</span>
+                      <ArrowRight className="w-3 h-3 text-indigo-600 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  </td>
+                  <td className="py-3 px-4">
+                    <button
+                      onClick={() => onNavigateToStockFiltered && onNavigateToStockFiltered(typeVal)}
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs font-semibold transition group shadow-2xs"
                       title="Aller vers le Stock filtré sur ce Type"
                     >
                       <Package className="w-3.5 h-3.5 text-cyan-600" />
                       <span>{articleCount} articles</span>
                       <ArrowRight className="w-3 h-3 text-cyan-600 group-hover:translate-x-0.5 transition-transform" />
-                    </button>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button
-                      onClick={() => onNavigateToDiagFiltered(t.id_type)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 text-xs font-semibold transition group shadow-2xs"
-                      title="Voir les diagnostics liés à ce Type"
-                    >
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-                      <span>{diagCount} diagnostics</span>
-                      <ArrowRight className="w-3 h-3 text-amber-600 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   </td>
                 </tr>
@@ -130,16 +142,16 @@ export default function TypeView({
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200">
             <h3 className="font-bold text-base text-slate-900 mb-1">+ Nouveau Type d'Article</h3>
-            <p className="text-xs text-slate-500 mb-4">Créez une catégorie principale pour classifier les articles en Stock.</p>
+            <p className="text-xs text-slate-500 mb-4">Créez une catégorie parent (ex: Foret, Vis, Roulement) pour regrouper les désignations.</p>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">ID Type (ex: TYPE-HYD)</label>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">ID / Nom du Type (ex: Foret, Vis, Roulement)</label>
                 <input
                   type="text"
-                  placeholder="TYPE-HYD"
+                  placeholder="Foret, Vis, Roulement..."
                   value={form.id_type}
-                  onChange={(e) => setForm({ ...form, id_type: e.target.value })}
-                  className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-bold uppercase"
+                  onChange={(e) => setForm({ ...form, id_type: e.target.value, libelle: form.libelle || e.target.value })}
+                  className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold"
                   required
                 />
               </div>
@@ -147,7 +159,7 @@ export default function TypeView({
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Libellé du Type</label>
                 <input
                   type="text"
-                  placeholder="Hydraulique & Haute Pression..."
+                  placeholder="Forêts & Mèches de perçage..."
                   value={form.libelle}
                   onChange={(e) => setForm({ ...form, libelle: e.target.value })}
                   className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs"
@@ -176,3 +188,4 @@ export default function TypeView({
     </div>
   );
 }
+

@@ -158,20 +158,20 @@ export default function Sidebar({
                 <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${currentTab === 'types' ? 'bg-slate-900 text-white font-bold' : 'bg-slate-800 text-slate-400'}`}>{counts.types || 0}</span>
               </button>
 
-              {/* Diagnostic (Secondaire) */}
+              {/* Designation (Secondaire) */}
               <button
-                onClick={() => navTo('diagnostics')}
+                onClick={() => navTo('designations')}
                 className={`w-full flex items-center justify-between px-3 py-1.5 pl-7 rounded-xl text-[12.5px] transition ${
-                  currentTab === 'diagnostics'
-                    ? 'bg-slate-800 text-amber-600 font-semibold'
+                  currentTab === 'designations' || currentTab === 'diagnostics'
+                    ? 'bg-slate-800 text-indigo-400 font-semibold'
                     : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
                 }`}
               >
                 <span className="flex items-center gap-2">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Diagnostic</span>
+                  <Layers className={`w-3.5 h-3.5 ${currentTab === 'designations' || currentTab === 'diagnostics' ? 'text-indigo-400' : 'text-indigo-400'}`} />
+                  <span>Désignation</span>
                 </span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${currentTab === 'diagnostics' ? 'bg-slate-900 text-white font-bold' : 'bg-slate-800 text-slate-400'}`}>{counts.diagnostics || 0}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${currentTab === 'designations' || currentTab === 'diagnostics' ? 'bg-slate-900 text-white font-bold' : 'bg-slate-800 text-slate-400'}`}>{counts.designations || counts.diagnostics || 0}</span>
               </button>
             </div>
           </div>

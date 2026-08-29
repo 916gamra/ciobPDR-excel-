@@ -74,10 +74,10 @@ export default function NexusView({
             <div className="p-3.5 rounded-xl bg-slate-900 text-white shadow-xs">
               <div className="font-bold text-xs flex items-center justify-between">
                 <span>Stock (Twin Principal)</span>
-                <span className="font-mono text-cyan-600 font-bold">{stockItems.length} articles</span>
+                <span className="font-mono text-cyan-400 font-bold">{stockItems.length} articles</span>
               </div>
-              <div className="text-[11px] text-slate-500 mt-1">
-                Regroupe Type (cyan) + Diagnostic (amber) + calculs en temps réel.
+              <div className="text-[11px] text-slate-300 mt-1">
+                Catalogué par Type (Foret, teflon, etc.) avec Formules Excel en temps réel.
               </div>
             </div>
           </div>

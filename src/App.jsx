@@ -19,6 +19,7 @@ import DashboardView from './components/DashboardView';
 import StockView from './components/StockView';
 import TypeView from './components/TypeView';
 import DiagnosticView from './components/DiagnosticView';
+import DesignationView from './components/DesignationView';
 import MachinesRegisteredView from './components/MachinesRegisteredView';
 import FamilyView from './components/FamilyView';
 import TemplatesView from './components/TemplatesView';
@@ -40,13 +41,17 @@ export default function App() {
 
   // Core Data States
   const [types, setTypes] = useState(() => {
-    const saved = localStorage.getItem('gmao_types');
-    return saved ? JSON.parse(saved) : INITIAL_TYPES;
-  });
-
-  const [diagnostics, setDiagnostics] = useState(() => {
-    const saved = localStorage.getItem('gmao_diagnostics');
-    return saved ? JSON.parse(saved) : INITIAL_DIAGNOSTICS;
+    const saved = localStorage.getItem('gmao_types_v4');
+    if (saved) return JSON.parse(saved);
+    const set = new Set();
+    (initialData.Stock_Actuel || []).forEach((item) => {
+      const t = String(item['Désignation'] || item['D\u00c3\u00a9signation'] || item.type || '').trim();
+      if (t && t !== '3' && !/^\d+$/.test(t)) set.add(t);
+    });
+    if (!set.size) {
+      ['Foret', 'Tenaille', 'Vis', 'Roulement', 'Courroie', 'Raccord', 'Cheville', 'Capteur', 'teflon'].forEach(t => set.add(t));
+    }
+    return Array.from(set).map((t) => ({ id_type: t, libelle: t }));
   });
 
   const [families, setFamilies] = useState(() => {
@@ -99,44 +104,70 @@ export default function App() {
   });
 
   const [rawStock, setRawStock] = useState(() => {
-    const saved = localStorage.getItem('gmao_raw_stock');
+    const saved = localStorage.getItem('gmao_raw_stock_v6');
     const rawList = saved ? JSON.parse(saved) : (initialData.Stock_Actuel || []);
 
-    const seenRefs = new Set();
-    return rawList.map((item, idx) => {
-      let baseRef = String(item.Ref != null ? item.Ref : (item.ref != null ? item.ref : `ART-${idx + 1}`)).trim();
-      let ref = baseRef;
-      if (seenRefs.has(ref)) {
-        ref = `${baseRef} #${idx + 1}`;
-      }
-      seenRefs.add(ref);
+    const typeCounters = {};
 
-      const designation = String(item.designation || item['Désignation'] || item['D\u00c3\u00a9signation'] || item['Designation'] || ref);
-      const initialType = item.type || item.Type;
+    return rawList.map((item, idx) => {
+      if (item.ref && item.designation && item.type && item.type !== '3' && !/^\d+$/.test(item.type) && item.designation !== item.ref && /^([A-Z0-9]+)\d{3}$/.test(item.ref)) {
+        return item;
+      }
+
+      const rawArticleName = String(item.Ref != null ? item.Ref : (item.designation != null ? item.designation : `Pièce ${idx + 1}`)).trim();
+      const rawType = String(item['Désignation'] || item['D\u00c3\u00a9signation'] || (typeof item.type === 'string' && !/^\d+$/.test(item.type) ? item.type : 'Divers')).trim();
       
-      const { id_type, id_diag } = (item.id_type && item.id_diag)
-        ? { id_type: item.id_type, id_diag: item.id_diag }
-        : mapItemToTypeAndDiag(designation);
+      const typePrefix = rawType.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || 'REF';
+      typeCounters[typePrefix] = (typeCounters[typePrefix] || 0) + 1;
+      const refCode = `${typePrefix}${String(typeCounters[typePrefix]).padStart(3, '0')}`;
+
+      let initStock = 0;
+      if (typeof item.Type === 'number' && !isNaN(item.Type)) {
+        initStock = item.Type;
+      } else if (typeof item['Stock Initial'] === 'number' && !isNaN(item['Stock Initial'])) {
+        initStock = item['Stock Initial'];
+      } else if (item.stockInitial != null) {
+        initStock = Number(item.stockInitial) || 0;
+      }
+
+      if (initStock === 0 && item['Stock Initial'] == null && item.stockInitial == null) {
+        initStock = (idx % 12) + 1;
+      }
 
       return {
         id: item.id || idx + 1,
-        ref: ref,
-        designation: designation,
-        id_type: id_type,
-        id_diag: id_diag,
-        type: typeof initialType === 'string' ? initialType : 'Standard',
-        stockInitial: Number(item.stockInitial != null ? item.stockInitial : (item['Stock Initial'] != null ? item['Stock Initial'] : 10)) || 0,
-        seuil: Number(item.seuil != null ? item.seuil : (item["Seuil d'Alerte"] != null ? item["Seuil d'Alerte"] : 3)) || 0,
-        emplacement: String(item.emplacement || item.Emplacement || `R${(idx % 4) + 1}-B${String((idx % 12) + 1).padStart(2, '0')}`)
+        ref: refCode,
+        designation: rawArticleName,
+        type: rawType,
+        id_type: rawType,
+        stockInitial: initStock,
+        seuil: Number(item.seuil != null ? item.seuil : (item["Seuil d'Alerte"] != null ? item["Seuil d'Alerte"] : Math.max(2, Math.floor(initStock * 0.25)))) || 3,
+        emplacement: String(item.emplacement || item.Emplacement || `A${(idx % 8) + 1}-R${(idx % 6) + 1}`)
       };
     });
   });
 
+  // Derive designations directly from rawStock for 100% synchronization & perfect ordering
+  const designations = useMemo(() => {
+    return rawStock.map((s) => ({
+      id_designation: s.ref,
+      ref: s.ref,
+      designation: s.designation,
+      id_type: s.type || s.id_type || 'Divers',
+      type: s.type || s.id_type || 'Divers',
+      stockInitial: s.stockInitial,
+      seuil: s.seuil,
+      emplacement: s.emplacement
+    })).sort((a, b) => a.ref.localeCompare(b.ref, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [rawStock]);
+
+  const diagnostics = designations;
+
   // Save to LocalStorage
   useEffect(() => {
     try {
-      localStorage.setItem('gmao_types', JSON.stringify(types));
-      localStorage.setItem('gmao_diagnostics', JSON.stringify(diagnostics));
+      localStorage.setItem('gmao_types_v4', JSON.stringify(types));
+      localStorage.setItem('gmao_designations_v2', JSON.stringify(designations));
       localStorage.setItem('gmao_families', JSON.stringify(families));
       localStorage.setItem('gmao_templates', JSON.stringify(templates));
       localStorage.setItem('gmao_machines', JSON.stringify(machines));
@@ -144,23 +175,34 @@ export default function App() {
       localStorage.setItem('gmao_technicians', JSON.stringify(technicians));
       localStorage.setItem('gmao_operations', JSON.stringify(operations));
       localStorage.setItem('gmao_mouvements', JSON.stringify(mouvements));
-      localStorage.setItem('gmao_raw_stock', JSON.stringify(rawStock));
+      localStorage.setItem('gmao_raw_stock_v5', JSON.stringify(rawStock));
     } catch (e) {
       console.warn('LocalStorage error:', e);
     }
-  }, [types, diagnostics, families, templates, machines, zones, technicians, operations, mouvements, rawStock]);
+  }, [types, designations, families, templates, machines, zones, technicians, operations, mouvements, rawStock]);
+
+  // Unique list of types in stock for filter dropdown
+  const stockTypesList = useMemo(() => {
+    const set = new Set();
+    rawStock.forEach((s) => {
+      if (s.type) set.add(s.type);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [rawStock]);
 
   // Compute Full Stock with Dynamic Live Calculations (Formula F, G, H, J)
   const stockItems = useMemo(() => {
     // Map entries and sorties by ref
     const mvtSummary = {};
     mouvements.forEach((m) => {
-      const r = m.ref;
+      const r = String(m.ref || m['Référence'] || '').trim().toLowerCase();
+      if (!r) return;
       if (!mvtSummary[r]) {
         mvtSummary[r] = { entrees: 0, sorties: 0 };
       }
-      const q = Number(m.quantite) || 0;
-      if (m.type === 'Entrée' || m.type === 'Entree') {
+      const q = Number(m.quantite != null ? m.quantite : m['Quantité']) || 0;
+      const t = String(m.type || m['Type (Entrée/Sortie)'] || '').toLowerCase();
+      if (t.includes('entr')) {
         mvtSummary[r].entrees += q;
       } else {
         mvtSummary[r].sorties += q;
@@ -168,9 +210,12 @@ export default function App() {
     });
 
     return rawStock.map((item) => {
-      const mvt = mvtSummary[item.ref] || { entrees: 0, sorties: 0 };
-      const entrees = mvt.entrees;
-      const sorties = mvt.sorties;
+      const itemRefKey = item.ref.toLowerCase();
+      const itemDesigKey = item.designation.toLowerCase();
+
+      let entrees = (mvtSummary[itemRefKey]?.entrees || 0) + (mvtSummary[itemDesigKey]?.entrees || 0);
+      let sorties = (mvtSummary[itemRefKey]?.sorties || 0) + (mvtSummary[itemDesigKey]?.sorties || 0);
+
       const stockInitial = Number(item.stockInitial) || 0;
       const seuil = Number(item.seuil) || 0;
       const stockActuel = stockInitial + entrees - sorties;
@@ -195,7 +240,6 @@ export default function App() {
   // Filters State
   const [stockSearch, setStockSearch] = useState('');
   const [stockTypeFilter, setStockTypeFilter] = useState('ALL');
-  const [stockDiagFilter, setStockDiagFilter] = useState('ALL');
   const [stockAlertOnly, setStockAlertOnly] = useState(false);
 
   const [diagTypeFilter, setDiagTypeFilter] = useState('ALL');
@@ -216,8 +260,12 @@ export default function App() {
   // Filtered Stock Items
   const filteredStock = useMemo(() => {
     return stockItems.filter((item) => {
-      if (stockTypeFilter !== 'ALL' && item.id_type !== stockTypeFilter) return false;
-      if (stockDiagFilter !== 'ALL' && item.id_diag !== stockDiagFilter) return false;
+      if (
+        stockTypeFilter !== 'ALL' &&
+        item.id_type !== stockTypeFilter &&
+        item.type !== stockTypeFilter
+      )
+        return false;
       if (stockAlertOnly && item.alerte === 'OK') return false;
 
       if (stockSearch) {
@@ -225,14 +273,14 @@ export default function App() {
         return (
           item.ref.toLowerCase().includes(q) ||
           item.designation.toLowerCase().includes(q) ||
+          (item.type && item.type.toLowerCase().includes(q)) ||
           (item.id_type && item.id_type.toLowerCase().includes(q)) ||
-          (item.id_diag && item.id_diag.toLowerCase().includes(q)) ||
           (item.emplacement && item.emplacement.toLowerCase().includes(q))
         );
       }
       return true;
     });
-  }, [stockItems, stockTypeFilter, stockDiagFilter, stockAlertOnly, stockSearch]);
+  }, [stockItems, stockTypeFilter, stockAlertOnly, stockSearch]);
 
   // Stock KPIs
   const stockKPIs = useMemo(() => {
@@ -263,22 +311,22 @@ export default function App() {
   // SMART NAVIGATION HANDLERS
   const handleNavigateToStockFiltered = (typeId) => {
     setStockTypeFilter(typeId);
-    setStockDiagFilter('ALL');
     setStockAlertOnly(false);
     setCurrentTab('stock');
   };
 
-  const handleNavigateToStockFilteredByDiag = (diagId) => {
-    setStockDiagFilter(diagId);
+  const handleNavigateToStockFilteredByRef = (refVal) => {
+    setStockSearch(refVal);
     setStockTypeFilter('ALL');
-    setStockAlertOnly(false);
     setCurrentTab('stock');
   };
 
-  const handleNavigateToDiagFiltered = (typeId) => {
+  const handleNavigateToDesignationsFiltered = (typeId) => {
     setDiagTypeFilter(typeId);
-    setCurrentTab('diagnostics');
+    setCurrentTab('designations');
   };
+
+  const handleNavigateToDiagFiltered = handleNavigateToDesignationsFiltered;
 
   const handleNavigateToTemplatesFiltered = (familyId) => {
     setTemplateFamilyFilter(familyId);
@@ -317,9 +365,23 @@ export default function App() {
     setTypes((prev) => [...prev, newType]);
   };
 
-  const handleAddDiagnostic = (newDiag) => {
-    setDiagnostics((prev) => [...prev, newDiag]);
+  const handleAddDesignation = (newDesig) => {
+    setRawStock((prev) => [
+      {
+        id: Date.now(),
+        ref: newDesig.ref,
+        designation: newDesig.designation,
+        type: newDesig.id_type,
+        id_type: newDesig.id_type,
+        stockInitial: Number(newDesig.stockInitial) || 0,
+        seuil: Number(newDesig.seuil) || 3,
+        emplacement: newDesig.emplacement || 'A1-R1'
+      },
+      ...prev
+    ]);
   };
+
+  const handleAddDiagnostic = handleAddDesignation;
 
   const handleAddFamily = (newFam) => {
     setFamilies((prev) => [...prev, newFam]);
@@ -497,7 +559,8 @@ export default function App() {
         counts={{
           stock: stockItems.length,
           types: types.length,
-          diagnostics: diagnostics.length,
+          designations: designations.length,
+          diagnostics: designations.length,
           machines: machines.length,
           families: families.length,
           templates: templates.length,
@@ -543,42 +606,37 @@ export default function App() {
             setStockSearch={setStockSearch}
             stockTypeFilter={stockTypeFilter}
             setStockTypeFilter={setStockTypeFilter}
-            stockDiagFilter={stockDiagFilter}
-            setStockDiagFilter={setStockDiagFilter}
             stockAlertOnly={stockAlertOnly}
             setStockAlertOnly={setStockAlertOnly}
-            types={types}
-            diagnostics={diagnostics}
+            types={stockTypesList}
             onOpenAddArticle={() => setShowAddArticleModal(true)}
             onQuickSortie={handleQuickSortie}
             stockKPIs={stockKPIs}
             onNavigateToType={handleNavigateToStockFiltered}
-            onNavigateToDiag={handleNavigateToStockFilteredByDiag}
           />
         )}
 
         {currentTab === 'types' && (
           <TypeView
             types={types}
-            diagnostics={diagnostics}
+            designations={designations}
             stockItems={stockItems}
             onAddType={handleAddType}
             onNavigateToStockFiltered={handleNavigateToStockFiltered}
-            onNavigateToDiagFiltered={handleNavigateToDiagFiltered}
+            onNavigateToDesignationsFiltered={handleNavigateToDesignationsFiltered}
           />
         )}
 
-        {currentTab === 'diagnostics' && (
-          <DiagnosticView
-            diagnostics={diagnostics}
+        {(currentTab === 'designations' || currentTab === 'diagnostics') && (
+          <DesignationView
+            designations={designations}
             types={types}
             stockItems={stockItems}
-            diagTypeFilter={diagTypeFilter}
-            setDiagTypeFilter={setDiagTypeFilter}
-            onAddDiagnostic={handleAddDiagnostic}
+            desigTypeFilter={diagTypeFilter}
+            setDesigTypeFilter={setDiagTypeFilter}
+            onAddDesignation={handleAddDesignation}
             onOpenAddTypeModal={() => setCurrentTab('types')}
-            onNavigateToStockFilteredByDiag={handleNavigateToStockFilteredByDiag}
-            onNavigateToTypeFiltered={handleNavigateToDiagFiltered}
+            onNavigateToStockFilteredByRef={handleNavigateToStockFilteredByRef}
           />
         )}
 
@@ -707,15 +765,10 @@ export default function App() {
         isOpen={showAddArticleModal}
         onClose={() => setShowAddArticleModal(false)}
         types={types}
-        diagnostics={diagnostics}
         onAddArticle={handleAddArticle}
         onOpenAddTypeModal={() => {
           setShowAddArticleModal(false);
           setCurrentTab('types');
-        }}
-        onOpenAddDiagModal={() => {
-          setShowAddArticleModal(false);
-          setCurrentTab('diagnostics');
         }}
       />
 

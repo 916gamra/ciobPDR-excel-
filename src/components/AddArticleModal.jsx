@@ -5,16 +5,13 @@ export default function AddArticleModal({
   isOpen,
   onClose,
   types,
-  diagnostics,
   onAddArticle,
-  onOpenAddTypeModal,
-  onOpenAddDiagModal
+  onOpenAddTypeModal
 }) {
   const [form, setForm] = useState({
     ref: '',
     designation: '',
     id_type: types[0]?.id_type || '',
-    id_diag: diagnostics[0]?.id_diag || '',
     stockInitial: 0,
     seuil: 5,
     emplacement: 'R1-B01'
@@ -22,20 +19,15 @@ export default function AddArticleModal({
 
   if (!isOpen) return null;
 
-  // Filter diagnostics by selected type if applicable
-  const relevantDiagnostics = form.id_type
-    ? diagnostics.filter((d) => d.id_type === form.id_type)
-    : diagnostics;
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.ref || !form.designation) return;
+    const cleanRef = form.ref.trim();
+    if (!cleanRef) return;
 
     onAddArticle({
-      ref: form.ref.trim(),
-      designation: form.designation.trim(),
+      ref: cleanRef,
+      designation: form.designation.trim() || cleanRef,
       id_type: form.id_type,
-      id_diag: form.id_diag || (relevantDiagnostics[0]?.id_diag || ''),
       stockInitial: Number(form.stockInitial) || 0,
       seuil: Number(form.seuil) || 0,
       emplacement: form.emplacement.trim() || 'ATELIER'
@@ -96,12 +88,12 @@ export default function AddArticleModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div>
             {/* Type with '+' Button */}
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
-                  Type d'Article
+                  Type d'Article (Famille / Genre)
                 </label>
                 <button
                   type="button"
@@ -109,53 +101,17 @@ export default function AddArticleModal({
                   className="text-[10.5px] text-cyan-600 hover:text-cyan-800 font-semibold inline-flex items-center gap-0.5"
                 >
                   <Plus className="w-3 h-3" />
-                  <span>Nouveau</span>
+                  <span>Nouveau Type</span>
                 </button>
               </div>
               <select
                 value={form.id_type}
-                onChange={(e) => {
-                  const newType = e.target.value;
-                  const relDiag = diagnostics.filter((d) => d.id_type === newType);
-                  setForm({
-                    ...form,
-                    id_type: newType,
-                    id_diag: relDiag[0]?.id_diag || ''
-                  });
-                }}
+                onChange={(e) => setForm({ ...form, id_type: e.target.value })}
                 className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
               >
                 {types.map((t) => (
                   <option key={t.id_type} value={t.id_type}>
                     {t.libelle} ({t.id_type})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Diagnostic with '+' Button */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
-                  Diagnostic Associé
-                </label>
-                <button
-                  type="button"
-                  onClick={onOpenAddDiagModal}
-                  className="text-[10.5px] text-amber-600 hover:text-amber-800 font-semibold inline-flex items-center gap-0.5"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Nouveau</span>
-                </button>
-              </div>
-              <select
-                value={form.id_diag}
-                onChange={(e) => setForm({ ...form, id_diag: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
-              >
-                {(relevantDiagnostics.length > 0 ? relevantDiagnostics : diagnostics).map((d) => (
-                  <option key={d.id_diag} value={d.id_diag}>
-                    {d.libelle} ({d.id_diag})
                   </option>
                 ))}
               </select>
