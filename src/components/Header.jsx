@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Upload, Download, RefreshCw } from 'lucide-react';
+import { Menu, Upload, Download, RefreshCw, LogOut, User } from 'lucide-react';
 
 export default function Header({
   currentTab,
@@ -7,7 +7,9 @@ export default function Header({
   fileInputRef,
   handleImportFile,
   handleExportExcel,
-  onResetData
+  onResetData,
+  currentUser,
+  onLogout
 }) {
   const getTabTitle = () => {
     switch (currentTab) {
@@ -181,6 +183,30 @@ export default function Header({
           <Download className="w-3.5 h-3.5" />
           <span>Exporter Excel</span>
         </button>
+
+        {currentUser && (
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-200 ml-1 shrink-0">
+            <div className="hidden md:flex items-center gap-2 bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1 rounded-xl">
+              <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white font-bold text-[10px] flex items-center justify-center shadow-xs">
+                {currentUser.avatar || 'RM'}
+              </div>
+              <div className="text-left leading-tight">
+                <div className="text-[11px] font-bold text-slate-900">{currentUser.name}</div>
+                <div className="text-[9.5px] text-emerald-800 font-semibold">{currentUser.titleFr || currentUser.role}</div>
+              </div>
+            </div>
+
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
+                title="Déconnexion"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );

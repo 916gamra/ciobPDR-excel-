@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, lazy, Suspense } from 'react';
 import * as XLSX from 'xlsx';
 import initialData from './initialData.json';
 import {
@@ -15,26 +15,38 @@ import {
 
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import DashboardView from './components/DashboardView';
-import StockView from './components/StockView';
-import TypeView from './components/TypeView';
-import DiagnosticView from './components/DiagnosticView';
-import DesignationView from './components/DesignationView';
-import MachinesRegisteredView from './components/MachinesRegisteredView';
-import FamilyView from './components/FamilyView';
-import TemplatesView from './components/TemplatesView';
-import ZonesView from './components/ZonesView';
-import TechniciansView from './components/TechniciansView';
-import OperationsView from './components/OperationsView';
-import SortieRapideView from './components/SortieRapideView';
-import NexusView from './components/NexusView';
-import GuideView from './components/GuideView';
-import SettingsView from './components/SettingsView';
+import LoadingSkeleton from './components/LoadingSkeleton';
+import SplashScreen from './components/SplashScreen';
+import LoginScreen from './components/LoginScreen';
 
-import AddArticleModal from './components/AddArticleModal';
-import AddMachineModal from './components/AddMachineModal';
+// Lazy load views for instant app startup & fast tab transitions
+const DashboardView = lazy(() => import('./components/DashboardView'));
+const StockView = lazy(() => import('./components/StockView'));
+const TypeView = lazy(() => import('./components/TypeView'));
+const DesignationView = lazy(() => import('./components/DesignationView'));
+const MachinesRegisteredView = lazy(() => import('./components/MachinesRegisteredView'));
+const FamilyView = lazy(() => import('./components/FamilyView'));
+const TemplatesView = lazy(() => import('./components/TemplatesView'));
+const ZonesView = lazy(() => import('./components/ZonesView'));
+const TechniciansView = lazy(() => import('./components/TechniciansView'));
+const OperationsView = lazy(() => import('./components/OperationsView'));
+const SortieRapideView = lazy(() => import('./components/SortieRapideView'));
+const NexusView = lazy(() => import('./components/NexusView'));
+const GuideView = lazy(() => import('./components/GuideView'));
+const SettingsView = lazy(() => import('./components/SettingsView'));
+
+const AddArticleModal = lazy(() => import('./components/AddArticleModal'));
+const AddMachineModal = lazy(() => import('./components/AddMachineModal'));
+
+import { storageService } from './utils/storageService';
+import { indexedDBService } from './utils/indexedDBService';
+import { safeNum, calculateStockStatus } from './utils/formulaEngine';
 
 export default function App() {
+  // Splash & Auth States
+  const [showSplash, setShowSplash] = useState(true);
+  const [currentUser, setCurrentUser] = useState(() => storageService.getItem('gmao_user_session') || null);
+
   // Navigation
   const [currentTab, setCurrentTab] = useState('stock');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -42,8 +54,8 @@ export default function App() {
 
   // Core Data States
   const [types, setTypes] = useState(() => {
-    const saved = localStorage.getItem('gmao_types_v4');
-    if (saved) return JSON.parse(saved);
+    const saved = storageService.getItem('gmao_types_v4');
+    if (saved) return saved;
     const set = new Set();
     (initialData.Stock_Actuel || []).forEach((item) => {
       const t = String(item['Désignation'] || item['D\u00c3\u00a9signation'] || item.type || '').trim();
@@ -56,43 +68,43 @@ export default function App() {
   });
 
   const [families, setFamilies] = useState(() => {
-    const saved = localStorage.getItem('gmao_families');
-    return saved ? JSON.parse(saved) : (initialData.Families?.length ? initialData.Families : INITIAL_FAMILIES);
+    const saved = storageService.getItem('gmao_families');
+    return saved ? saved : (initialData.Families?.length ? initialData.Families : INITIAL_FAMILIES);
   });
 
   const [templates, setTemplates] = useState(() => {
-    const saved = localStorage.getItem('gmao_templates');
-    return saved ? JSON.parse(saved) : (initialData.Templates?.length ? initialData.Templates : INITIAL_TEMPLATES);
+    const saved = storageService.getItem('gmao_templates');
+    return saved ? saved : (initialData.Templates?.length ? initialData.Templates : INITIAL_TEMPLATES);
   });
 
   const [machines, setMachines] = useState(() => {
-    const saved = localStorage.getItem('gmao_machines');
-    return saved ? JSON.parse(saved) : (initialData.Machines_Registered?.length ? initialData.Machines_Registered : INITIAL_MACHINES_REGISTERED);
+    const saved = storageService.getItem('gmao_machines');
+    return saved ? saved : (initialData.Machines_Registered?.length ? initialData.Machines_Registered : INITIAL_MACHINES_REGISTERED);
   });
 
   const [zones, setZones] = useState(() => {
-    const saved = localStorage.getItem('gmao_zones');
-    return saved ? JSON.parse(saved) : (initialData.Zones?.length ? initialData.Zones : INITIAL_ZONES);
+    const saved = storageService.getItem('gmao_zones');
+    return saved ? saved : (initialData.Zones?.length ? initialData.Zones : INITIAL_ZONES);
   });
 
   const [technicians, setTechnicians] = useState(() => {
-    const saved = localStorage.getItem('gmao_technicians');
-    return saved ? JSON.parse(saved) : (initialData.Technicians?.length ? initialData.Technicians : INITIAL_TECHNICIANS);
+    const saved = storageService.getItem('gmao_technicians');
+    return saved ? saved : (initialData.Technicians?.length ? initialData.Technicians : INITIAL_TECHNICIANS);
   });
 
   const [operations, setOperations] = useState(() => {
-    const saved = localStorage.getItem('gmao_operations');
-    return saved ? JSON.parse(saved) : (initialData.Operations?.length ? initialData.Operations : INITIAL_OPERATIONS);
+    const saved = storageService.getItem('gmao_operations');
+    return saved ? saved : (initialData.Operations?.length ? initialData.Operations : INITIAL_OPERATIONS);
   });
 
   const [mouvements, setMouvements] = useState(() => {
-    const saved = localStorage.getItem('gmao_mouvements');
-    const rawList = saved ? JSON.parse(saved) : (initialData.Mouvement || []);
+    const saved = storageService.getItem('gmao_mouvements');
+    const rawList = saved ? saved : (initialData.Mouvement || []);
     return rawList.map((m, idx) => ({
       id: m.id || idx + 1,
       date: m.date || (m.Date ? String(m.Date).split('T')[0] : '2026-07-16'),
       ref: m.ref || m['Référence'] || m['Reference'] || '',
-      quantite: Number(m.quantite != null ? m.quantite : (m['Quantité'] != null ? m['Quantité'] : m['Quantite'])) || 1,
+      quantite: safeNum(m.quantite != null ? m.quantite : (m['Quantité'] != null ? m['Quantité'] : m['Quantite']), 1),
       type: m.type || m['Type (Entrée/Sortie)'] || 'Sortie',
       action_id: m.action_id || m['Action_ID'] || 'CORRECTIVE',
       technicien: m.technicien || m.id_technician || 'Rachid',
@@ -105,8 +117,8 @@ export default function App() {
   });
 
   const [rawStock, setRawStock] = useState(() => {
-    const saved = localStorage.getItem('gmao_raw_stock_v6');
-    const rawList = saved ? JSON.parse(saved) : (initialData.Stock_Actuel || []);
+    const saved = storageService.getItem('gmao_raw_stock_v6');
+    const rawList = saved ? saved : (initialData.Stock_Actuel || []);
 
     const typeCounters = {};
 
@@ -128,7 +140,7 @@ export default function App() {
       } else if (typeof item['Stock Initial'] === 'number' && !isNaN(item['Stock Initial'])) {
         initStock = item['Stock Initial'];
       } else if (item.stockInitial != null) {
-        initStock = Number(item.stockInitial) || 0;
+        initStock = safeNum(item.stockInitial, 0);
       }
 
       if (initStock === 0 && item['Stock Initial'] == null && item.stockInitial == null) {
@@ -142,7 +154,7 @@ export default function App() {
         type: rawType,
         id_type: rawType,
         stockInitial: initStock,
-        seuil: Number(item.seuil != null ? item.seuil : (item["Seuil d'Alerte"] != null ? item["Seuil d'Alerte"] : Math.max(2, Math.floor(initStock * 0.25)))) || 3,
+        seuil: safeNum(item.seuil != null ? item.seuil : (item["Seuil d'Alerte"] != null ? item["Seuil d'Alerte"] : Math.max(2, Math.floor(initStock * 0.25))), 3),
         emplacement: String(item.emplacement || item.Emplacement || `A${(idx % 8) + 1}-R${(idx % 6) + 1}`)
       };
     });
@@ -164,22 +176,26 @@ export default function App() {
 
   const diagnostics = designations;
 
-  // Save to LocalStorage
+  // Save to LocalStorage and IndexedDB (Debounced to avoid I/O bottlenecks during fast updates)
   useEffect(() => {
-    try {
-      localStorage.setItem('gmao_types_v4', JSON.stringify(types));
-      localStorage.setItem('gmao_designations_v2', JSON.stringify(designations));
-      localStorage.setItem('gmao_families', JSON.stringify(families));
-      localStorage.setItem('gmao_templates', JSON.stringify(templates));
-      localStorage.setItem('gmao_machines', JSON.stringify(machines));
-      localStorage.setItem('gmao_zones', JSON.stringify(zones));
-      localStorage.setItem('gmao_technicians', JSON.stringify(technicians));
-      localStorage.setItem('gmao_operations', JSON.stringify(operations));
-      localStorage.setItem('gmao_mouvements', JSON.stringify(mouvements));
-      localStorage.setItem('gmao_raw_stock_v5', JSON.stringify(rawStock));
-    } catch (e) {
-      console.warn('LocalStorage error:', e);
-    }
+    const timer = setTimeout(() => {
+      storageService.setItem('gmao_types_v4', types);
+      storageService.setItem('gmao_designations_v2', designations);
+      storageService.setItem('gmao_families', families);
+      storageService.setItem('gmao_templates', templates);
+      storageService.setItem('gmao_machines', machines);
+      storageService.setItem('gmao_zones', zones);
+      storageService.setItem('gmao_technicians', technicians);
+      storageService.setItem('gmao_operations', operations);
+      storageService.setItem('gmao_mouvements', mouvements);
+      storageService.setItem('gmao_raw_stock_v6', rawStock);
+
+      // High capacity IndexedDB backup
+      indexedDBService.setItem('gmao_mouvements', mouvements);
+      indexedDBService.setItem('gmao_raw_stock_v6', rawStock);
+    }, 250);
+
+    return () => clearTimeout(timer);
   }, [types, designations, families, templates, machines, zones, technicians, operations, mouvements, rawStock]);
 
   // Unique list of types in stock for filter dropdown
@@ -201,7 +217,7 @@ export default function App() {
       if (!mvtSummary[r]) {
         mvtSummary[r] = { entrees: 0, sorties: 0 };
       }
-      const q = Number(m.quantite != null ? m.quantite : m['Quantité']) || 0;
+      const q = safeNum(m.quantite != null ? m.quantite : m['Quantité'], 0);
       const t = String(m.type || m['Type (Entrée/Sortie)'] || '').toLowerCase();
       if (t.includes('entr')) {
         mvtSummary[r].entrees += q;
@@ -217,16 +233,9 @@ export default function App() {
       let entrees = (mvtSummary[itemRefKey]?.entrees || 0) + (mvtSummary[itemDesigKey]?.entrees || 0);
       let sorties = (mvtSummary[itemRefKey]?.sorties || 0) + (mvtSummary[itemDesigKey]?.sorties || 0);
 
-      const stockInitial = Number(item.stockInitial) || 0;
-      const seuil = Number(item.seuil) || 0;
-      const stockActuel = stockInitial + entrees - sorties;
-
-      let alerte = 'OK';
-      if (stockActuel <= 0) {
-        alerte = 'RUPTURE';
-      } else if (stockActuel <= seuil) {
-        alerte = 'ALERTE';
-      }
+      const stockInitial = safeNum(item.stockInitial, 0);
+      const seuil = safeNum(item.seuil, 0);
+      const { stockActuel, alerte } = calculateStockStatus(stockInitial, entrees, sorties, seuil);
 
       return {
         ...item,
@@ -549,6 +558,14 @@ export default function App() {
     }
   };
 
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
+
+  if (!currentUser) {
+    return <LoginScreen onLoginSuccess={(u) => setCurrentUser(u)} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col md:pl-[270px]">
       {/* Sidebar Navigation */}
@@ -578,229 +595,238 @@ export default function App() {
         fileInputRef={fileInputRef}
         handleImportFile={handleImportFile}
         handleExportExcel={handleExportExcel}
+        currentUser={currentUser}
+        onLogout={() => {
+          storageService.removeItem('gmao_user_session');
+          setCurrentUser(null);
+        }}
       />
 
-      {/* Main Content Area - Full Fluid Width to maximize screen usage */}
+      {/* Main Content Area - Full Fluid Width with Lazy Loading Suspense */}
       <main className="flex-1 p-4 md:p-6 lg:p-8 w-full">
-        {currentTab === 'dashboard' && (
-          <DashboardView
-            stockItems={stockItems}
-            machines={machines}
-            mouvements={mouvements}
-            types={types}
-            diagnostics={diagnostics}
-            zones={zones}
-            technicians={technicians}
-            stockKPIs={stockKPIs}
-            onNavigateToStock={() => setCurrentTab('stock')}
-            onNavigateToMachines={() => setCurrentTab('machines')}
-            onNavigateToSortie={() => setCurrentTab('sortie')}
-            onQuickSortie={handleQuickSortie}
-          />
-        )}
+        <Suspense fallback={<LoadingSkeleton />}>
+          {currentTab === 'dashboard' && (
+            <DashboardView
+              stockItems={stockItems}
+              machines={machines}
+              mouvements={mouvements}
+              types={types}
+              diagnostics={diagnostics}
+              zones={zones}
+              technicians={technicians}
+              stockKPIs={stockKPIs}
+              onNavigateToStock={() => setCurrentTab('stock')}
+              onNavigateToMachines={() => setCurrentTab('machines')}
+              onNavigateToSortie={() => setCurrentTab('sortie')}
+              onQuickSortie={handleQuickSortie}
+            />
+          )}
 
-        {currentTab === 'stock' && (
-          <StockView
-            stockItems={stockItems}
-            filteredStock={filteredStock}
-            stockSearch={stockSearch}
-            setStockSearch={setStockSearch}
-            stockTypeFilter={stockTypeFilter}
-            setStockTypeFilter={setStockTypeFilter}
-            stockAlertOnly={stockAlertOnly}
-            setStockAlertOnly={setStockAlertOnly}
-            types={stockTypesList}
-            onOpenAddArticle={() => setShowAddArticleModal(true)}
-            onQuickSortie={handleQuickSortie}
-            stockKPIs={stockKPIs}
-            onNavigateToType={handleNavigateToStockFiltered}
-          />
-        )}
+          {currentTab === 'stock' && (
+            <StockView
+              stockItems={stockItems}
+              filteredStock={filteredStock}
+              stockSearch={stockSearch}
+              setStockSearch={setStockSearch}
+              stockTypeFilter={stockTypeFilter}
+              setStockTypeFilter={setStockTypeFilter}
+              stockAlertOnly={stockAlertOnly}
+              setStockAlertOnly={setStockAlertOnly}
+              types={stockTypesList}
+              onOpenAddArticle={() => setShowAddArticleModal(true)}
+              onQuickSortie={handleQuickSortie}
+              stockKPIs={stockKPIs}
+              onNavigateToType={handleNavigateToStockFiltered}
+            />
+          )}
 
-        {currentTab === 'types' && (
-          <TypeView
-            types={types}
-            designations={designations}
-            stockItems={stockItems}
-            onAddType={handleAddType}
-            onNavigateToStockFiltered={handleNavigateToStockFiltered}
-            onNavigateToDesignationsFiltered={handleNavigateToDesignationsFiltered}
-          />
-        )}
+          {currentTab === 'types' && (
+            <TypeView
+              types={types}
+              designations={designations}
+              stockItems={stockItems}
+              onAddType={handleAddType}
+              onNavigateToStockFiltered={handleNavigateToStockFiltered}
+              onNavigateToDesignationsFiltered={handleNavigateToDesignationsFiltered}
+            />
+          )}
 
-        {(currentTab === 'designations' || currentTab === 'diagnostics') && (
-          <DesignationView
-            designations={designations}
-            types={types}
-            stockItems={stockItems}
-            desigTypeFilter={diagTypeFilter}
-            setDesigTypeFilter={setDiagTypeFilter}
-            onAddDesignation={handleAddDesignation}
-            onOpenAddTypeModal={() => setCurrentTab('types')}
-            onNavigateToStockFilteredByRef={handleNavigateToStockFilteredByRef}
-          />
-        )}
+          {(currentTab === 'designations' || currentTab === 'diagnostics') && (
+            <DesignationView
+              designations={designations}
+              types={types}
+              stockItems={stockItems}
+              desigTypeFilter={diagTypeFilter}
+              setDesigTypeFilter={setDiagTypeFilter}
+              onAddDesignation={handleAddDesignation}
+              onOpenAddTypeModal={() => setCurrentTab('types')}
+              onNavigateToStockFilteredByRef={handleNavigateToStockFilteredByRef}
+            />
+          )}
 
-        {currentTab === 'machines' && (
-          <MachinesRegisteredView
-            machines={machines}
-            families={families}
-            templates={templates}
-            zones={zones}
-            technicians={technicians}
-            mouvements={mouvements}
-            mchFamilyFilter={mchFamilyFilter}
-            setMchFamilyFilter={setMchFamilyFilter}
-            mchTemplateFilter={mchTemplateFilter}
-            setMchTemplateFilter={setMchTemplateFilter}
-            mchZoneFilter={mchZoneFilter}
-            setMchZoneFilter={setMchZoneFilter}
-            mchSearch={mchSearch}
-            setMchSearch={setMchSearch}
-            onOpenAddMachine={() => setShowAddMachineModal(true)}
-            onNavigateToFamily={handleNavigateToMachinesByFamily}
-            onNavigateToTemplate={handleNavigateToMachinesByTemplate}
-            onNavigateToZone={handleNavigateToMachinesByZone}
-          />
-        )}
+          {currentTab === 'machines' && (
+            <MachinesRegisteredView
+              machines={machines}
+              families={families}
+              templates={templates}
+              zones={zones}
+              technicians={technicians}
+              mouvements={mouvements}
+              mchFamilyFilter={mchFamilyFilter}
+              setMchFamilyFilter={setMchFamilyFilter}
+              mchTemplateFilter={mchTemplateFilter}
+              setMchTemplateFilter={setMchTemplateFilter}
+              mchZoneFilter={mchZoneFilter}
+              setMchZoneFilter={setMchZoneFilter}
+              mchSearch={mchSearch}
+              setMchSearch={setMchSearch}
+              onOpenAddMachine={() => setShowAddMachineModal(true)}
+              onNavigateToFamily={handleNavigateToMachinesByFamily}
+              onNavigateToTemplate={handleNavigateToMachinesByTemplate}
+              onNavigateToZone={handleNavigateToMachinesByZone}
+            />
+          )}
 
-        {currentTab === 'families' && (
-          <FamilyView
-            families={families}
-            templates={templates}
-            machines={machines}
-            onAddFamily={handleAddFamily}
-            onNavigateToTemplatesFiltered={handleNavigateToTemplatesFiltered}
-            onNavigateToMachinesByFamily={handleNavigateToMachinesByFamily}
-          />
-        )}
+          {currentTab === 'families' && (
+            <FamilyView
+              families={families}
+              templates={templates}
+              machines={machines}
+              onAddFamily={handleAddFamily}
+              onNavigateToTemplatesFiltered={handleNavigateToTemplatesFiltered}
+              onNavigateToMachinesByFamily={handleNavigateToMachinesByFamily}
+            />
+          )}
 
-        {currentTab === 'templates' && (
-          <TemplatesView
-            templates={templates}
-            families={families}
-            machines={machines}
-            templateFamilyFilter={templateFamilyFilter}
-            setTemplateFamilyFilter={setTemplateFamilyFilter}
-            onAddTemplate={handleAddTemplate}
-            onOpenAddFamilyModal={() => setCurrentTab('families')}
-            onNavigateToMachinesByTemplate={handleNavigateToMachinesByTemplate}
-            onNavigateToFamilyFiltered={handleNavigateToTemplatesFiltered}
-          />
-        )}
+          {currentTab === 'templates' && (
+            <TemplatesView
+              templates={templates}
+              families={families}
+              machines={machines}
+              templateFamilyFilter={templateFamilyFilter}
+              setTemplateFamilyFilter={setTemplateFamilyFilter}
+              onAddTemplate={handleAddTemplate}
+              onOpenAddFamilyModal={() => setCurrentTab('families')}
+              onNavigateToMachinesByTemplate={handleNavigateToMachinesByTemplate}
+              onNavigateToFamilyFiltered={handleNavigateToTemplatesFiltered}
+            />
+          )}
 
-        {currentTab === 'zones' && (
-          <ZonesView
-            zones={zones}
-            technicians={technicians}
-            operations={operations}
-            machines={machines}
-            onAddZone={handleAddZone}
-            onNavigateToTechsByZone={handleNavigateToTechsByZone}
-            onNavigateToOpsByZone={handleNavigateToOpsByZone}
-            onNavigateToMachinesByZone={handleNavigateToMachinesByZone}
-          />
-        )}
+          {currentTab === 'zones' && (
+            <ZonesView
+              zones={zones}
+              technicians={technicians}
+              operations={operations}
+              machines={machines}
+              onAddZone={handleAddZone}
+              onNavigateToTechsByZone={handleNavigateToTechsByZone}
+              onNavigateToOpsByZone={handleNavigateToOpsByZone}
+              onNavigateToMachinesByZone={handleNavigateToMachinesByZone}
+            />
+          )}
 
-        {currentTab === 'technicians' && (
-          <TechniciansView
-            technicians={technicians}
-            zones={zones}
-            mouvements={mouvements}
-            techZoneFilter={techZoneFilter}
-            setTechZoneFilter={setTechZoneFilter}
-            onAddTechnician={handleAddTechnician}
-            onOpenAddZoneModal={() => setCurrentTab('zones')}
-            onNavigateToZoneFiltered={handleNavigateToTechsByZone}
-          />
-        )}
+          {currentTab === 'technicians' && (
+            <TechniciansView
+              technicians={technicians}
+              zones={zones}
+              mouvements={mouvements}
+              techZoneFilter={techZoneFilter}
+              setTechZoneFilter={setTechZoneFilter}
+              onAddTechnician={handleAddTechnician}
+              onOpenAddZoneModal={() => setCurrentTab('zones')}
+              onNavigateToZoneFiltered={handleNavigateToTechsByZone}
+            />
+          )}
 
-        {currentTab === 'operations' && (
-          <OperationsView
-            operations={operations}
-            zones={zones}
-            mouvements={mouvements}
-            opZoneFilter={opZoneFilter}
-            setOpZoneFilter={setOpZoneFilter}
-            onAddOperation={handleAddOperation}
-            onOpenAddZoneModal={() => setCurrentTab('zones')}
-            onNavigateToZoneFiltered={handleNavigateToOpsByZone}
-          />
-        )}
+          {currentTab === 'operations' && (
+            <OperationsView
+              operations={operations}
+              zones={zones}
+              mouvements={mouvements}
+              opZoneFilter={opZoneFilter}
+              setOpZoneFilter={setOpZoneFilter}
+              onAddOperation={handleAddOperation}
+              onOpenAddZoneModal={() => setCurrentTab('zones')}
+              onNavigateToZoneFiltered={handleNavigateToOpsByZone}
+            />
+          )}
 
-        {currentTab === 'sortie' && (
-          <SortieRapideView
-            mouvements={mouvements}
-            stockItems={stockItems}
-            zones={zones}
-            machines={machines}
-            technicians={technicians}
-            operations={operations}
-            onAddMouvement={handleAddMouvement}
-            onDeleteMouvement={handleDeleteMouvement}
-            onOpenAddArticle={() => setShowAddArticleModal(true)}
-            onOpenAddMachine={() => setShowAddMachineModal(true)}
-            onOpenAddZone={() => setCurrentTab('zones')}
-          />
-        )}
+          {currentTab === 'sortie' && (
+            <SortieRapideView
+              mouvements={mouvements}
+              stockItems={stockItems}
+              zones={zones}
+              machines={machines}
+              technicians={technicians}
+              operations={operations}
+              onAddMouvement={handleAddMouvement}
+              onDeleteMouvement={handleDeleteMouvement}
+              onOpenAddArticle={() => setShowAddArticleModal(true)}
+              onOpenAddMachine={() => setShowAddMachineModal(true)}
+              onOpenAddZone={() => setCurrentTab('zones')}
+            />
+          )}
 
-        {currentTab === 'nexus' && (
-          <NexusView
-            types={types}
-            diagnostics={diagnostics}
-            families={families}
-            templates={templates}
-            zones={zones}
-            technicians={technicians}
-            operations={operations}
-            machines={machines}
-            stockItems={stockItems}
-          />
-        )}
+          {currentTab === 'nexus' && (
+            <NexusView
+              types={types}
+              diagnostics={diagnostics}
+              families={families}
+              templates={templates}
+              zones={zones}
+              technicians={technicians}
+              operations={operations}
+              machines={machines}
+              stockItems={stockItems}
+            />
+          )}
 
-        {currentTab === 'guide' && <GuideView />}
+          {currentTab === 'guide' && <GuideView />}
 
-        {currentTab === 'settings' && <SettingsView />}
+          {currentTab === 'settings' && <SettingsView />}
+        </Suspense>
       </main>
 
-      {/* Quick Add Modals */}
-      <AddArticleModal
-        isOpen={showAddArticleModal}
-        onClose={() => setShowAddArticleModal(false)}
-        types={types}
-        onAddArticle={handleAddArticle}
-        onOpenAddTypeModal={() => {
-          setShowAddArticleModal(false);
-          setCurrentTab('types');
-        }}
-      />
+      {/* Quick Add Modals with Suspense */}
+      <Suspense fallback={null}>
+        <AddArticleModal
+          isOpen={showAddArticleModal}
+          onClose={() => setShowAddArticleModal(false)}
+          types={types}
+          onAddArticle={handleAddArticle}
+          onOpenAddTypeModal={() => {
+            setShowAddArticleModal(false);
+            setCurrentTab('types');
+          }}
+        />
 
-      <AddMachineModal
-        isOpen={showAddMachineModal}
-        onClose={() => setShowAddMachineModal(false)}
-        families={families}
-        templates={templates}
-        zones={zones}
-        technicians={technicians}
-        machines={machines}
-        onAddMachine={handleAddMachine}
-        onOpenAddFamilyModal={() => {
-          setShowAddMachineModal(false);
-          setCurrentTab('families');
-        }}
-        onOpenAddTemplateModal={() => {
-          setShowAddMachineModal(false);
-          setCurrentTab('templates');
-        }}
-        onOpenAddZoneModal={() => {
-          setShowAddMachineModal(false);
-          setCurrentTab('zones');
-        }}
-        onOpenAddTechModal={() => {
-          setShowAddMachineModal(false);
-          setCurrentTab('technicians');
-        }}
-      />
+        <AddMachineModal
+          isOpen={showAddMachineModal}
+          onClose={() => setShowAddMachineModal(false)}
+          families={families}
+          templates={templates}
+          zones={zones}
+          technicians={technicians}
+          machines={machines}
+          onAddMachine={handleAddMachine}
+          onOpenAddFamilyModal={() => {
+            setShowAddMachineModal(false);
+            setCurrentTab('families');
+          }}
+          onOpenAddTemplateModal={() => {
+            setShowAddMachineModal(false);
+            setCurrentTab('templates');
+          }}
+          onOpenAddZoneModal={() => {
+            setShowAddMachineModal(false);
+            setCurrentTab('zones');
+          }}
+          onOpenAddTechModal={() => {
+            setShowAddMachineModal(false);
+            setCurrentTab('technicians');
+          }}
+        />
+      </Suspense>
     </div>
   );
 }
