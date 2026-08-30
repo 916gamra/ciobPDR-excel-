@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import AnimatedPage from './AnimatedPage';
 import CustomSelect from './CustomSelect';
 import SortieEntreeIcon from './SortieEntreeIcon';
 import {
@@ -32,7 +33,12 @@ import {
   Factory,
   Warehouse,
   ShieldCheck,
-  Filter
+  Filter,
+  ArrowUpDown,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  SlidersHorizontal,
+  ChevronDown
 } from 'lucide-react';
 
 export default function SortieRapideView({
@@ -81,6 +87,18 @@ export default function SortieRapideView({
   const [tableFilterType, setTableFilterType] = useState('ALL'); // 'ALL' | 'Sortie' | 'Entrée'
   const [tableFilterAction, setTableFilterAction] = useState('ALL');
   const [tableSearchText, setTableSearchText] = useState('');
+  const [tableSortField, setTableSortField] = useState('date');
+  const [tableSortOrder, setTableSortOrder] = useState('desc');
+  const [showTableSortMenu, setShowTableSortMenu] = useState(false);
+
+  const handleTableSort = (field) => {
+    if (tableSortField === field) {
+      setTableSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setTableSortField(field);
+      setTableSortOrder('asc');
+    }
+  };
 
   const selectedArticle = stockItems.find((s) => s.ref === form.ref);
 
@@ -334,9 +352,9 @@ export default function SortieRapideView({
     });
   };
 
-  // Filtered movements for table
+  // Filtered & Sorted movements for table
   const displayedMouvements = useMemo(() => {
-    return mouvements.filter((m) => {
+    const list = mouvements.filter((m) => {
       if (tableFilterType !== 'ALL' && m.type !== tableFilterType) return false;
       if (tableFilterAction !== 'ALL' && m.action_id !== tableFilterAction) return false;
       if (tableSearchText.trim()) {
@@ -351,10 +369,30 @@ export default function SortieRapideView({
       }
       return true;
     });
-  }, [mouvements, tableFilterType, tableFilterAction, tableSearchText]);
+
+    return list.sort((a, b) => {
+      let valA = a[tableSortField];
+      let valB = b[tableSortField];
+
+      if (tableSortField === 'quantite') {
+        valA = Number(valA || 0);
+        valB = Number(valB || 0);
+      } else if (tableSortField === 'date') {
+        valA = String(a.date || '') + String(a.code_bon || '');
+        valB = String(b.date || '') + String(b.code_bon || '');
+      } else {
+        valA = String(valA || '').toLowerCase();
+        valB = String(valB || '').toLowerCase();
+      }
+
+      if (valA < valB) return tableSortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return tableSortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [mouvements, tableFilterType, tableFilterAction, tableSearchText, tableSortField, tableSortOrder]);
 
   return (
-    <div className="space-y-6">
+    <AnimatedPage className="space-y-6">
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -1257,29 +1295,175 @@ export default function SortieRapideView({
                   className="w-full h-8 pl-8 pr-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs"
                 />
               </div>
+
+              {/* Sort By Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowTableSortMenu(!showTableSortMenu)}
+                  className={`h-8 px-2.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                    showTableSortMenu || tableSortField !== 'date' || tableSortOrder !== 'desc'
+                      ? 'bg-indigo-50 text-indigo-900 border-indigo-300'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                  title="Trier l'historique"
+                >
+                  <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Tri</span>
+                  <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showTableSortMenu ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showTableSortMenu && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 p-3 space-y-2.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      <span className="flex items-center gap-1.5 text-slate-800">
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
+                        Trier l'historique
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5 text-xs">
+                      {[
+                        { key: 'date', label: 'Date / Bon' },
+                        { key: 'type', label: 'Type' },
+                        { key: 'action_id', label: 'Action ID' },
+                        { key: 'ref', label: 'Réf Article' },
+                        { key: 'quantite', label: 'Quantité' },
+                        { key: 'technicien', label: 'Intervenant' },
+                      ].map((col) => (
+                        <button
+                          key={col.key}
+                          type="button"
+                          onClick={() => {
+                            handleTableSort(col.key);
+                          }}
+                          className={`px-2.5 py-1.5 rounded-xl border text-left font-medium text-[11px] flex items-center justify-between transition cursor-pointer ${
+                            tableSortField === col.key
+                              ? 'bg-indigo-50 text-indigo-950 border-indigo-300 font-bold'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className="truncate">{col.label}</span>
+                          {tableSortField === col.key && (
+                            tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTableSortOrder('asc')}
+                        className={`flex-1 px-2 py-1 rounded-lg border text-[11px] font-semibold flex items-center justify-center gap-1 transition ${
+                          tableSortOrder === 'asc' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        <ArrowUpAZ className="w-3 h-3" />
+                        A-Z
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTableSortOrder('desc')}
+                        className={`flex-1 px-2 py-1 rounded-lg border text-[11px] font-semibold flex items-center justify-center gap-1 transition ${
+                          tableSortOrder === 'desc' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        <ArrowDownAZ className="w-3 h-3" />
+                        Z-A
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
             <div className="max-h-[66vh] overflow-y-auto overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse min-w-[760px]">
-                <thead className="sticky top-0 bg-slate-100 text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200 z-10">
+              <table className="w-full text-left text-xs border-collapse min-w-[800px]">
+                <thead className="sticky top-0 bg-slate-100 text-[10.5px] font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 z-10 shadow-2xs">
                   <tr>
-                    <th className="py-3 px-3">Bon # / Date</th>
-                    <th className="py-3 px-2">Type</th>
-                    <th className="py-3 px-3">Action ID</th>
-                    <th className="py-3 px-3">Réf & Article</th>
-                    <th className="py-3 px-2 text-right">Qté</th>
+                    <th className="py-3 px-3 text-center w-12 text-slate-500 font-mono text-[10px] bg-slate-200/60 border-r border-slate-200 shrink-0">
+                      N°
+                    </th>
+
+                    <th
+                      onClick={() => handleTableSort('date')}
+                      className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/70 transition"
+                      title="Trier par Bon / Date"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Bon # / Date</span>
+                        {tableSortField === 'date' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                      </div>
+                    </th>
+
+                    <th
+                      onClick={() => handleTableSort('type')}
+                      className="py-3 px-2 cursor-pointer select-none hover:bg-slate-200/70 transition"
+                      title="Trier par Type"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Type</span>
+                        {tableSortField === 'type' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                      </div>
+                    </th>
+
+                    <th
+                      onClick={() => handleTableSort('action_id')}
+                      className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/70 transition"
+                      title="Trier par Action ID"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Action ID</span>
+                        {tableSortField === 'action_id' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                      </div>
+                    </th>
+
+                    <th
+                      onClick={() => handleTableSort('ref')}
+                      className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/70 transition"
+                      title="Trier par Réf Article"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Réf & Article</span>
+                        {tableSortField === 'ref' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                      </div>
+                    </th>
+
+                    <th
+                      onClick={() => handleTableSort('quantite')}
+                      className="py-3 px-2 text-right cursor-pointer select-none hover:bg-slate-200/70 transition"
+                      title="Trier par Quantité"
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        <span>Qté</span>
+                        {tableSortField === 'quantite' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                      </div>
+                    </th>
+
                     <th className="py-3 px-3">Machine / Zone / Emplacement</th>
-                    <th className="py-3 px-3">Intervenant / Demandeur</th>
+
+                    <th
+                      onClick={() => handleTableSort('technicien')}
+                      className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/70 transition"
+                      title="Trier par Intervenant"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Intervenant / Demandeur</span>
+                        {tableSortField === 'technicien' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                      </div>
+                    </th>
+
                     <th className="py-3 px-3">Motif / Commentaire</th>
                     <th className="py-3 px-2 text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-200/80">
                   {displayedMouvements.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-10 text-center text-xs text-slate-400 font-medium">
+                      <td colSpan={10} className="py-10 text-center text-xs text-slate-400 font-medium">
                         Aucun mouvement correspondant aux critères.
                       </td>
                     </tr>
@@ -1290,7 +1474,12 @@ export default function SortieRapideView({
                         operations.some((op) => (op.nom === m.operation || op.id_operation === m.operation) && (op.type_profil === 'CHEF' || String(op.id_operation).startsWith('CHEF')));
 
                       return (
-                        <tr key={m.id || `mvt-${idx}`} className="even:bg-slate-50/50 odd:bg-white hover:bg-indigo-50/30 transition">
+                        <tr key={m.id || `mvt-${idx}`} className="even:bg-slate-50/80 odd:bg-white hover:bg-indigo-50/50 border-b border-slate-200/70 transition-colors">
+                          {/* Row N° */}
+                          <td className="py-2.5 px-3 text-center font-mono text-[11px] font-bold text-slate-400 bg-slate-100/40 border-r border-slate-200/80 shrink-0">
+                            {idx + 1}
+                          </td>
+
                           {/* Bon # & Date */}
                           <td className="py-2.5 px-3 whitespace-nowrap">
                             <div className="font-mono font-bold text-indigo-950 text-[11px] flex items-center gap-1">
@@ -1604,6 +1793,6 @@ export default function SortieRapideView({
           </div>
         </div>
       )}
-    </div>
+    </AnimatedPage>
   );
 }

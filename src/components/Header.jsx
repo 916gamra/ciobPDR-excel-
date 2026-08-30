@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Upload, Download, RefreshCw, LogOut, User } from 'lucide-react';
+import { Menu, Upload, Download, Link, Save, FileSpreadsheet } from 'lucide-react';
 
 export default function Header({
   currentTab,
@@ -7,9 +7,9 @@ export default function Header({
   fileInputRef,
   handleImportFile,
   handleExportExcel,
-  onResetData,
-  currentUser,
-  onLogout
+  linkedFileName,
+  onDirectLink,
+  onDirectSave
 }) {
   const getTabTitle = () => {
     switch (currentTab) {
@@ -131,35 +131,36 @@ export default function Header({
   const currentTabInfo = getTabSubtitle();
 
   return (
-    <header className="h-[68px] bg-white border-b border-slate-200 px-4 md:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-      <div className="flex items-center gap-3 min-w-0 flex-1 mr-4">
+    <header className="h-[68px] bg-white border-b border-slate-200 px-3 sm:px-4 md:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+      <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2 sm:mr-4">
         <button
           onClick={() => setMobileMenuOpen(true)}
-          className="p-2 -ml-2 rounded-xl text-slate-600 hover:bg-slate-100 md:hidden shrink-0"
+          className="p-2 -ml-1 rounded-xl text-slate-600 hover:bg-slate-100 md:hidden shrink-0 cursor-pointer"
+          aria-label="Ouvrir le menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <h1 className="text-base sm:text-lg md:text-xl font-bold text-slate-800 tracking-tight shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-sm sm:text-base md:text-lg font-bold text-slate-800 tracking-tight truncate">
               {getTabTitle()}
             </h1>
             {currentTabInfo.source && (
-              <span className="hidden lg:inline-flex items-center font-mono text-[10.5px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 truncate max-w-[280px] xl:max-w-md shadow-2xs shrink-0">
+              <span className="hidden xl:inline-flex items-center font-mono text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/80 truncate max-w-[220px] 2xl:max-w-xs shadow-2xs shrink-0">
                 Source: {currentTabInfo.source}
               </span>
             )}
           </div>
           {currentTabInfo.desc && (
-            <p className="text-xs text-slate-500 hidden sm:block truncate max-w-xl xl:max-w-2xl mt-0.5">
+            <p className="text-[11px] text-slate-500 hidden sm:block truncate max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl mt-0.5">
               {currentTabInfo.desc}
             </p>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0 flex-nowrap">
         <input
           type="file"
           ref={fileInputRef}
@@ -167,46 +168,55 @@ export default function Header({
           accept=".json,.xlsx,.xls"
           className="hidden"
         />
+
+        {/* Direct Link / Direct Save Button */}
+        {linkedFileName ? (
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span
+              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/90 shadow-2xs truncate max-w-[170px]"
+              title={`Fichier lié en direct : ${linkedFileName}`}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="truncate">{linkedFileName}</span>
+            </span>
+            <button
+              onClick={onDirectSave}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 transition shadow-xs shrink-0 whitespace-nowrap cursor-pointer"
+              title="Enregistrer les modifications directement dans le fichier lié"
+            >
+              <Save className="w-3.5 h-3.5 shrink-0" />
+              <span>Sauvegarder Direct</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onDirectLink}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 transition shrink-0 whitespace-nowrap cursor-pointer shadow-2xs"
+            title="Lier directement un fichier Excel (.xlsx) sans avoir à exporter à chaque fois"
+          >
+            <Link className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>🔗 Lien Direct Excel</span>
+          </button>
+        )}
+
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition shrink-0"
+          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 transition shrink-0 whitespace-nowrap cursor-pointer"
           title="Importer un fichier JSON ou Excel"
         >
-          <Upload className="w-3.5 h-3.5 text-slate-600" />
+          <Upload className="w-3.5 h-3.5 text-slate-600 shrink-0" />
           <span>Importer</span>
         </button>
+
         <button
           onClick={handleExportExcel}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium text-white bg-slate-900 hover:bg-black transition shadow-sm shrink-0"
+          className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs shrink-0 whitespace-nowrap cursor-pointer"
           title="Exporter toutes les tables sous Excel"
         >
-          <Download className="w-3.5 h-3.5" />
-          <span>Exporter Excel</span>
+          <Download className="w-3.5 h-3.5 shrink-0" />
+          <span className="hidden xs:inline">Exporter Excel</span>
+          <span className="xs:hidden">Excel</span>
         </button>
-
-        {currentUser && (
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-200 ml-1 shrink-0">
-            <div className="hidden md:flex items-center gap-2 bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1 rounded-xl">
-              <div className="w-6 h-6 rounded-lg bg-emerald-700 text-white font-bold text-[10px] flex items-center justify-center shadow-xs">
-                {currentUser.avatar || 'RM'}
-              </div>
-              <div className="text-left leading-tight">
-                <div className="text-[11px] font-bold text-slate-900">{currentUser.name}</div>
-                <div className="text-[9.5px] text-emerald-800 font-semibold">{currentUser.titleFr || currentUser.role}</div>
-              </div>
-            </div>
-
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
-                title="Déconnexion"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        )}
       </div>
     </header>
   );

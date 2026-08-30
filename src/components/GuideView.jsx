@@ -1,9 +1,10 @@
 import React from 'react';
+import AnimatedPage from './AnimatedPage';
 import { BookOpen, CheckCircle2, ArrowRight, Zap, Database, Layers, ShieldCheck } from 'lucide-react';
 
 export default function GuideView() {
   return (
-    <div className="space-y-6">
+    <AnimatedPage className="space-y-6">
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
@@ -192,6 +193,6 @@ export default function GuideView() {
           </div>
         </div>
       </div>
-    </div>
+    </AnimatedPage>
   );
 }

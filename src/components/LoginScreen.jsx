@@ -1,30 +1,87 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Key, ArrowRight, Check, Package, Store } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Key, ArrowRight, Check, Package, Store, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { storageService } from '../utils/storageService';
 
-const STORE_MANAGER_ACCOUNT = {
-  id: 'store_manager',
-  name: 'Responsable du Magasin',
-  titleFr: 'Responsable du Magasin',
-  role: 'Gestionnaire Principal du Stock & Mouvements',
-  zone: 'Magasin Central',
-  avatar: 'RM'
+// Base64 encryption/obfuscation helpers for offline security
+const encryptPin = (pin) => btoa(`CIOB_GMAO_SECURE_SALT:${pin}`);
+const decryptPin = (encrypted) => {
+  try {
+    const raw = atob(encrypted);
+    if (raw.startsWith('CIOB_GMAO_SECURE_SALT:')) {
+      return raw.replace('CIOB_GMAO_SECURE_SALT:', '');
+    }
+  } catch (e) {}
+  return encrypted;
 };
 
 export default function LoginScreen({ onLoginSuccess }) {
-  const [pinCode, setPinCode] = useState('1234');
+  // Load dynamic configuration from local storage
+  const [managerRole, setManagerRole] = useState(() => {
+    return localStorage.getItem('gmao_admin_role') || 'Gestionnaire Principal du Stock & Mouvements';
+  });
+
+  const [storedPin, setStoredPin] = useState(() => {
+    const saved = localStorage.getItem('gmao_admin_pin');
+    if (saved) {
+      return decryptPin(saved);
+    }
+    // Default PIN is '1234'
+    const defaultEnc = encryptPin('1234');
+    localStorage.setItem('gmao_admin_pin', defaultEnc);
+    return '1234';
+  });
+
+  const [isOpenMode, setIsOpenMode] = useState(() => {
+    return localStorage.getItem('gmao_admin_open_mode') === 'true';
+  });
+
+  // State for user input
+  const [pinCode, setPinCode] = useState(() => {
+    // If open mode is active, we don't need code
+    const open = localStorage.getItem('gmao_admin_open_mode') === 'true';
+    return open ? '' : ''; // Let the user type it if not open mode, or keep empty for real prompt
+  });
+
   const [rememberMe, setRememberMe] = useState(true);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  // Sync state if localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const role = localStorage.getItem('gmao_admin_role') || 'Gestionnaire Principal du Stock & Mouvements';
+      const pinSaved = localStorage.getItem('gmao_admin_pin');
+      const open = localStorage.getItem('gmao_admin_open_mode') === 'true';
+      
+      setManagerRole(role);
+      if (pinSaved) {
+        setStoredPin(decryptPin(pinSaved));
+      }
+      setIsOpenMode(open);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const handleLogin = (e) => {
     if (e) e.preventDefault();
+    setErrorMsg(null);
+
+    // If Open Mode is false, we MUST validate the entered PIN code
+    if (!isOpenMode) {
+      if (pinCode !== storedPin) {
+        setErrorMsg("Code PIN d'accès incorrect. Veuillez réessayer.");
+        return;
+      }
+    }
 
     const userToSave = {
-      id: STORE_MANAGER_ACCOUNT.id,
-      name: STORE_MANAGER_ACCOUNT.name,
-      titleFr: STORE_MANAGER_ACCOUNT.titleFr,
-      role: STORE_MANAGER_ACCOUNT.role,
-      zone: STORE_MANAGER_ACCOUNT.zone,
-      avatar: STORE_MANAGER_ACCOUNT.avatar
+      id: 'store_manager',
+      name: 'Responsable du Magasin',
+      titleFr: 'Responsable du Magasin',
+      role: managerRole,
+      zone: 'Magasin Central',
+      avatar: 'RM'
     };
 
     if (rememberMe) {
@@ -84,8 +141,8 @@ export default function LoginScreen({ onLoginSuccess }) {
                   <div className="text-sm font-black text-slate-900 flex items-center gap-2">
                     <span>Responsable du Magasin</span>
                   </div>
-                  <div className="text-[11px] text-emerald-800 font-medium truncate mt-0.5">
-                    {STORE_MANAGER_ACCOUNT.role}
+                  <div className="text-[11px] text-emerald-800 font-medium mt-0.5 whitespace-pre-wrap break-words">
+                    {managerRole}
                   </div>
                 </div>
               </div>
@@ -96,25 +153,58 @@ export default function LoginScreen({ onLoginSuccess }) {
             </div>
           </div>
 
+          {/* Error Message Box */}
+          {errorMsg && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-rose-700 text-xs animate-shake">
+              <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              <div className="font-medium">{errorMsg}</div>
+            </div>
+          )}
+
           {/* PIN Input */}
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider font-mono mb-1.5">
-              Code PIN d'accès
-            </label>
-            <div className="relative">
-              <Key className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-              <input
-                type="password"
-                value={pinCode}
-                onChange={(e) => setPinCode(e.target.value)}
-                placeholder="****"
-                maxLength={8}
-                className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono text-slate-900 tracking-widest focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition"
-              />
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider font-mono">
+                Code PIN d'accès
+              </label>
+              {isOpenMode ? (
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <Unlock className="w-3 h-3" /> Mode Libre Activé
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded flex items-center gap-1">
+                  <Lock className="w-3 h-3" /> PIN Requis
+                </span>
+              )}
             </div>
-            <p className="text-[10.5px] text-slate-500 mt-1.5 leading-snug">
-              * Session locale : Le code PIN est pré-rempli pour un accès direct.
-            </p>
+
+            {isOpenMode ? (
+              <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl text-center text-xs text-emerald-800 font-medium">
+                <Unlock className="w-5 h-5 text-emerald-600 mx-auto mb-1.5" />
+                L'accès libre est configuré. Cliquez simplement sur le bouton ci-dessous pour vous connecter directement.
+              </div>
+            ) : (
+              <div className="relative">
+                <Key className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="password"
+                  value={pinCode}
+                  onChange={(e) => {
+                    setPinCode(e.target.value);
+                    if (errorMsg) setErrorMsg(null);
+                  }}
+                  placeholder="Saisir le code PIN d'accès..."
+                  maxLength={8}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono text-slate-900 tracking-widest focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition"
+                />
+              </div>
+            )}
+            
+            {!isOpenMode && (
+              <p className="text-[10.5px] text-slate-500 mt-1.5 leading-snug">
+                * Saisissez le code configuré par l'administrateur (Par défaut: 1234).
+              </p>
+            )}
           </div>
 
           {/* Remember Me Option */}
@@ -150,3 +240,4 @@ export default function LoginScreen({ onLoginSuccess }) {
     </div>
   );
 }
+

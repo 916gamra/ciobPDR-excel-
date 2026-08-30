@@ -18,7 +18,8 @@ import {
   Lightbulb,
   Settings,
   Sun,
-  Moon
+  Moon,
+  LogOut
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -26,7 +27,9 @@ export default function Sidebar({
   setCurrentTab,
   mobileMenuOpen,
   setMobileMenuOpen,
-  counts
+  counts,
+  currentUser,
+  onLogout
 }) {
   // Sidebar Dark / Light Theme state (persisted in localStorage)
   const [sidebarTheme, setSidebarTheme] = useState(() => {
@@ -328,31 +331,17 @@ export default function Sidebar({
                 </span>
               </button>
 
-              {/* Technicians */}
+              {/* Utilisateurs */}
               <button
-                onClick={() => navTo('technicians')}
-                className={getTabClass('technicians', true)}
+                onClick={() => navTo('utilisateurs')}
+                className={getTabClass('utilisateurs', true)}
               >
                 <span className="flex items-center gap-2">
-                  <Users className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-                  <span>Techniciens</span>
+                  <Users className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                  <span>Utilisateurs (Membres)</span>
                 </span>
-                <span className={getBadgeClass('technicians')}>
-                  {counts.technicians || 0}
-                </span>
-              </button>
-
-              {/* Operations & Chefs */}
-              <button
-                onClick={() => navTo('operations')}
-                className={getTabClass('operations', true)}
-              >
-                <span className="flex items-center gap-2">
-                  <ClipboardList className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
-                  <span>Opérations & Chefs</span>
-                </span>
-                <span className={getBadgeClass('operations')}>
-                  {counts.operations || 0}
+                <span className={getBadgeClass('utilisateurs')}>
+                  {(counts.technicians || 0) + (counts.operations || 0)}
                 </span>
               </button>
             </div>
@@ -442,6 +431,52 @@ export default function Sidebar({
             )}
           </button>
         </div>
+
+        {/* User Account Card & Logout Section */}
+        {currentUser && (
+          <div
+            className={`p-3 border-t flex items-center justify-between gap-2 shrink-0 ${
+              isDark ? 'border-slate-800 bg-slate-950' : 'border-slate-200 bg-slate-50'
+            }`}
+          >
+            {/* Account Card */}
+            <div
+              className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl border min-w-0 flex-1 ${
+                isDark
+                  ? 'bg-slate-900 border-slate-800 text-white'
+                  : 'bg-white border-slate-200/90 text-slate-900 shadow-2xs'
+              }`}
+            >
+              <div className="w-7 h-7 rounded-lg bg-emerald-700 text-white font-bold text-[10.5px] flex items-center justify-center shadow-2xs shrink-0">
+                {currentUser.avatar || 'RM'}
+              </div>
+              <div className="text-left leading-tight min-w-0 flex-1">
+                <div className={`text-[11.5px] font-bold truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                  {currentUser.name}
+                </div>
+                <div className={`text-[9.5px] font-semibold truncate ${isDark ? 'text-emerald-400' : 'text-emerald-800'}`}>
+                  {currentUser.titleFr || currentUser.role}
+                </div>
+              </div>
+            </div>
+
+            {/* Logout Button */}
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className={`p-2 rounded-xl transition shrink-0 cursor-pointer ${
+                  isDark
+                    ? 'text-slate-400 hover:text-rose-400 hover:bg-slate-800'
+                    : 'text-slate-500 hover:text-rose-600 hover:bg-rose-50'
+                }`}
+                title="Déconnexion"
+                aria-label="Déconnexion"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
       </aside>
     </>
   );

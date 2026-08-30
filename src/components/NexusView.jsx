@@ -1,4 +1,5 @@
 import React from 'react';
+import AnimatedPage from './AnimatedPage';
 import { GitBranch, Layers, ArrowRight, Package, Cpu, MapPin, Tag, Users, Wrench } from 'lucide-react';
 
 export default function NexusView({
@@ -13,7 +14,7 @@ export default function NexusView({
   stockItems
 }) {
   return (
-    <div className="space-y-6">
+    <AnimatedPage className="space-y-6">
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
@@ -220,6 +221,6 @@ export default function NexusView({
           </div>
         </div>
       </div>
-    </div>
+    </AnimatedPage>
   );
 }

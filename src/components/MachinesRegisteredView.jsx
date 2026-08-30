@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import AnimatedPage from './AnimatedPage';
 import CustomSelect from './CustomSelect';
-import {
+import {      
   Cpu,
   Plus,
   Search,
@@ -12,8 +13,9 @@ import {
   Layers,
   Wrench,
   CheckCircle2,
-  AlertTriangle
-} from 'lucide-react';
+  AlertTriangle,
+  Trash2, Edit2
+, ChevronLeft , ChevronRight , SlidersHorizontal , ArrowUpDown , ChevronDown , ArrowDown } from 'lucide-react';
 
 export default function MachinesRegisteredView({
   machines,
@@ -33,38 +35,101 @@ export default function MachinesRegisteredView({
   onOpenAddMachine,
   onNavigateToFamily,
   onNavigateToTemplate,
-  onNavigateToZone
+  onNavigateToZone,
+  onUpdateMachine,
+  onDeleteMachine
 }) {
+  const [toEdit, setToEdit] = useState(null);
+  const [toDelete, setToDelete] = useState(null);
+
   // Cascading templates based on selected family
   const availableTemplates = mchFamilyFilter === 'ALL'
     ? templates
     : templates.filter((t) => t.id_family === mchFamilyFilter);
 
-  const filteredMachines = machines
-    .filter((m) => {
-      if (mchFamilyFilter !== 'ALL' && m.id_family !== mchFamilyFilter) return false;
-      if (mchTemplateFilter !== 'ALL' && m.id_templates !== mchTemplateFilter) return false;
-      if (mchZoneFilter !== 'ALL' && m.id_zone_default !== mchZoneFilter) return false;
-      if (mchSearch) {
-        const q = mchSearch.toLowerCase();
-        return (
-          m.id_machine_registered.toLowerCase().includes(q) ||
-          m.designation.toLowerCase().includes(q) ||
-          m.id_family.toLowerCase().includes(q) ||
-          m.id_templates.toLowerCase().includes(q) ||
-          (m.id_zone_default && m.id_zone_default.toLowerCase().includes(q))
-        );
+  const filteredMachines = useMemo(() => {
+    return machines
+      .filter((m) => {
+        if (mchFamilyFilter !== 'ALL' && m.id_family !== mchFamilyFilter) return false;
+        if (mchTemplateFilter !== 'ALL' && m.id_templates !== mchTemplateFilter) return false;
+        if (mchZoneFilter !== 'ALL' && m.id_zone_default !== mchZoneFilter) return false;
+        if (mchSearch) {
+          const q = mchSearch.toLowerCase();
+          return (
+            m.id_machine_registered.toLowerCase().includes(q) ||
+            m.designation.toLowerCase().includes(q) ||
+            m.id_family.toLowerCase().includes(q) ||
+            m.id_templates.toLowerCase().includes(q) ||
+            (m.id_zone_default && m.id_zone_default.toLowerCase().includes(q))
+          );
+        }
+        return true;
+      });
+  }, [machines, mchFamilyFilter, mchTemplateFilter, mchZoneFilter, mchSearch]);
+
+  const [pageSize, setPageSize] = useState(100);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState('id_machine_registered');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+
+  const sortMenuRef = useRef(null);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [mchSearch, mchFamilyFilter, mchTemplateFilter, mchZoneFilter, sortField, sortOrder]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target)) {
+        setShowSortMenu(false);
       }
-      return true;
-    })
-    .sort((a, b) => {
-      const codeA = String(a.id_machine_registered || '');
-      const codeB = String(b.id_machine_registered || '');
-      return codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const sortedData = useMemo(() => {
+    if (!sortField) return filteredMachines;
+    return [...filteredMachines].sort((a, b) => {
+      let valA = a[sortField] || '';
+      let valB = b[sortField] || '';
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
     });
+  }, [filteredMachines, sortField, sortOrder]);
+
+  const totalItems = sortedData.length;
+  const totalPages = pageSize === 0 ? 1 : Math.ceil(totalItems / pageSize);
+  const effectivePageSize = pageSize === 0 ? totalItems : pageSize;
+  const startIndex = (currentPage - 1) * effectivePageSize;
+  const displayedData = pageSize === 0 ? sortedData : sortedData.slice(startIndex, startIndex + effectivePageSize);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const renderSortIcon = (field) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition shrink-0" />;
+    }
+    return sortOrder === 'asc' ? (
+      <ArrowUp className="w-3 h-3 text-cyan-700 shrink-0 font-bold" />
+    ) : (
+      <ArrowDown className="w-3 h-3 text-cyan-700 shrink-0 font-bold" />
+    );
+  };
 
   return (
-    <div className="space-y-4">
+    <AnimatedPage className="space-y-4">
       {/* Top Banner */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -143,6 +208,182 @@ export default function MachinesRegisteredView({
               className="w-full h-9 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none"
             />
           </div>
+
+        <div className="relative" ref={sortMenuRef}>
+          <button
+            onClick={() => setShowSortMenu(!showSortMenu)}
+            className={`h-9 px-3 rounded-xl border text-xs font-semibold transition flex items-center gap-2 cursor-pointer ${
+              showSortMenu || sortField !== 'id_machine_registered' || sortOrder !== 'asc'
+                ? 'bg-cyan-50 text-cyan-800 border-cyan-300 ring-1 ring-cyan-200 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
+          >
+            <ArrowUpDown className="w-3.5 h-3.5 text-cyan-600" />
+            <span className="hidden sm:inline">Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> ({sortOrder === 'asc' ? 'A→Z' : 'Z→A'})</span>
+            <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showSortMenu ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showSortMenu && (
+            <div className="absolute left-0 md:right-0 md:left-auto mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 p-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="flex items-center gap-1.5 text-slate-700 font-semibold">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-600" />
+                  Trier par
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-1.5 text-xs">
+                
+                <button
+                  onClick={() => {
+                    if (sortField === 'id_machine_registered') {
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('id_machine_registered');
+                      setSortOrder('asc');
+                    }
+                  }}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                    sortField === 'id_machine_registered'
+                      ? 'bg-cyan-50 text-cyan-800'
+                      : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>ID Machine</span>
+                  {sortField === 'id_machine_registered' && (
+                    sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    if (sortField === 'designation') {
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('designation');
+                      setSortOrder('asc');
+                    }
+                  }}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                    sortField === 'designation'
+                      ? 'bg-cyan-50 text-cyan-800'
+                      : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Désignation</span>
+                  {sortField === 'designation' && (
+                    sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    if (sortField === 'id_family') {
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('id_family');
+                      setSortOrder('asc');
+                    }
+                  }}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                    sortField === 'id_family'
+                      ? 'bg-cyan-50 text-cyan-800'
+                      : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Famille</span>
+                  {sortField === 'id_family' && (
+                    sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    if (sortField === 'id_templates') {
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('id_templates');
+                      setSortOrder('asc');
+                    }
+                  }}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                    sortField === 'id_templates'
+                      ? 'bg-cyan-50 text-cyan-800'
+                      : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Modèle</span>
+                  {sortField === 'id_templates' && (
+                    sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    if (sortField === 'id_zone_default') {
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('id_zone_default');
+                      setSortOrder('asc');
+                    }
+                  }}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                    sortField === 'id_zone_default'
+                      ? 'bg-cyan-50 text-cyan-800'
+                      : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Zone</span>
+                  {sortField === 'id_zone_default' && (
+                    sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    if (sortField === 'technician') {
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('technician');
+                      setSortOrder('asc');
+                    }
+                  }}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                    sortField === 'technician'
+                      ? 'bg-cyan-50 text-cyan-800'
+                      : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Technicien</span>
+                  {sortField === 'technician' && (
+                    sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    if (sortField === 'status') {
+                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('status');
+                      setSortOrder('asc');
+                    }
+                  }}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                    sortField === 'status'
+                      ? 'bg-cyan-50 text-cyan-800'
+                      : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Statut</span>
+                  {sortField === 'status' && (
+                    sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                  )}
+                </button>
+                
+              </div>
+            </div>
+          )}
+        </div>
+
+
 
           {/* Family Filter */}
           <div className="w-48">
@@ -225,9 +466,12 @@ export default function MachinesRegisteredView({
         </div>
 
         <div className="max-h-[60vh] overflow-y-auto overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse min-w-[900px]">
-            <thead className="sticky top-0 bg-slate-50/90 backdrop-blur-xs text-[10.5px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200 z-10 shadow-2xs">
+          <table className="w-full text-left text-xs border-collapse min-w-[940px]">
+            <thead className="sticky top-0 bg-slate-100 text-[10.5px] font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 z-10 shadow-2xs">
               <tr>
+                <th className="py-2.5 px-3 text-center w-12 text-slate-500 font-mono text-[10px] bg-slate-200/60 border-r border-slate-200 shrink-0">
+                  N°
+                </th>
                 <th className="py-2.5 px-4">
                   <span>CDE CODE</span> <span className="text-slate-400 font-normal text-[10px]">(B)</span>
                 </th>
@@ -250,10 +494,11 @@ export default function MachinesRegisteredView({
                   <span>STATUS</span> <span className="text-slate-400 font-normal text-[10px]">(H)</span>
                 </th>
                 <th className="py-2.5 px-4 text-right">Interventions</th>
+                <th className="py-2.5 px-4 text-right">ACTIONS</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredMachines.map((m) => {
+            <tbody className="divide-y divide-slate-200/80">
+              {displayedData.map((m, idx) => {
                 const fam = families.find((f) => f.id_family === m.id_family);
                 const tpl = templates.find((t) => t.id_templates === m.id_templates);
                 const zn = zones.find((z) => z.id_zone === m.id_zone_default);
@@ -265,8 +510,13 @@ export default function MachinesRegisteredView({
                 return (
                   <tr
                     key={m.id_machine_registered}
-                    className="even:bg-slate-50/50 odd:bg-white hover:bg-emerald-50/50 transition-colors"
+                    className="even:bg-slate-50/80 odd:bg-white hover:bg-emerald-50/50 border-b border-slate-200/70 transition-colors"
                   >
+                    {/* Row N° Column */}
+                    <td className="py-3 px-3 text-center font-mono text-[11px] font-bold text-slate-400 bg-slate-100/40 border-r border-slate-200/80 shrink-0">
+                      {idx + 1}
+                    </td>
+
                     {/* Cde Machine */}
                     <td className="py-3 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">
                       <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
@@ -349,6 +599,12 @@ export default function MachinesRegisteredView({
                     <td className="py-3 px-4 text-right font-mono font-bold text-slate-800 whitespace-nowrap">
                       {sortiesCount} sorties
                     </td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => setToEdit({ ...m })} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition"><Edit2 className="w-4 h-4" /></button>
+                        <button onClick={() => setToDelete(m)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -356,6 +612,118 @@ export default function MachinesRegisteredView({
           </table>
         </div>
       </div>
-    </div>
+    
+      
+      {/* Pagination Footer */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 mt-4">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-slate-600">Lignes par page :</span>
+          <div className="flex bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+            {[100, 200, 500, 0].map((size) => (
+              <button
+                key={size}
+                onClick={() => { setPageSize(size); setCurrentPage(1); }}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                  pageSize === size
+                    ? 'bg-white text-cyan-800 shadow-xs border border-slate-200/50'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                }`}
+              >
+                {size === 0 ? 'Tout' : size}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="text-xs font-semibold text-slate-500">
+            Affichage <b className="text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</b> à <b className="text-slate-900">{Math.min(startIndex + effectivePageSize, totalItems)}</b> sur <b className="text-slate-900">{totalItems}</b>
+          </div>
+          {pageSize !== 0 && totalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold transition"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                Précédent
+              </button>
+              <span className="px-2 font-mono text-xs font-bold text-slate-600">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold transition"
+              >
+                Suivant
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {toEdit && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200">
+            <h3 className="font-bold text-base text-slate-900 mb-1">Modifier Machine</h3>
+            <form onSubmit={(e) => { e.preventDefault(); onUpdateMachine(toEdit.id_machine_registered, toEdit); setToEdit(null); }} className="space-y-3">
+              <div><label className="text-[11px] font-bold text-slate-500">ID Machine</label>
+              <input type="text" value={toEdit.id_machine_registered} disabled className="mt-1 w-full h-10 px-3 rounded-xl bg-slate-100 text-slate-500 text-xs font-mono" /></div>
+              
+              <div><label className="text-[11px] font-bold text-slate-500">Désignation</label>
+              <input type="text" value={toEdit.designation} onChange={(e) => setToEdit({ ...toEdit, designation: e.target.value })} required className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs" /></div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500">Famille</label>
+                  <CustomSelect value={toEdit.id_family} onChange={(val) => {
+                    setToEdit({ ...toEdit, id_family: val, id_templates: '' });
+                  }} options={families.map(f => ({ value: f.id_family, label: f.id_family }))} />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500">Modèle (Template)</label>
+                  <CustomSelect value={toEdit.id_templates} onChange={(val) => setToEdit({ ...toEdit, id_templates: val })} options={templates.filter(t => t.id_family === toEdit.id_family).map(t => ({ value: t.id_templates, label: t.id_templates }))} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500">Zone par Défaut</label>
+                  <CustomSelect value={toEdit.id_zone_default} onChange={(val) => setToEdit({ ...toEdit, id_zone_default: val })} options={zones.map(z => ({ value: z.id_zone, label: z.id_zone }))} />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500">Technicien</label>
+                  <CustomSelect value={toEdit.technician} onChange={(val) => setToEdit({ ...toEdit, technician: val })} options={technicians.map(t => ({ value: t.nom, label: t.nom }))} />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-500">Statut</label>
+                <CustomSelect value={toEdit.status || 'En Service'} onChange={(val) => setToEdit({ ...toEdit, status: val })} options={[{value: 'En Service', label: 'En Service'}, {value: 'En Panne', label: 'En Panne'}, {value: 'Arrêt', label: 'Arrêt'}]} />
+              </div>
+
+              <div className="flex gap-2 pt-3">
+                <button type="button" onClick={() => setToEdit(null)} className="flex-1 h-10 rounded-xl bg-slate-100 text-xs font-medium">Annuler</button>
+                <button type="submit" className="flex-1 h-10 rounded-xl bg-blue-600 text-white text-xs font-semibold">Enregistrer</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {toDelete && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
+            <div className="flex flex-col items-center text-center"><AlertTriangle className="w-8 h-8 text-rose-600 mb-2" />
+            <h3 className="font-bold text-lg text-slate-900">Supprimer la machine ?</h3></div>
+            <p className="text-sm text-center text-slate-600">Confirmez-vous la suppression de <b>{toDelete.id_machine_registered}</b> ?</p>
+            <div className="flex gap-2"><button onClick={() => setToDelete(null)} className="flex-1 h-10 rounded-xl bg-slate-100 text-slate-700 text-xs font-medium">Annuler</button>
+            <button onClick={() => { onDeleteMachine(toDelete.id_machine_registered); setToDelete(null); }} className="flex-1 h-10 rounded-xl bg-rose-600 text-white text-xs font-semibold">Supprimer</button></div>
+          </div>
+        </div>
+      )}
+    </AnimatedPage>
   );
 }

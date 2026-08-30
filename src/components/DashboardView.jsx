@@ -1,4 +1,5 @@
 import React from 'react';
+import AnimatedPage from './AnimatedPage';
 import SortieEntreeIcon from './SortieEntreeIcon';
 import {
   Package,
@@ -32,7 +33,7 @@ export default function DashboardView({
   );
 
   return (
-    <div className="space-y-6">
+    <AnimatedPage className="space-y-6">
       {/* KPI Cards Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Articles */}
@@ -293,6 +294,6 @@ export default function DashboardView({
           </div>
         </div>
       </div>
-    </div>
+    </AnimatedPage>
   );
 }

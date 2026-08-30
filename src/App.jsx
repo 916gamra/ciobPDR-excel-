@@ -18,6 +18,7 @@ import Header from './components/Header';
 import LoadingSkeleton from './components/LoadingSkeleton';
 import SplashScreen from './components/SplashScreen';
 import LoginScreen from './components/LoginScreen';
+import Toast from './components/Toast';
 
 // Lazy load views for instant app startup & fast tab transitions
 const DashboardView = lazy(() => import('./components/DashboardView'));
@@ -28,8 +29,7 @@ const MachinesRegisteredView = lazy(() => import('./components/MachinesRegistere
 const FamilyView = lazy(() => import('./components/FamilyView'));
 const TemplatesView = lazy(() => import('./components/TemplatesView'));
 const ZonesView = lazy(() => import('./components/ZonesView'));
-const TechniciansView = lazy(() => import('./components/TechniciansView'));
-const OperationsView = lazy(() => import('./components/OperationsView'));
+const UtilisateursView = lazy(() => import('./components/UtilisateursView'));
 const SortieRapideView = lazy(() => import('./components/SortieRapideView'));
 const NexusView = lazy(() => import('./components/NexusView'));
 const GuideView = lazy(() => import('./components/GuideView'));
@@ -46,6 +46,18 @@ export default function App() {
   // Splash & Auth States
   const [showSplash, setShowSplash] = useState(true);
   const [currentUser, setCurrentUser] = useState(() => storageService.getItem('gmao_user_session') || null);
+
+  // Toast & Direct File Link States
+  const [toast, setToast] = useState({ message: '', type: 'success' });
+  const [linkedFileHandle, setLinkedFileHandle] = useState(null);
+  const [linkedFileName, setLinkedFileName] = useState('');
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast((prev) => (prev.message === message ? { message: '', type: 'success' } : prev));
+    }, 4500);
+  };
 
   // Navigation
   const [currentTab, setCurrentTab] = useState('stock');
@@ -322,52 +334,52 @@ export default function App() {
   const handleNavigateToStockFiltered = (typeId) => {
     setStockTypeFilter(typeId);
     setStockAlertOnly(false);
-    setCurrentTab('stock');
+    React.startTransition(() => setCurrentTab('stock'));
   };
 
   const handleNavigateToStockFilteredByRef = (refVal) => {
     setStockSearch(refVal);
     setStockTypeFilter('ALL');
-    setCurrentTab('stock');
+    React.startTransition(() => setCurrentTab('stock'));
   };
 
   const handleNavigateToDesignationsFiltered = (typeId) => {
     setDiagTypeFilter(typeId);
-    setCurrentTab('designations');
+    React.startTransition(() => setCurrentTab('designations'));
   };
 
   const handleNavigateToDiagFiltered = handleNavigateToDesignationsFiltered;
 
   const handleNavigateToTemplatesFiltered = (familyId) => {
     setTemplateFamilyFilter(familyId);
-    setCurrentTab('templates');
+    React.startTransition(() => setCurrentTab('templates'));
   };
 
   const handleNavigateToMachinesByFamily = (familyId) => {
     setMchFamilyFilter(familyId);
     setMchTemplateFilter('ALL');
-    setCurrentTab('machines');
+    React.startTransition(() => setCurrentTab('machines'));
   };
 
   const handleNavigateToMachinesByTemplate = (familyId, templateId) => {
     setMchFamilyFilter(familyId);
     setMchTemplateFilter(templateId);
-    setCurrentTab('machines');
+    React.startTransition(() => setCurrentTab('machines'));
   };
 
   const handleNavigateToTechsByZone = (zoneId) => {
     setTechZoneFilter(zoneId);
-    setCurrentTab('technicians');
+    React.startTransition(() => setCurrentTab('technicians'));
   };
 
   const handleNavigateToOpsByZone = (zoneId) => {
     setOpZoneFilter(zoneId);
-    setCurrentTab('operations');
+    React.startTransition(() => setCurrentTab('operations'));
   };
 
   const handleNavigateToMachinesByZone = (zoneId) => {
     setMchZoneFilter(zoneId);
-    setCurrentTab('machines');
+    React.startTransition(() => setCurrentTab('machines'));
   };
 
   // ADD ENTITY HANDLERS
@@ -405,8 +417,96 @@ export default function App() {
     setZones((prev) => [...prev, newZone]);
   };
 
+    // ===== UPDATE & DELETE HANDLERS =====
+  const handleUpdateZone = (id, updatedZone) => {
+    setZones(prev => prev.map(z => z.id_zone === id ? updatedZone : z));
+    const oldZone = zones.find(z => z.id_zone === id);
+    if (oldZone && oldZone.id_zone !== updatedZone.id_zone) {
+      setTechnicians(prev => prev.map(t => t.id_zone === id ? { ...t, id_zone: updatedZone.id_zone } : t));
+      setOperations(prev => prev.map(o => o.id_zone === id ? { ...o, id_zone: updatedZone.id_zone } : o));
+      setMachines(prev => prev.map(m => m.id_zone_default === id ? { ...m, id_zone_default: updatedZone.id_zone } : m));
+      setMouvements(prev => prev.map(m => m.id_zone === id ? { ...m, id_zone: updatedZone.id_zone } : m));
+    }
+  };
+  const handleDeleteZone = (id) => setZones(prev => prev.filter(z => z.id_zone !== id));
+
+  const handleUpdateOperation = (id, updatedOp) => {
+    setOperations(prev => prev.map(o => o.id_operation === id ? updatedOp : o));
+    const oldOp = operations.find(o => o.id_operation === id);
+    if (oldOp && oldOp.nom !== updatedOp.nom) {
+      setMouvements(prev => prev.map(m => m.operation === oldOp.nom ? { ...m, operation: updatedOp.nom } : m));
+    }
+  };
+  const handleDeleteOperation = (id) => setOperations(prev => prev.filter(o => o.id_operation !== id));
+
+  const handleUpdateMachine = (id, updatedMch) => {
+    setMachines(prev => prev.map(m => m.id_machine_registered === id ? updatedMch : m));
+    if (id !== updatedMch.id_machine_registered) {
+      setMouvements(prev => prev.map(m => m.id_machine_registered === id ? { ...m, id_machine_registered: updatedMch.id_machine_registered } : m));
+    }
+  };
+  const handleDeleteMachine = (id) => setMachines(prev => prev.filter(m => m.id_machine_registered !== id));
+
+  const handleUpdateType = (id, updatedType) => {
+    setTypes(prev => prev.map(t => t.id_type === id ? updatedType : t));
+    if (id !== updatedType.id_type) {
+      setRawStock(prev => prev.map(s => s.type === id || s.id_type === id ? { ...s, type: updatedType.id_type, id_type: updatedType.id_type } : s));
+    }
+  };
+  const handleDeleteType = (id) => setTypes(prev => prev.filter(t => t.id_type !== id));
+
+  const handleUpdateDesignation = (id, updatedDesig) => {
+    setRawStock(prev => prev.map(s => s.ref === id ? { 
+      ...s, 
+      ref: updatedDesig.ref, 
+      designation: updatedDesig.designation, 
+      type: updatedDesig.id_type, 
+      id_type: updatedDesig.id_type,
+      stockInitial: Number(updatedDesig.stockInitial),
+      seuil: Number(updatedDesig.seuil),
+      emplacement: updatedDesig.emplacement
+    } : s));
+  };
+  const handleDeleteDesignation = (id) => setRawStock(prev => prev.filter(s => s.ref !== id));
+  const handleUpdateDiagnostic = handleUpdateDesignation;
+  const handleDeleteDiagnostic = handleDeleteDesignation;
+
+  const handleUpdateFamily = (id, updatedFamily) => {
+    setFamilies(prev => prev.map(f => f.id_family === id ? updatedFamily : f));
+    if (id !== updatedFamily.id_family) {
+      setTemplates(prev => prev.map(t => t.id_family === id ? { ...t, id_family: updatedFamily.id_family } : t));
+      setMachines(prev => prev.map(m => m.id_family === id ? { ...m, id_family: updatedFamily.id_family } : m));
+    }
+  };
+  const handleDeleteFamily = (id) => setFamilies(prev => prev.filter(f => f.id_family !== id));
+
+  const handleUpdateTemplate = (id, updatedTemplate) => {
+    setTemplates(prev => prev.map(t => t.id_templates === id ? updatedTemplate : t));
+    if (id !== updatedTemplate.id_templates) {
+      setMachines(prev => prev.map(m => m.id_templates === id ? { ...m, id_templates: updatedTemplate.id_templates } : m));
+    }
+  };
+  const handleDeleteTemplate = (id) => setTemplates(prev => prev.filter(t => t.id_templates !== id));
+  // ===================================
+
   const handleAddTechnician = (newTech) => {
     setTechnicians((prev) => [...prev, newTech]);
+  };
+
+  const handleUpdateTechnician = (id, updatedTech) => {
+    setTechnicians((prev) => prev.map((t) => t.id_technician === id ? updatedTech : t));
+    
+    // Cascade update to Machines (technician field) if name changed
+    const oldTech = technicians.find(t => t.id_technician === id);
+    if (oldTech && oldTech.nom !== updatedTech.nom) {
+      setMachines((prev) => prev.map(m => m.technician === oldTech.nom ? { ...m, technician: updatedTech.nom } : m));
+      // Cascade update to Mouvements if it stores the name
+      setMouvements((prev) => prev.map(m => m.technicien === oldTech.nom ? { ...m, technicien: updatedTech.nom } : m));
+    }
+  };
+
+  const handleDeleteTechnician = (id) => {
+    setTechnicians((prev) => prev.filter((t) => t.id_technician !== id));
   };
 
   const handleAddOperation = (newOp) => {
@@ -437,14 +537,54 @@ export default function App() {
 
   const handleQuickSortie = (article) => {
     // Navigate to Sortie Rapide tab
-    setCurrentTab('sortie');
+    React.startTransition(() => setCurrentTab('sortie'));
   };
 
-  // EXCEL EXPORT HANDLER
-  const handleExportExcel = () => {
+  // AUTOMATIC BACKUP CREATOR
+  const createAutomaticBackup = (reason = 'Importation Excel') => {
+    try {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('fr-FR') + ' À ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const backupKey = `gmao_backup_${now.getTime()}`;
+      const backupData = {
+        timestamp: now.toISOString(),
+        dateFormatted: dateStr,
+        reason,
+        data: {
+          rawStock,
+          mouvements,
+          machines,
+          families,
+          templates,
+          zones,
+          technicians,
+          operations,
+          types,
+          diagnostics
+        }
+      };
+
+      storageService.setItem(backupKey, backupData);
+
+      const backupList = storageService.getItem('gmao_backups_list') || [];
+      const updatedList = [
+        { key: backupKey, date: dateStr, reason, itemsCount: rawStock.length, mvtsCount: mouvements.length },
+        ...backupList
+      ].slice(0, 15);
+
+      storageService.setItem('gmao_backups_list', updatedList);
+      return dateStr;
+    } catch (err) {
+      console.error('Backup creation error:', err);
+      return new Date().toLocaleString('fr-FR');
+    }
+  };
+
+  // HELPER TO BUILD COMPLETE EXCEL WORKBOOK
+  const buildWorkbook = () => {
     const wb = XLSX.utils.book_new();
 
-    // 1. Stock (Articles)
+    // 1. Stock_Actuel
     const stockData = stockItems.map((s) => ({
       Ref: s.ref,
       Désignation: s.designation,
@@ -458,10 +598,9 @@ export default function App() {
       Alerte: s.alerte,
       Emplacement: s.emplacement
     }));
-    const wsStock = XLSX.utils.json_to_sheet(stockData);
-    XLSX.utils.book_append_sheet(wb, wsStock, 'Stock_Actuel');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(stockData), 'Stock_Actuel');
 
-    // 2. Machines Registered
+    // 2. Machines_Registered
     const mchData = machines.map((m) => ({
       'Code Machine (Ref)': m.id_machine_registered,
       Désignation: m.designation,
@@ -471,48 +610,49 @@ export default function App() {
       Technicien: m.technician,
       Statut: m.status
     }));
-    const wsMch = XLSX.utils.json_to_sheet(mchData);
-    XLSX.utils.book_append_sheet(wb, wsMch, 'Machines_Registered');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mchData), 'Machines_Registered');
 
     // 3. Mouvements
-    const wsMvt = XLSX.utils.json_to_sheet(mouvements);
-    XLSX.utils.book_append_sheet(wb, wsMvt, 'Mouvements');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mouvements), 'Mouvements');
 
     // 4. Types
-    const wsTypes = XLSX.utils.json_to_sheet(types);
-    XLSX.utils.book_append_sheet(wb, wsTypes, 'Types');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(types), 'Types');
 
     // 5. Diagnostics
-    const wsDiag = XLSX.utils.json_to_sheet(diagnostics);
-    XLSX.utils.book_append_sheet(wb, wsDiag, 'Diagnostics');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(diagnostics), 'Diagnostics');
 
     // 6. Families
-    const wsFam = XLSX.utils.json_to_sheet(families);
-    XLSX.utils.book_append_sheet(wb, wsFam, 'Families');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(families), 'Families');
 
     // 7. Templates
-    const wsTpl = XLSX.utils.json_to_sheet(templates);
-    XLSX.utils.book_append_sheet(wb, wsTpl, 'Templates');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(templates), 'Templates');
 
     // 8. Zones
-    const wsZones = XLSX.utils.json_to_sheet(zones);
-    XLSX.utils.book_append_sheet(wb, wsZones, 'Zones');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(zones), 'Zones');
 
     // 9. Technicians
-    const wsTech = XLSX.utils.json_to_sheet(technicians);
-    XLSX.utils.book_append_sheet(wb, wsTech, 'Technicians');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(technicians), 'Technicians');
 
     // 10. Operations
-    const wsOps = XLSX.utils.json_to_sheet(operations);
-    XLSX.utils.book_append_sheet(wb, wsOps, 'Operations');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(operations), 'Operations');
 
-    XLSX.writeFile(wb, `GMAO_Light_Export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    return wb;
   };
 
-  // FILE IMPORT HANDLER
+  // EXCEL EXPORT HANDLER
+  const handleExportExcel = () => {
+    const wb = buildWorkbook();
+    XLSX.writeFile(wb, `GMAO_Light_Export_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    showToast('Export Excel généré et téléchargé avec succès !', 'success');
+  };
+
+  // FILE IMPORT HANDLER WITH AUTOMATIC DATED BACKUP
   const handleImportFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Create Automatic Dated Backup before overwriting data
+    const backupDate = createAutomaticBackup(`Importation : ${file.name}`);
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -527,7 +667,7 @@ export default function App() {
           if (json.Zones) setZones(json.Zones);
           if (json.Technicians) setTechnicians(json.Technicians);
           if (json.Operations) setOperations(json.Operations);
-          alert('Import JSON réussi !');
+          showToast(`Import JSON réussi ! (Backup daté du ${backupDate})`, 'success');
         } else {
           const data = new Uint8Array(evt.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
@@ -543,11 +683,23 @@ export default function App() {
             const parsedMvt = XLSX.utils.sheet_to_json(workbook.Sheets['Mouvements']);
             if (parsedMvt.length > 0) setMouvements(parsedMvt);
           }
-          alert('Import Excel réussi !');
+          if (workbook.SheetNames.includes('Types')) {
+            const parsedTypes = XLSX.utils.sheet_to_json(workbook.Sheets['Types']);
+            if (parsedTypes.length > 0) setTypes(parsedTypes);
+          }
+          if (workbook.SheetNames.includes('Families')) {
+            const parsedFam = XLSX.utils.sheet_to_json(workbook.Sheets['Families']);
+            if (parsedFam.length > 0) setFamilies(parsedFam);
+          }
+          if (workbook.SheetNames.includes('Zones')) {
+            const parsedZones = XLSX.utils.sheet_to_json(workbook.Sheets['Zones']);
+            if (parsedZones.length > 0) setZones(parsedZones);
+          }
+          showToast(`Import Excel réussi via XLSX.read ! (Backup daté du ${backupDate})`, 'success');
         }
       } catch (err) {
         console.error('Import error:', err);
-        alert('Erreur lors de l\'import du fichier.');
+        showToast('Erreur lors de l\'importation du fichier.', 'error');
       }
     };
 
@@ -555,6 +707,80 @@ export default function App() {
       reader.readAsText(file);
     } else {
       reader.readAsArrayBuffer(file);
+    }
+  };
+
+  // DIRECT FILE SYSTEM ACCESS API LINK (NO EXPORT DOWNLOAD NEEDED)
+  const handleDirectFileLink = async () => {
+    if (!('showOpenFilePicker' in window)) {
+      showToast('Liaison directe disponible sur Chrome/Edge. Basculement vers l\'import classique.', 'info');
+      fileInputRef.current?.click();
+      return;
+    }
+
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [
+          {
+            description: 'Fichiers Excel GMAO (.xlsx)',
+            accept: {
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx', '.xls']
+            }
+          }
+        ],
+        multiple: false
+      });
+
+      const file = await handle.getFile();
+      const backupDate = createAutomaticBackup(`Avant Liaison Directe : ${file.name}`);
+
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+
+      if (workbook.SheetNames.includes('Stock_Actuel')) {
+        const parsedStock = XLSX.utils.sheet_to_json(workbook.Sheets['Stock_Actuel']);
+        if (parsedStock.length > 0) setRawStock(parsedStock);
+      }
+      if (workbook.SheetNames.includes('Machines_Registered')) {
+        const parsedMch = XLSX.utils.sheet_to_json(workbook.Sheets['Machines_Registered']);
+        if (parsedMch.length > 0) setMachines(parsedMch);
+      }
+      if (workbook.SheetNames.includes('Mouvements')) {
+        const parsedMvt = XLSX.utils.sheet_to_json(workbook.Sheets['Mouvements']);
+        if (parsedMvt.length > 0) setMouvements(parsedMvt);
+      }
+
+      setLinkedFileHandle(handle);
+      setLinkedFileName(file.name);
+      showToast(`🔗 Fichier "${file.name}" lié en direct ! (Backup sauvegardé : ${backupDate})`, 'success');
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error('Direct link error:', err);
+        showToast('Erreur lors de l\'accès au fichier sélectionné.', 'error');
+      }
+    }
+  };
+
+  // DIRECT FILE SYSTEM SAVE HANDLER
+  const handleDirectSave = async () => {
+    if (!linkedFileHandle) {
+      handleExportExcel();
+      return;
+    }
+
+    try {
+      const wb = buildWorkbook();
+      const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+      const writable = await linkedFileHandle.createWritable();
+      await writable.write(wbOut);
+      await writable.close();
+
+      showToast(`💾 Écriture directe réussie dans "${linkedFileName}" !`, 'success');
+    } catch (err) {
+      console.error('Direct save error:', err);
+      showToast('Écriture directe impossible. Exportation standard...', 'info');
+      handleExportExcel();
     }
   };
 
@@ -586,6 +812,11 @@ export default function App() {
           technicians: technicians.length,
           operations: operations.length
         }}
+        currentUser={currentUser}
+        onLogout={() => {
+          storageService.removeItem('gmao_user_session');
+          setCurrentUser(null);
+        }}
       />
 
       {/* Header Bar */}
@@ -595,16 +826,14 @@ export default function App() {
         fileInputRef={fileInputRef}
         handleImportFile={handleImportFile}
         handleExportExcel={handleExportExcel}
-        currentUser={currentUser}
-        onLogout={() => {
-          storageService.removeItem('gmao_user_session');
-          setCurrentUser(null);
-        }}
+        linkedFileName={linkedFileName}
+        onDirectLink={handleDirectFileLink}
+        onDirectSave={handleDirectSave}
       />
 
       {/* Main Content Area - Full Fluid Width with Lazy Loading Suspense */}
       <main className="flex-1 p-4 md:p-6 lg:p-8 w-full">
-        <Suspense fallback={<LoadingSkeleton />}>
+        <Suspense fallback={<LoadingSkeleton currentTab={currentTab} />}>
           {currentTab === 'dashboard' && (
             <DashboardView
               stockItems={stockItems}
@@ -615,9 +844,9 @@ export default function App() {
               zones={zones}
               technicians={technicians}
               stockKPIs={stockKPIs}
-              onNavigateToStock={() => setCurrentTab('stock')}
-              onNavigateToMachines={() => setCurrentTab('machines')}
-              onNavigateToSortie={() => setCurrentTab('sortie')}
+              onNavigateToStock={() => React.startTransition(() => setCurrentTab('stock'))}
+              onNavigateToMachines={() => React.startTransition(() => setCurrentTab('machines'))}
+              onNavigateToSortie={() => React.startTransition(() => setCurrentTab('sortie'))}
               onQuickSortie={handleQuickSortie}
             />
           )}
@@ -646,6 +875,8 @@ export default function App() {
               designations={designations}
               stockItems={stockItems}
               onAddType={handleAddType}
+              onUpdateType={handleUpdateType}
+              onDeleteType={handleDeleteType}
               onNavigateToStockFiltered={handleNavigateToStockFiltered}
               onNavigateToDesignationsFiltered={handleNavigateToDesignationsFiltered}
             />
@@ -659,7 +890,9 @@ export default function App() {
               desigTypeFilter={diagTypeFilter}
               setDesigTypeFilter={setDiagTypeFilter}
               onAddDesignation={handleAddDesignation}
-              onOpenAddTypeModal={() => setCurrentTab('types')}
+              onUpdateDesignation={handleUpdateDesignation}
+              onDeleteDesignation={handleDeleteDesignation}
+              onOpenAddTypeModal={() => React.startTransition(() => setCurrentTab('types'))}
               onNavigateToStockFilteredByRef={handleNavigateToStockFilteredByRef}
             />
           )}
@@ -667,6 +900,8 @@ export default function App() {
           {currentTab === 'machines' && (
             <MachinesRegisteredView
               machines={machines}
+              onUpdateMachine={handleUpdateMachine}
+              onDeleteMachine={handleDeleteMachine}
               families={families}
               templates={templates}
               zones={zones}
@@ -693,6 +928,8 @@ export default function App() {
               templates={templates}
               machines={machines}
               onAddFamily={handleAddFamily}
+              onUpdateFamily={handleUpdateFamily}
+              onDeleteFamily={handleDeleteFamily}
               onNavigateToTemplatesFiltered={handleNavigateToTemplatesFiltered}
               onNavigateToMachinesByFamily={handleNavigateToMachinesByFamily}
             />
@@ -706,7 +943,9 @@ export default function App() {
               templateFamilyFilter={templateFamilyFilter}
               setTemplateFamilyFilter={setTemplateFamilyFilter}
               onAddTemplate={handleAddTemplate}
-              onOpenAddFamilyModal={() => setCurrentTab('families')}
+              onUpdateTemplate={handleUpdateTemplate}
+              onDeleteTemplate={handleDeleteTemplate}
+              onOpenAddFamilyModal={() => React.startTransition(() => setCurrentTab('families'))}
               onNavigateToMachinesByTemplate={handleNavigateToMachinesByTemplate}
               onNavigateToFamilyFiltered={handleNavigateToTemplatesFiltered}
             />
@@ -719,35 +958,27 @@ export default function App() {
               operations={operations}
               machines={machines}
               onAddZone={handleAddZone}
+              onUpdateZone={handleUpdateZone}
+              onDeleteZone={handleDeleteZone}
               onNavigateToTechsByZone={handleNavigateToTechsByZone}
               onNavigateToOpsByZone={handleNavigateToOpsByZone}
               onNavigateToMachinesByZone={handleNavigateToMachinesByZone}
             />
           )}
 
-          {currentTab === 'technicians' && (
-            <TechniciansView
+          {currentTab === 'utilisateurs' && (
+            <UtilisateursView
               technicians={technicians}
-              zones={zones}
-              mouvements={mouvements}
-              techZoneFilter={techZoneFilter}
-              setTechZoneFilter={setTechZoneFilter}
-              onAddTechnician={handleAddTechnician}
-              onOpenAddZoneModal={() => setCurrentTab('zones')}
-              onNavigateToZoneFiltered={handleNavigateToTechsByZone}
-            />
-          )}
-
-          {currentTab === 'operations' && (
-            <OperationsView
               operations={operations}
               zones={zones}
               mouvements={mouvements}
-              opZoneFilter={opZoneFilter}
-              setOpZoneFilter={setOpZoneFilter}
+              onAddTechnician={handleAddTechnician}
+              onUpdateTechnician={handleUpdateTechnician}
+              onDeleteTechnician={handleDeleteTechnician}
               onAddOperation={handleAddOperation}
-              onOpenAddZoneModal={() => setCurrentTab('zones')}
-              onNavigateToZoneFiltered={handleNavigateToOpsByZone}
+              onUpdateOperation={handleUpdateOperation}
+              onDeleteOperation={handleDeleteOperation}
+              onOpenAddZoneModal={() => React.startTransition(() => setCurrentTab('zones'))}
             />
           )}
 
@@ -763,7 +994,7 @@ export default function App() {
               onDeleteMouvement={handleDeleteMouvement}
               onOpenAddArticle={() => setShowAddArticleModal(true)}
               onOpenAddMachine={() => setShowAddMachineModal(true)}
-              onOpenAddZone={() => setCurrentTab('zones')}
+              onOpenAddZone={() => React.startTransition(() => setCurrentTab('zones'))}
             />
           )}
 
@@ -783,7 +1014,35 @@ export default function App() {
 
           {currentTab === 'guide' && <GuideView />}
 
-          {currentTab === 'settings' && <SettingsView />}
+          {currentTab === 'settings' && (
+            <SettingsView
+              rawStock={rawStock}
+              setRawStock={setRawStock}
+              mouvements={mouvements}
+              setMouvements={setMouvements}
+              machines={machines}
+              setMachines={setMachines}
+              families={families}
+              setFamilies={setFamilies}
+              templates={templates}
+              setTemplates={setTemplates}
+              zones={zones}
+              setZones={setZones}
+              technicians={technicians}
+              setTechnicians={setTechnicians}
+              operations={operations}
+              setOperations={setOperations}
+              types={types}
+              setTypes={setTypes}
+              showToast={showToast}
+              linkedFileHandle={linkedFileHandle}
+              setLinkedFileHandle={setLinkedFileHandle}
+              linkedFileName={linkedFileName}
+              setLinkedFileName={setLinkedFileName}
+              onDirectLink={handleDirectFileLink}
+              onDirectSave={handleDirectSave}
+            />
+          )}
         </Suspense>
       </main>
 
@@ -796,7 +1055,7 @@ export default function App() {
           onAddArticle={handleAddArticle}
           onOpenAddTypeModal={() => {
             setShowAddArticleModal(false);
-            setCurrentTab('types');
+            React.startTransition(() => setCurrentTab('types'));
           }}
         />
 
@@ -809,24 +1068,35 @@ export default function App() {
           technicians={technicians}
           machines={machines}
           onAddMachine={handleAddMachine}
+              onUpdateMachine={handleUpdateMachine}
+              onDeleteMachine={handleDeleteMachine}
           onOpenAddFamilyModal={() => {
             setShowAddMachineModal(false);
-            setCurrentTab('families');
+            React.startTransition(() => setCurrentTab('families'));
           }}
           onOpenAddTemplateModal={() => {
             setShowAddMachineModal(false);
-            setCurrentTab('templates');
+            React.startTransition(() => setCurrentTab('templates'));
           }}
           onOpenAddZoneModal={() => {
             setShowAddMachineModal(false);
-            setCurrentTab('zones');
+            React.startTransition(() => setCurrentTab('zones'));
           }}
           onOpenAddTechModal={() => {
             setShowAddMachineModal(false);
-            setCurrentTab('technicians');
+            React.startTransition(() => setCurrentTab('technicians'));
           }}
         />
       </Suspense>
+
+      {/* Global Notification Toast */}
+      {toast.message && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ message: '', type: 'success' })}
+        />
+      )}
     </div>
   );
 }
