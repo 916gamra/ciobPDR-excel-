@@ -1,15 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Plus, X } from 'lucide-react';
 
-export default function AddZoneModal({
-  isOpen,
-  onClose,
-  zones = [],
-  onAddZone
-}) {
+export default function AddZoneModal({ isOpen, onClose, zones = [], onAddZone }) {
   const [form, setForm] = useState({
     id_zone: '',
-    libelle: ''
+    libelle: '',
   });
   const [error, setError] = useState('');
 
@@ -29,7 +24,7 @@ export default function AddZoneModal({
     if (isOpen) {
       setForm({
         id_zone: getNextZoneId(),
-        libelle: ''
+        libelle: '',
       });
       setError('');
     }
@@ -51,7 +46,7 @@ export default function AddZoneModal({
 
     onAddZone({
       id_zone: form.id_zone.trim().toUpperCase(),
-      libelle: form.libelle.trim()
+      libelle: form.libelle.trim(),
     });
 
     onClose();

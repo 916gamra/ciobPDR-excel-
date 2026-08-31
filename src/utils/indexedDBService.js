@@ -62,5 +62,5 @@ export const indexedDBService = {
       console.warn('[IndexedDB] Fallback setItem error:', e);
       return false;
     }
-  }
+  },
 };

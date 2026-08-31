@@ -11,13 +11,13 @@ export default function AddUserModal({
   onAddTechnician,
   onAddOperation,
   initialType = 'TECHNICIEN', // 'TECHNICIEN' | 'OPERATEUR' | 'CHEF'
-  onOpenAddZoneModal
+  onOpenAddZoneModal,
 }) {
   const [profileType, setProfileType] = useState(initialType);
   const [form, setForm] = useState({
     nom: '',
     id_zone: zones[0]?.id_zone || '',
-    specialite: ''
+    specialite: '',
   });
   const [error, setError] = useState('');
 
@@ -62,7 +62,12 @@ export default function AddUserModal({
       setForm({
         nom: '',
         id_zone: zones[0]?.id_zone || '',
-        specialite: initialType === 'TECHNICIEN' ? 'Mécanique / Électrique' : (initialType === 'CHEF' ? 'Superviseur Atelier' : 'Opérateur de Ligne')
+        specialite:
+          initialType === 'TECHNICIEN'
+            ? 'Mécanique / Électrique'
+            : initialType === 'CHEF'
+              ? 'Superviseur Atelier'
+              : 'Opérateur de Ligne',
       });
       setError('');
     }
@@ -88,7 +93,7 @@ export default function AddUserModal({
         id_technician: currentId,
         nom: form.nom.trim(),
         id_zone: form.id_zone,
-        specialite: form.specialite.trim() || 'Spécialiste GMAO'
+        specialite: form.specialite.trim() || 'Spécialiste GMAO',
       });
     } else {
       if (operations.some((o) => o.nom.toLowerCase().trim() === form.nom.toLowerCase().trim())) {
@@ -99,7 +104,7 @@ export default function AddUserModal({
         id_operation: currentId,
         nom: form.nom.trim(),
         id_zone: form.id_zone,
-        type_profil: profileType === 'CHEF' ? 'CHEF' : 'OPERATEUR'
+        type_profil: profileType === 'CHEF' ? 'CHEF' : 'OPERATEUR',
       });
     }
 
@@ -117,7 +122,11 @@ export default function AddUserModal({
             </div>
             <div>
               <h3 className="font-bold text-sm leading-none">
-                {profileType === 'TECHNICIEN' ? 'Nouveau Technicien' : profileType === 'CHEF' ? 'Nouveau Chef d\'Équipe' : 'Nouvelle Opération / Opérateur'}
+                {profileType === 'TECHNICIEN'
+                  ? 'Nouveau Technicien'
+                  : profileType === 'CHEF'
+                    ? "Nouveau Chef d'Équipe"
+                    : 'Nouvelle Opération / Opérateur'}
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5">
                 Création rapide liée aux zones et au workflow
@@ -219,7 +228,13 @@ export default function AddUserModal({
               type="text"
               required
               autoFocus
-              placeholder={profileType === 'TECHNICIEN' ? 'ex: Karim Bennani' : profileType === 'CHEF' ? 'ex: Chef Amine Tazi' : 'ex: Nettoyage et Graissage Ligne 1'}
+              placeholder={
+                profileType === 'TECHNICIEN'
+                  ? 'ex: Karim Bennani'
+                  : profileType === 'CHEF'
+                    ? 'ex: Chef Amine Tazi'
+                    : 'ex: Nettoyage et Graissage Ligne 1'
+              }
               value={form.nom}
               onChange={(e) => setForm({ ...form, nom: e.target.value })}
               className="w-full h-9 px-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
@@ -250,7 +265,7 @@ export default function AddUserModal({
               onChange={(val) => setForm({ ...form, id_zone: val })}
               options={zones.map((z) => ({
                 value: z.id_zone,
-                label: `${z.libelle} (${z.id_zone})`
+                label: `${z.libelle} (${z.id_zone})`,
               }))}
               placeholder="-- Choisir une Zone --"
             />

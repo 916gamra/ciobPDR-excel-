@@ -25,7 +25,9 @@ export default function DashboardSkeleton() {
             </div>
 
             {/* Icon Container */}
-            <div className={`w-11 h-11 rounded-2xl ${card.iconBg} flex items-center justify-center shrink-0`}>
+            <div
+              className={`w-11 h-11 rounded-2xl ${card.iconBg} flex items-center justify-center shrink-0`}
+            >
               <div className="w-5 h-5 bg-slate-300/60 rounded-lg" />
             </div>
           </div>
@@ -76,26 +78,50 @@ export default function DashboardSkeleton() {
             <table className="w-full text-left text-xs border-collapse min-w-[550px]">
               <thead className="bg-slate-100/80 border-b border-slate-200">
                 <tr>
-                  <th className="py-2.5 px-3 w-16"><div className="h-3 w-10 bg-slate-300/70 rounded" /></th>
-                  <th className="py-2.5 px-3"><div className="h-3 w-24 bg-slate-300/70 rounded" /></th>
-                  <th className="py-2.5 px-2 text-right"><div className="h-3 w-12 bg-slate-300/70 rounded ml-auto" /></th>
-                  <th className="py-2.5 px-2 text-right"><div className="h-3 w-10 bg-slate-300/70 rounded ml-auto" /></th>
-                  <th className="py-2.5 px-3 text-center"><div className="h-3 w-14 bg-slate-300/70 rounded mx-auto" /></th>
-                  <th className="py-2.5 px-3"><div className="h-3 w-16 bg-slate-300/70 rounded" /></th>
-                  <th className="py-2.5 px-3 text-center"><div className="h-3 w-12 bg-slate-300/70 rounded mx-auto" /></th>
+                  <th className="py-2.5 px-3 w-16">
+                    <div className="h-3 w-10 bg-slate-300/70 rounded" />
+                  </th>
+                  <th className="py-2.5 px-3">
+                    <div className="h-3 w-24 bg-slate-300/70 rounded" />
+                  </th>
+                  <th className="py-2.5 px-2 text-right">
+                    <div className="h-3 w-12 bg-slate-300/70 rounded ml-auto" />
+                  </th>
+                  <th className="py-2.5 px-2 text-right">
+                    <div className="h-3 w-10 bg-slate-300/70 rounded ml-auto" />
+                  </th>
+                  <th className="py-2.5 px-3 text-center">
+                    <div className="h-3 w-14 bg-slate-300/70 rounded mx-auto" />
+                  </th>
+                  <th className="py-2.5 px-3">
+                    <div className="h-3 w-16 bg-slate-300/70 rounded" />
+                  </th>
+                  <th className="py-2.5 px-3 text-center">
+                    <div className="h-3 w-12 bg-slate-300/70 rounded mx-auto" />
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {[...Array(6)].map((_, rIdx) => (
                   <tr key={`skel-row-${rIdx}`} className="even:bg-slate-50/50 odd:bg-white">
-                    <td className="py-3 px-3"><div className="h-4 w-14 bg-slate-200/80 rounded-md font-mono" /></td>
-                    <td className="py-3 px-3"><div className="h-4 w-36 bg-slate-200/70 rounded-md" /></td>
-                    <td className="py-3 px-2 text-right"><div className="h-4 w-8 bg-rose-200/70 rounded-md ml-auto" /></td>
-                    <td className="py-3 px-2 text-right"><div className="h-4 w-8 bg-slate-200/60 rounded-md ml-auto" /></td>
+                    <td className="py-3 px-3">
+                      <div className="h-4 w-14 bg-slate-200/80 rounded-md font-mono" />
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="h-4 w-36 bg-slate-200/70 rounded-md" />
+                    </td>
+                    <td className="py-3 px-2 text-right">
+                      <div className="h-4 w-8 bg-rose-200/70 rounded-md ml-auto" />
+                    </td>
+                    <td className="py-3 px-2 text-right">
+                      <div className="h-4 w-8 bg-slate-200/60 rounded-md ml-auto" />
+                    </td>
                     <td className="py-3 px-3 text-center">
                       <div className="h-5 w-16 bg-amber-100/80 rounded-full mx-auto" />
                     </td>
-                    <td className="py-3 px-3"><div className="h-4 w-12 bg-slate-200/60 rounded" /></td>
+                    <td className="py-3 px-3">
+                      <div className="h-4 w-12 bg-slate-200/60 rounded" />
+                    </td>
                     <td className="py-3 px-3 text-center">
                       <div className="h-6 w-14 bg-slate-900/10 rounded-lg mx-auto" />
                     </td>
@@ -128,7 +154,9 @@ export default function DashboardSkeleton() {
               >
                 <div className="space-y-1.5 flex-1 pr-2">
                   <div className="flex items-center gap-2">
-                    <div className={`h-4 w-10 rounded text-[10px] ${mIdx % 2 === 0 ? 'bg-rose-100' : 'bg-emerald-100'}`} />
+                    <div
+                      className={`h-4 w-10 rounded text-[10px] ${mIdx % 2 === 0 ? 'bg-rose-100' : 'bg-emerald-100'}`}
+                    />
                     <div className="h-4 w-20 bg-slate-200 rounded font-mono" />
                   </div>
                   <div className="h-3 w-32 bg-slate-200/80 rounded" />

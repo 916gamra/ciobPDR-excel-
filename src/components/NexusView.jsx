@@ -1,6 +1,16 @@
 import React from 'react';
 import AnimatedPage from './AnimatedPage';
-import { GitBranch, Layers, ArrowRight, Package, Cpu, MapPin, Tag, Users, Wrench } from 'lucide-react';
+import {
+  GitBranch,
+  Layers,
+  ArrowRight,
+  Package,
+  Cpu,
+  MapPin,
+  Tag,
+  Users,
+  Wrench,
+} from 'lucide-react';
 
 export default function NexusView({
   types,
@@ -11,7 +21,7 @@ export default function NexusView({
   technicians,
   operations,
   machines,
-  stockItems
+  stockItems,
 }) {
   return (
     <AnimatedPage className="space-y-6">
@@ -22,7 +32,10 @@ export default function NexusView({
           <span>Nexus Matrix : Schéma des Liaisons GMAO Light</span>
         </h2>
         <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-          Visualisez l'interconnexion complète et les formules de calcul entre les 3 piliers du système : <b className="text-blue-600">Components (Stock)</b>, <b className="text-emerald-600">Machines Registered</b> et <b className="text-purple-600">Zones & Équipes</b>.
+          Visualisez l'interconnexion complète et les formules de calcul entre les 3 piliers du
+          système : <b className="text-blue-600">Components (Stock)</b>,{' '}
+          <b className="text-emerald-600">Machines Registered</b> et{' '}
+          <b className="text-purple-600">Zones & Équipes</b>.
         </p>
       </div>
 
@@ -50,7 +63,8 @@ export default function NexusView({
                 Catégorie parent pour pièces : Mécanique, Fixation, Pneumatique...
               </div>
               <div className="mt-2 pt-1.5 border-t border-cyan-200/60 font-mono text-[10px] text-cyan-900">
-                Formule Nb Articles : <span className="font-semibold">=COUNTIF(Stock!D:D, [@id_type])</span>
+                Formule Nb Articles :{' '}
+                <span className="font-semibold">=COUNTIF(Stock!D:D, [@id_type])</span>
               </div>
             </div>
 
@@ -78,7 +92,9 @@ export default function NexusView({
             <div className="p-3.5 rounded-xl bg-slate-900 text-white shadow-xs">
               <div className="font-bold text-xs flex items-center justify-between">
                 <span>Stock (Twin Principal)</span>
-                <span className="font-mono text-cyan-400 font-bold">{stockItems.length} articles</span>
+                <span className="font-mono text-cyan-400 font-bold">
+                  {stockItems.length} articles
+                </span>
               </div>
               <div className="text-[11px] text-slate-300 mt-1">
                 Catalogué par Type avec Formules Excel en temps réel.
@@ -112,7 +128,8 @@ export default function NexusView({
                 Familles technologiques : Emballage, Usinage, Découpe...
               </div>
               <div className="mt-2 pt-1.5 border-t border-cyan-200/60 font-mono text-[10px] text-cyan-900">
-                Formule Nb Templates : <span className="font-semibold">=COUNTIF(Templates!C:C, [@id_family])</span>
+                Formule Nb Templates :{' '}
+                <span className="font-semibold">=COUNTIF(Templates!C:C, [@id_family])</span>
               </div>
             </div>
 
@@ -129,7 +146,8 @@ export default function NexusView({
                 Modèles de constructeurs rattachés à une Famille.
               </div>
               <div className="mt-2 pt-1.5 border-t border-amber-200/60 font-mono text-[10px] text-amber-900">
-                Formule Nb Machines : <span className="font-semibold">=COUNTIF(Machines!D:D, [@id_templates])</span>
+                Formule Nb Machines :{' '}
+                <span className="font-semibold">=COUNTIF(Machines!D:D, [@id_templates])</span>
               </div>
             </div>
 
@@ -140,13 +158,18 @@ export default function NexusView({
             <div className="p-3.5 rounded-xl bg-slate-900 text-white shadow-xs">
               <div className="font-bold text-xs flex items-center justify-between">
                 <span>Machines Registered (Twin)</span>
-                <span className="font-mono text-emerald-400 font-bold">{machines.length} machines</span>
+                <span className="font-mono text-emerald-400 font-bold">
+                  {machines.length} machines
+                </span>
               </div>
               <div className="text-[11px] text-slate-300 mt-1">
                 Intègre Famille + Template + Zone + Technicien assigné.
               </div>
               <div className="mt-2 pt-1.5 border-t border-slate-800 font-mono text-[10px] text-cyan-400">
-                Liaisons : <span className="text-white font-semibold">id_family + id_templates + id_zone_default</span>
+                Liaisons :{' '}
+                <span className="text-white font-semibold">
+                  id_family + id_templates + id_zone_default
+                </span>
               </div>
             </div>
           </div>
@@ -174,7 +197,8 @@ export default function NexusView({
                 Secteurs de production (Détacheuse, Usinage, Emballage...)
               </div>
               <div className="mt-2 pt-1.5 border-t border-purple-200/60 font-mono text-[10px] text-purple-900">
-                Formule Nb Machines : <span className="font-semibold">=COUNTIF(Machines!E:E, [@id_zone])</span>
+                Formule Nb Machines :{' '}
+                <span className="font-semibold">=COUNTIF(Machines!E:E, [@id_zone])</span>
               </div>
             </div>
 
@@ -215,7 +239,8 @@ export default function NexusView({
                 Gouverné par Action_ID avec impact direct sur Stock Actuel.
               </div>
               <div className="mt-2 pt-1.5 border-t border-slate-800 font-mono text-[10px] text-amber-400">
-                Formule SUMIFS : <span className="text-white font-semibold">SUMIFS(Mouvements[Qté], ...)</span>
+                Formule SUMIFS :{' '}
+                <span className="text-white font-semibold">SUMIFS(Mouvements[Qté], ...)</span>
               </div>
             </div>
           </div>

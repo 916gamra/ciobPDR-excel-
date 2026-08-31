@@ -9,7 +9,7 @@
  * @param {number} defaultVal - Default fallback value if val is invalid
  * @returns {number}
  */
-export function safeNum(val, defaultVal = 0) {
+export function safeNum(val, defaultVal = NaN) {
   if (val === null || val === undefined || val === '') return defaultVal;
   const num = Number(val);
   return Number.isFinite(num) ? num : defaultVal;
@@ -19,11 +19,11 @@ export function safeNum(val, defaultVal = 0) {
  * Calculates stock balance and alert status safely according to GMAO Excel Twin formulas.
  * Formula Stock Actuel = stockInitial + entrees - sorties
  * Formula Alert = RUPTURE if stockActuel <= 0, ALERTE if stockActuel <= seuil, else OK
- * 
- * @param {number} stockInitial 
- * @param {number} entrees 
- * @param {number} sorties 
- * @param {number} seuil 
+ *
+ * @param {number} stockInitial
+ * @param {number} entrees
+ * @param {number} sorties
+ * @param {number} seuil
  * @returns {{ stockActuel: number, alerte: 'OK' | 'ALERTE' | 'RUPTURE' }}
  */
 export function calculateStockStatus(stockInitial, entrees, sorties, seuil) {
@@ -44,27 +44,27 @@ export function calculateStockStatus(stockInitial, entrees, sorties, seuil) {
 
   return {
     stockActuel,
-    alerte
+    alerte,
   };
 }
 
 /**
  * Validates a movement record before saving.
- * @param {object} mvt 
+ * @param {object} mvt
  * @returns {{ valid: boolean, errors: string[] }}
  */
 export function validateMouvement(mvt) {
   const errors = [];
   if (!mvt.ref || String(mvt.ref).trim() === '') {
-    errors.push('La référence de l\'article est requise.');
+    errors.push("La référence de l'article est requise.");
   }
   const qty = safeNum(mvt.quantite || mvt.quantity);
-  if (qty <= 0) {
-    errors.push('La quantité doit être un nombre supérieur à 0.');
+  if (Number.isNaN(qty) || qty <= 0) {
+    errors.push('La quantité doit être un nombre valide et supérieur à 0.');
   }
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -84,16 +84,26 @@ export function validateMovementWithContext(mvt, context) {
   }
 
   if (!mvt.ref || String(mvt.ref).trim() === '') {
-    errors.push('La référence de l\'article (Ref) est requise.');
+    errors.push("La référence de l'article (Ref) est requise.");
   }
 
   if (qty <= 0) {
     errors.push('La quantité doit être un nombre strictement positif.');
   }
 
-  const validTypes = ['Entrée', 'Sortie', 'Sortie Interne', 'Entrée Interne', 'Sortie Externe', 'Entrée Externe', 'COMMANDE'];
-  if (!mvt.type || !validTypes.some(vt => mvt.type.toLowerCase().includes(vt.toLowerCase()))) {
-    errors.push('Le type de mouvement doit être "Sortie Interne", "Entrée Interne", "Sortie Externe", "Entrée Externe" ou "COMMANDE".');
+  const validTypes = [
+    'Entrée',
+    'Sortie',
+    'Sortie Interne',
+    'Entrée Interne',
+    'Sortie Externe',
+    'Entrée Externe',
+    'COMMANDE',
+  ];
+  if (!mvt.type || !validTypes.some((vt) => mvt.type.toLowerCase().includes(vt.toLowerCase()))) {
+    errors.push(
+      'Le type de mouvement doit être "Sortie Interne", "Entrée Interne", "Sortie Externe", "Entrée Externe" ou "COMMANDE".'
+    );
   }
 
   if (!mvt.date || isNaN(Date.parse(mvt.date))) {
@@ -105,15 +115,24 @@ export function validateMovementWithContext(mvt, context) {
     const { stock = [], technicians = [], operations = [], zones = [], machines = [] } = context;
 
     // Check if article exists in stock
-    const article = stock.find(s => String(s.ref || s.Ref || '').toLowerCase().trim() === String(mvt.ref).toLowerCase().trim());
+    const article = stock.find(
+      (s) =>
+        String(s.ref || s.Ref || '')
+          .toLowerCase()
+          .trim() === String(mvt.ref).toLowerCase().trim()
+    );
     if (!article) {
       errors.push(`La référence article "${mvt.ref}" n'existe pas dans le stock.`);
     }
 
     // Check technician/person existence (if specified and not empty)
     if (mvt.technicien && mvt.technicien.trim() !== '') {
-      const techExists = technicians.some(t => String(t.nom).toLowerCase().trim() === String(mvt.technicien).toLowerCase().trim());
-      const opExists = operations.some(o => String(o.nom).toLowerCase().trim() === String(mvt.technicien).toLowerCase().trim());
+      const techExists = technicians.some(
+        (t) => String(t.nom).toLowerCase().trim() === String(mvt.technicien).toLowerCase().trim()
+      );
+      const opExists = operations.some(
+        (o) => String(o.nom).toLowerCase().trim() === String(mvt.technicien).toLowerCase().trim()
+      );
       if (!techExists && !opExists) {
         errors.push(`Le technicien ou intervenant "${mvt.technicien}" n'est pas enregistré.`);
       }
@@ -121,7 +140,12 @@ export function validateMovementWithContext(mvt, context) {
 
     // Check zone existence (if specified and not empty)
     if (mvt.id_zone && mvt.id_zone.trim() !== '') {
-      const zoneExists = zones.some(z => String(z.id_zone || z.ID_Zone || '').toLowerCase().trim() === String(mvt.id_zone).toLowerCase().trim());
+      const zoneExists = zones.some(
+        (z) =>
+          String(z.id_zone || z.ID_Zone || '')
+            .toLowerCase()
+            .trim() === String(mvt.id_zone).toLowerCase().trim()
+      );
       if (!zoneExists) {
         errors.push(`La zone "${mvt.id_zone}" n'est pas enregistrée.`);
       }
@@ -129,7 +153,11 @@ export function validateMovementWithContext(mvt, context) {
 
     // Check machine existence (if specified and not empty)
     if (mvt.id_machine_registered && mvt.id_machine_registered.trim() !== '') {
-      const mchExists = machines.some(m => String(m.id_machine_registered).toLowerCase().trim() === String(mvt.id_machine_registered).toLowerCase().trim());
+      const mchExists = machines.some(
+        (m) =>
+          String(m.id_machine_registered).toLowerCase().trim() ===
+          String(mvt.id_machine_registered).toLowerCase().trim()
+      );
       if (!mchExists) {
         errors.push(`La machine "${mvt.id_machine_registered}" n'est pas enregistrée.`);
       }
@@ -140,13 +168,15 @@ export function validateMovementWithContext(mvt, context) {
       // Calculate active stock for the article
       const currentStock = safeNum(article.stockActuel || article.stockInitial);
       if (qty > currentStock) {
-        errors.push(`Mouvement impossible : Stock insuffisant pour la référence "${mvt.ref}". Disponible : ${currentStock}, Demandé : ${qty}.`);
+        errors.push(
+          `Mouvement impossible : Stock insuffisant pour la référence "${mvt.ref}". Disponible : ${currentStock}, Demandé : ${qty}.`
+        );
       }
     }
   }
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }

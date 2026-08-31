@@ -18,7 +18,7 @@ import {
   ArrowDownAZ,
   ArrowUpAZ,
   SlidersHorizontal,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react';
 
 const TYPE_STYLES = {
@@ -37,9 +37,7 @@ const TYPE_STYLES = {
 function getTypeStyle(typeStr) {
   if (!typeStr) return 'bg-cyan-50 text-cyan-800 border-cyan-200';
   const clean = String(typeStr).trim();
-  const key = Object.keys(TYPE_STYLES).find(
-    (k) => k.toLowerCase() === clean.toLowerCase()
-  );
+  const key = Object.keys(TYPE_STYLES).find((k) => k.toLowerCase() === clean.toLowerCase());
   return TYPE_STYLES[key] || 'bg-cyan-50 text-cyan-800 border-cyan-200';
 }
 
@@ -56,7 +54,7 @@ export default function StockView({
   onOpenAddArticle,
   onQuickSortie,
   stockKPIs,
-  onNavigateToType
+  onNavigateToType,
 }) {
   const [pageSize, setPageSize] = React.useState(100);
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -137,11 +135,14 @@ export default function StockView({
   const effectivePageSize = pageSize === 0 ? totalItems : pageSize;
   const totalPages = pageSize === 0 ? 1 : Math.ceil(totalItems / effectivePageSize) || 1;
   const startIndex = (currentPage - 1) * effectivePageSize;
-  const displayedStock = pageSize === 0 ? sortedStock : sortedStock.slice(startIndex, startIndex + effectivePageSize);
+  const displayedStock =
+    pageSize === 0 ? sortedStock : sortedStock.slice(startIndex, startIndex + effectivePageSize);
 
   const renderSortIcon = (field) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition shrink-0" />;
+      return (
+        <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition shrink-0" />
+      );
     }
     return sortOrder === 'asc' ? (
       <ArrowUp className="w-3 h-3 text-cyan-700 shrink-0 font-bold" />
@@ -160,7 +161,11 @@ export default function StockView({
             <span>Stock Actuel & Articles (Catalogue Pièces)</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Tableau central miroir de Stock. Calcul temps réel : <b className="text-emerald-700 font-mono">Stock Actuel = Initial (E) + Entrées (F) - Sorties (G)</b> et détection automatique des <b className="text-amber-600">Alertes (J)</b>.
+            Tableau central miroir de Stock. Calcul temps réel :{' '}
+            <b className="text-emerald-700 font-mono">
+              Stock Actuel = Initial (E) + Entrées (F) - Sorties (G)
+            </b>{' '}
+            et détection automatique des <b className="text-amber-600">Alertes (J)</b>.
           </p>
         </div>
 
@@ -263,13 +268,13 @@ export default function StockView({
               options={[
                 { value: 'ALL', label: `Tous les Types (${types.length})` },
                 ...types.map((t) => {
-                  const val = typeof t === 'string' ? t : (t.id_type || t.libelle);
-                  const label = typeof t === 'string' ? t : (t.libelle || t.id_type);
+                  const val = typeof t === 'string' ? t : t.id_type || t.libelle;
+                  const label = typeof t === 'string' ? t : t.libelle || t.id_type;
                   return {
                     value: val,
-                    label: `[D] ${label}`
+                    label: `[D] ${label}`,
                   };
-                })
+                }),
               ]}
               compact={false}
             />
@@ -309,9 +314,14 @@ export default function StockView({
             >
               <div className="flex items-center gap-2 truncate">
                 <ArrowUpDown className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span className="truncate">Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> ({sortOrder === 'asc' ? 'A→Z' : 'Z→A'})</span>
+                <span className="truncate">
+                  Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> (
+                  {sortOrder === 'asc' ? 'A→Z' : 'Z→A'})
+                </span>
               </div>
-              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform shrink-0 ${showSortMenu ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`w-3 h-3 text-slate-400 transition-transform shrink-0 ${showSortMenu ? 'rotate-180' : ''}`}
+              />
             </button>
 
             {/* Sort Popover Menu */}
@@ -349,9 +359,12 @@ export default function StockView({
                       }`}
                     >
                       <span className="truncate">{col.label}</span>
-                      {sortField === col.key && (
-                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
-                      )}
+                      {sortField === col.key &&
+                        (sortOrder === 'asc' ? (
+                          <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" />
+                        ) : (
+                          <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                        ))}
                     </button>
                   ))}
                 </div>
@@ -386,7 +399,11 @@ export default function StockView({
             )}
           </div>
 
-          {(stockTypeFilter !== 'ALL' || stockAlertOnly || stockSearch || sortField !== 'ref' || sortOrder !== 'asc') && (
+          {(stockTypeFilter !== 'ALL' ||
+            stockAlertOnly ||
+            stockSearch ||
+            sortField !== 'ref' ||
+            sortOrder !== 'asc') && (
             <button
               onClick={() => {
                 setStockTypeFilter('ALL');
@@ -404,7 +421,8 @@ export default function StockView({
 
         {/* Total Count Badge/Text */}
         <div className="text-xs text-slate-500 font-medium shrink-0">
-          Total : <b className="text-slate-900">{filteredStock.length}</b> / <b className="text-slate-900">{stockItems.length}</b> articles
+          Total : <b className="text-slate-900">{filteredStock.length}</b> /{' '}
+          <b className="text-slate-900">{stockItems.length}</b> articles
         </div>
       </div>
 
@@ -416,7 +434,8 @@ export default function StockView({
             Stock_Actuel • Ordre Excel Row 3 : B→K
           </div>
           <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
-            N° | Ref | Désignation | Type | Initial | Entrées | Sorties | Actuel | Seuil | Alerte | Emplacement
+            N° | Ref | Désignation | Type | Initial | Entrées | Sorties | Actuel | Seuil | Alerte |
+            Emplacement
           </div>
         </div>
 
@@ -435,7 +454,8 @@ export default function StockView({
                   title="Cliquer pour trier par Référence"
                 >
                   <div className="flex items-center gap-1">
-                    <span>REF</span> <span className="text-slate-400 font-normal text-[10px]">(B)</span>
+                    <span>REF</span>{' '}
+                    <span className="text-slate-400 font-normal text-[10px]">(B)</span>
                     {renderSortIcon('ref')}
                   </div>
                 </th>
@@ -447,7 +467,8 @@ export default function StockView({
                   title="Cliquer pour trier par Désignation"
                 >
                   <div className="flex items-center gap-1">
-                    <span>DÉSIGNATION</span> <span className="text-slate-400 font-normal text-[10px]">(C)</span>
+                    <span>DÉSIGNATION</span>{' '}
+                    <span className="text-slate-400 font-normal text-[10px]">(C)</span>
                     {renderSortIcon('designation')}
                   </div>
                 </th>
@@ -459,7 +480,8 @@ export default function StockView({
                   title="Cliquer pour trier par Type"
                 >
                   <div className="flex items-center gap-1">
-                    <span>TYPE</span> <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+                    <span>TYPE</span>{' '}
+                    <span className="text-slate-400 font-normal text-[10px]">(D)</span>
                     {renderSortIcon('type')}
                   </div>
                 </th>
@@ -581,9 +603,11 @@ export default function StockView({
                 </tr>
               ) : (
                 displayedStock.map((item, idx) => {
-                  const typeObj = types.find((t) => t.id_type === item.id_type || t.libelle === item.type);
+                  const typeObj = types.find(
+                    (t) => t.id_type === item.id_type || t.libelle === item.type
+                  );
                   const rowNum = startIndex + idx + 1;
-                  
+
                   return (
                     <tr
                       key={item.id || item.ref || idx}
@@ -713,9 +737,12 @@ export default function StockView({
             </div>
 
             <div className="text-slate-500">
-              Affichage de <b className="text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</b> à{' '}
-              <b className="text-slate-900">{Math.min(startIndex + displayedStock.length, totalItems)}</b> sur{' '}
-              <b className="text-slate-900">{totalItems}</b> articles
+              Affichage de <b className="text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</b>{' '}
+              à{' '}
+              <b className="text-slate-900">
+                {Math.min(startIndex + displayedStock.length, totalItems)}
+              </b>{' '}
+              sur <b className="text-slate-900">{totalItems}</b> articles
             </div>
           </div>
 

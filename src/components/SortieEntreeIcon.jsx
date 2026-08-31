@@ -2,7 +2,7 @@ import React from 'react';
 
 /**
  * SortieEntreeIcon - Unified dual-arrow movement icon for CIOB GMAO Light.
- * 
+ *
  * - Down Arrow (Entrée / Stock In): GREEN (#10b981 / emerald)
  * - Up Arrow (Sortie / Stock Out): RED (#f43f5e / rose)
  */
@@ -29,7 +29,7 @@ export default function SortieEntreeIcon({
         <path d="M7 4v16" />
         <path d="m3 16 4 4 4-4" />
       </g>
-      
+
       {/* Up Arrow (Red / Sortie) */}
       <g className={upColor} stroke="currentColor">
         <path d="M17 20V4" />

@@ -1,12 +1,12 @@
 import React from 'react';
 import DashboardSkeleton from './DashboardSkeleton';
-import { 
-  StockSkeleton, 
-  SortieRapideSkeleton, 
-  MachinesRegisteredSkeleton, 
-  OperationsSkeleton, 
+import {
+  StockSkeleton,
+  SortieRapideSkeleton,
+  MachinesRegisteredSkeleton,
+  OperationsSkeleton,
   GenericTableSkeleton,
-  GuidanceCardsTableSkeleton
+  GuidanceCardsTableSkeleton,
 } from './PageSkeletons';
 
 export default function LoadingSkeleton({ currentTab = 'dashboard' }) {
@@ -34,5 +34,3 @@ export default function LoadingSkeleton({ currentTab = 'dashboard' }) {
       return <DashboardSkeleton />;
   }
 }
-
-

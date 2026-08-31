@@ -19,7 +19,7 @@ import {
   Settings,
   Sun,
   Moon,
-  LogOut
+  LogOut,
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -29,7 +29,7 @@ export default function Sidebar({
   setMobileMenuOpen,
   counts,
   currentUser,
-  onLogout
+  onLogout,
 }) {
   // Sidebar Dark / Light Theme state (persisted in localStorage)
   const [sidebarTheme, setSidebarTheme] = useState(() => {
@@ -41,7 +41,7 @@ export default function Sidebar({
   }, [sidebarTheme]);
 
   const toggleSidebarTheme = () => {
-    setSidebarTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+    setSidebarTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
   const navTo = (tab) => {
@@ -53,7 +53,8 @@ export default function Sidebar({
 
   // Dynamic styling based on sidebarTheme
   const getTabClass = (tabName, isSubItem = false) => {
-    const isActive = currentTab === tabName || (tabName === 'designations' && currentTab === 'diagnostics');
+    const isActive =
+      currentTab === tabName || (tabName === 'designations' && currentTab === 'diagnostics');
     const basePadding = isSubItem ? 'pl-6 pr-3 py-2' : 'px-3 py-2.5';
 
     if (isDark) {
@@ -71,7 +72,8 @@ export default function Sidebar({
 
   // Badge styling
   const getBadgeClass = (tabName) => {
-    const isActive = currentTab === tabName || (tabName === 'designations' && currentTab === 'diagnostics');
+    const isActive =
+      currentTab === tabName || (tabName === 'designations' && currentTab === 'diagnostics');
     if (isDark) {
       if (isActive) {
         return 'text-[11px] px-2 py-0.5 rounded-full font-mono bg-slate-900 text-white font-bold';
@@ -120,7 +122,7 @@ export default function Sidebar({
             >
               {/* Excel Grid Texture Behind */}
               <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)] bg-[size:5px_5px]" />
-              
+
               {/* Excel Badge & Symbol */}
               <svg
                 id="excel-svg-icon"
@@ -130,11 +132,48 @@ export default function Sidebar({
                 xmlns="http://www.w3.org/2000/svg"
               >
                 {/* Excel Workbook Sheet */}
-                <rect x="3" y="3" width="18" height="18" rx="3.5" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.75" />
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="3.5"
+                  fill="currentColor"
+                  fillOpacity="0.15"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                />
                 {/* Spreadsheet inner division */}
-                <line x1="9.5" y1="3" x2="9.5" y2="21" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.6" strokeDasharray="1.5 1.5" />
-                <line x1="3" y1="9.5" x2="21" y2="9.5" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.6" strokeDasharray="1.5 1.5" />
-                <line x1="3" y1="15.5" x2="21" y2="15.5" stroke="currentColor" strokeWidth="1.2" strokeOpacity="0.6" strokeDasharray="1.5 1.5" />
+                <line
+                  x1="9.5"
+                  y1="3"
+                  x2="9.5"
+                  y2="21"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeOpacity="0.6"
+                  strokeDasharray="1.5 1.5"
+                />
+                <line
+                  x1="3"
+                  y1="9.5"
+                  x2="21"
+                  y2="9.5"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeOpacity="0.6"
+                  strokeDasharray="1.5 1.5"
+                />
+                <line
+                  x1="3"
+                  y1="15.5"
+                  x2="21"
+                  y2="15.5"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeOpacity="0.6"
+                  strokeDasharray="1.5 1.5"
+                />
                 {/* The Classic Excel 'X' Symbol in left panel */}
                 <path
                   d="M12.5 7.5L18 16.5M18 7.5L12.5 16.5"
@@ -159,7 +198,9 @@ export default function Sidebar({
                   XLS
                 </span>
               </div>
-              <div className={`text-[11px] font-semibold tracking-tight ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}>
+              <div
+                className={`text-[11px] font-semibold tracking-tight ${isDark ? 'text-emerald-400' : 'text-emerald-700'}`}
+              >
                 Pièces de Rechange & GMAO
               </div>
             </div>
@@ -167,7 +208,9 @@ export default function Sidebar({
           <button
             onClick={() => setMobileMenuOpen(false)}
             className={`p-1.5 rounded-lg md:hidden ${
-              isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+              isDark
+                ? 'text-slate-400 hover:text-white hover:bg-slate-800'
+                : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
             }`}
             aria-label="Fermer le menu"
           >
@@ -180,31 +223,23 @@ export default function Sidebar({
           {/* Main Global Navigation */}
           <div className="space-y-1">
             {/* Dashboard Tab */}
-            <button
-              onClick={() => navTo('dashboard')}
-              className={getTabClass('dashboard')}
-            >
+            <button onClick={() => navTo('dashboard')} className={getTabClass('dashboard')}>
               <span className="flex items-center gap-2.5">
-                <LayoutDashboard className={`w-4 h-4 shrink-0 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                <LayoutDashboard
+                  className={`w-4 h-4 shrink-0 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}
+                />
                 <span>Dashboard</span>
               </span>
-              <span className={getBadgeClass('dashboard')}>
-                KPI
-              </span>
+              <span className={getBadgeClass('dashboard')}>KPI</span>
             </button>
 
             {/* Sortie Rapide Tab */}
-            <button
-              onClick={() => navTo('sortie')}
-              className={getTabClass('sortie')}
-            >
+            <button onClick={() => navTo('sortie')} className={getTabClass('sortie')}>
               <span className="flex items-center gap-2.5">
                 <SortieEntreeIcon className="w-4 h-4 shrink-0" />
                 <span>Sortie & Entrée Rapide</span>
               </span>
-              <span className={getBadgeClass('sortie')}>
-                Mvt
-              </span>
+              <span className={getBadgeClass('sortie')}>Mvt</span>
             </button>
           </div>
 
@@ -216,31 +251,25 @@ export default function Sidebar({
             </div>
             <div className="space-y-1">
               {/* Stock Actuel */}
-              <button
-                onClick={() => navTo('stock')}
-                className={getTabClass('stock')}
-              >
+              <button onClick={() => navTo('stock')} className={getTabClass('stock')}>
                 <span className="flex items-center gap-2.5">
-                  <Package className={`w-4 h-4 shrink-0 ${isDark ? 'text-sky-400' : 'text-sky-600'}`} />
+                  <Package
+                    className={`w-4 h-4 shrink-0 ${isDark ? 'text-sky-400' : 'text-sky-600'}`}
+                  />
                   <span>Stock (Articles)</span>
                 </span>
-                <span className={getBadgeClass('stock')}>
-                  {counts.stock || 0}
-                </span>
+                <span className={getBadgeClass('stock')}>{counts.stock || 0}</span>
               </button>
 
               {/* Types */}
-              <button
-                onClick={() => navTo('types')}
-                className={getTabClass('types', true)}
-              >
+              <button onClick={() => navTo('types')} className={getTabClass('types', true)}>
                 <span className="flex items-center gap-2">
-                  <Tag className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
+                  <Tag
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}
+                  />
                   <span>Types</span>
                 </span>
-                <span className={getBadgeClass('types')}>
-                  {counts.types || 0}
-                </span>
+                <span className={getBadgeClass('types')}>{counts.types || 0}</span>
               </button>
 
               {/* Désignations */}
@@ -249,7 +278,9 @@ export default function Sidebar({
                 className={getTabClass('designations', true)}
               >
                 <span className="flex items-center gap-2">
-                  <Layers className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                  <Layers
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}
+                  />
                   <span>Désignations</span>
                 </span>
                 <span className={getBadgeClass('designations')}>
@@ -267,45 +298,36 @@ export default function Sidebar({
             </div>
             <div className="space-y-1">
               {/* Machines Registered - Updated with Factory icon */}
-              <button
-                onClick={() => navTo('machines')}
-                className={getTabClass('machines')}
-              >
+              <button onClick={() => navTo('machines')} className={getTabClass('machines')}>
                 <span className="flex items-center gap-2.5">
-                  <Factory className={`w-4 h-4 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                  <Factory
+                    className={`w-4 h-4 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}
+                  />
                   <span>Machines Registered</span>
                 </span>
-                <span className={getBadgeClass('machines')}>
-                  {counts.machines || 0}
-                </span>
+                <span className={getBadgeClass('machines')}>{counts.machines || 0}</span>
               </button>
 
               {/* Families - Updated with Boxes icon */}
-              <button
-                onClick={() => navTo('families')}
-                className={getTabClass('families', true)}
-              >
+              <button onClick={() => navTo('families')} className={getTabClass('families', true)}>
                 <span className="flex items-center gap-2">
-                  <Boxes className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`} />
+                  <Boxes
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}
+                  />
                   <span>Familles</span>
                 </span>
-                <span className={getBadgeClass('families')}>
-                  {counts.families || 0}
-                </span>
+                <span className={getBadgeClass('families')}>{counts.families || 0}</span>
               </button>
 
               {/* Templates */}
-              <button
-                onClick={() => navTo('templates')}
-                className={getTabClass('templates', true)}
-              >
+              <button onClick={() => navTo('templates')} className={getTabClass('templates', true)}>
                 <span className="flex items-center gap-2">
-                  <Layers className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+                  <Layers
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}
+                  />
                   <span>Templates</span>
                 </span>
-                <span className={getBadgeClass('templates')}>
-                  {counts.templates || 0}
-                </span>
+                <span className={getBadgeClass('templates')}>{counts.templates || 0}</span>
               </button>
             </div>
           </div>
@@ -318,17 +340,14 @@ export default function Sidebar({
             </div>
             <div className="space-y-1">
               {/* Zones */}
-              <button
-                onClick={() => navTo('zones')}
-                className={getTabClass('zones')}
-              >
+              <button onClick={() => navTo('zones')} className={getTabClass('zones')}>
                 <span className="flex items-center gap-2.5">
-                  <MapPin className={`w-4 h-4 shrink-0 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
+                  <MapPin
+                    className={`w-4 h-4 shrink-0 ${isDark ? 'text-purple-400' : 'text-purple-600'}`}
+                  />
                   <span>Zones & Ateliers</span>
                 </span>
-                <span className={getBadgeClass('zones')}>
-                  {counts.zones || 0}
-                </span>
+                <span className={getBadgeClass('zones')}>{counts.zones || 0}</span>
               </button>
 
               {/* Utilisateurs */}
@@ -337,7 +356,9 @@ export default function Sidebar({
                 className={getTabClass('utilisateurs', true)}
               >
                 <span className="flex items-center gap-2">
-                  <Users className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`} />
+                  <Users
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}
+                  />
                   <span>Utilisateurs (Membres)</span>
                 </span>
                 <span className={getBadgeClass('utilisateurs')}>
@@ -348,22 +369,22 @@ export default function Sidebar({
           </div>
 
           {/* GROUPE 4: OUTILS & RÉFÉRENTIEL */}
-          <div className={`space-y-1 pt-2 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-            <button
-              onClick={() => navTo('nexus')}
-              className={getTabClass('nexus')}
-            >
+          <div
+            className={`space-y-1 pt-2 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}
+          >
+            <button onClick={() => navTo('nexus')} className={getTabClass('nexus')}>
               <span className="flex items-center gap-2.5">
-                <GitBranch className={`w-4 h-4 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                <GitBranch
+                  className={`w-4 h-4 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}
+                />
                 <span>Nexus Matrix</span>
               </span>
             </button>
-            <button
-              onClick={() => navTo('guide')}
-              className={getTabClass('guide')}
-            >
+            <button onClick={() => navTo('guide')} className={getTabClass('guide')}>
               <span className="flex items-center gap-2.5">
-                <BookOpen className={`w-4 h-4 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+                <BookOpen
+                  className={`w-4 h-4 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}
+                />
                 <span>Guide d'utilisation</span>
               </span>
             </button>
@@ -371,7 +392,9 @@ export default function Sidebar({
         </div>
 
         {/* Guided Tip Box */}
-        <div className={`p-3 border-t ${isDark ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50'}`}>
+        <div
+          className={`p-3 border-t ${isDark ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50'}`}
+        >
           <div
             className={`rounded-xl p-3 text-[11.5px] leading-relaxed space-y-1 border ${
               isDark
@@ -379,12 +402,17 @@ export default function Sidebar({
                 : 'bg-white text-slate-600 border-slate-200 shadow-2xs'
             }`}
           >
-            <div className={`font-semibold flex items-center gap-1.5 text-[12px] ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
+            <div
+              className={`font-semibold flex items-center gap-1.5 text-[12px] ${isDark ? 'text-slate-100' : 'text-slate-800'}`}
+            >
               <Lightbulb className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>Astuce Excel Twin</span>
             </div>
-            <div className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              • Cliquez sur n'importe quel code (Zone, Famille, Type) pour filtrer les tables associées.
+            <div
+              className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}
+            >
+              • Cliquez sur n'importe quel code (Zone, Famille, Type) pour filtrer les tables
+              associées.
             </div>
           </div>
         </div>
@@ -404,12 +432,14 @@ export default function Sidebar({
                   ? 'bg-white text-slate-900 shadow-sm'
                   : 'bg-slate-900 text-white shadow-sm'
                 : isDark
-                ? 'text-slate-300 hover:text-white hover:bg-slate-800'
-                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/80'
+                  ? 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/80'
             }`}
             title="Paramètres du système"
           >
-            <Settings className={`w-4 h-4 shrink-0 ${currentTab === 'settings' ? (isDark ? 'text-slate-900' : 'text-white') : 'text-slate-400'}`} />
+            <Settings
+              className={`w-4 h-4 shrink-0 ${currentTab === 'settings' ? (isDark ? 'text-slate-900' : 'text-white') : 'text-slate-400'}`}
+            />
             <span>Paramètres</span>
           </button>
 
@@ -421,14 +451,14 @@ export default function Sidebar({
                 ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700 hover:text-amber-300'
                 : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 shadow-2xs'
             }`}
-            title={isDark ? 'Passer au mode Light pour le volet latéral' : 'Passer au mode Dark pour le volet latéral'}
+            title={
+              isDark
+                ? 'Passer au mode Light pour le volet latéral'
+                : 'Passer au mode Dark pour le volet latéral'
+            }
             aria-label="Toggle Sidebar Theme"
           >
-            {isDark ? (
-              <Sun className="w-4 h-4" />
-            ) : (
-              <Moon className="w-4 h-4 text-indigo-600" />
-            )}
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4 text-indigo-600" />}
           </button>
         </div>
 
@@ -451,10 +481,14 @@ export default function Sidebar({
                 {currentUser.avatar || 'RM'}
               </div>
               <div className="text-left leading-tight min-w-0 flex-1">
-                <div className={`text-[11.5px] font-bold truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                <div
+                  className={`text-[11.5px] font-bold truncate ${isDark ? 'text-slate-100' : 'text-slate-900'}`}
+                >
                   {currentUser.name}
                 </div>
-                <div className={`text-[9.5px] font-semibold truncate ${isDark ? 'text-emerald-400' : 'text-emerald-800'}`}>
+                <div
+                  className={`text-[9.5px] font-semibold truncate ${isDark ? 'text-emerald-400' : 'text-emerald-800'}`}
+                >
                   {currentUser.titleFr || currentUser.role}
                 </div>
               </div>

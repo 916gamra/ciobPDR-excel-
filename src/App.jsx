@@ -1,5 +1,15 @@
-import React, { useState, useMemo, useRef, useEffect, lazy, Suspense } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  lazy,
+  Suspense,
+  useDeferredValue,
+} from 'react';
 import * as XLSX from 'xlsx';
+import { useGmaoState } from './hooks/useGmaoState';
+import { useGenericCRUD } from './hooks/useGenericCRUD';
 import initialData from './initialData.json';
 import {
   INITIAL_TYPES,
@@ -10,7 +20,7 @@ import {
   INITIAL_ZONES,
   INITIAL_TECHNICIANS,
   INITIAL_OPERATIONS,
-  mapItemToTypeAndDiag
+  mapItemToTypeAndDiag,
 } from './data/seedData';
 
 import Sidebar from './components/Sidebar';
@@ -41,13 +51,16 @@ const AddUserModal = lazy(() => import('./components/AddUserModal'));
 const AddZoneModal = lazy(() => import('./components/AddZoneModal'));
 
 import { storageService } from './utils/storageService';
+import { sanitizeObject } from './utils/sanitize';
 import { indexedDBService } from './utils/indexedDBService';
 import { safeNum, calculateStockStatus } from './utils/formulaEngine';
 
 export default function App() {
   // Splash & Auth States
   const [showSplash, setShowSplash] = useState(true);
-  const [currentUser, setCurrentUser] = useState(() => storageService.getItem('gmao_user_session') || null);
+  const [currentUser, setCurrentUser] = useState(
+    () => storageService.getItem('gmao_user_session') || null
+  );
 
   // Toast & Direct File Link States
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -65,166 +78,32 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState('stock');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const fileInputRef = useRef(null);
-
   // Core Data States
-  const [types, setTypes] = useState(() => {
-    const saved = storageService.getItem('gmao_types_v4');
-    if (saved) return saved;
-    const set = new Set();
-    (initialData.Stock_Actuel || []).forEach((item) => {
-      const t = String(item['Désignation'] || item['D\u00c3\u00a9signation'] || item.type || '').trim();
-      if (t && t !== '3' && !/^\d+$/.test(t)) set.add(t);
-    });
-    if (!set.size) {
-      ['Foret', 'Tenaille', 'Vis', 'Roulement', 'Courroie', 'Raccord', 'Cheville', 'Capteur', 'teflon'].forEach(t => set.add(t));
-    }
-    return Array.from(set).map((t) => ({ id_type: t, libelle: t }));
-  });
-
-  const [families, setFamilies] = useState(() => {
-    const saved = storageService.getItem('gmao_families');
-    return saved ? saved : (initialData.Families?.length ? initialData.Families : INITIAL_FAMILIES);
-  });
-
-  const [templates, setTemplates] = useState(() => {
-    const saved = storageService.getItem('gmao_templates');
-    return saved ? saved : (initialData.Templates?.length ? initialData.Templates : INITIAL_TEMPLATES);
-  });
-
-  const [machines, setMachines] = useState(() => {
-    const saved = storageService.getItem('gmao_machines');
-    return saved ? saved : (initialData.Machines_Registered?.length ? initialData.Machines_Registered : INITIAL_MACHINES_REGISTERED);
-  });
-
-  const [zones, setZones] = useState(() => {
-    const saved = storageService.getItem('gmao_zones');
-    return saved ? saved : (initialData.Zones?.length ? initialData.Zones : INITIAL_ZONES);
-  });
-
-  const [technicians, setTechnicians] = useState(() => {
-    const saved = storageService.getItem('gmao_technicians');
-    return saved ? saved : (initialData.Technicians?.length ? initialData.Technicians : INITIAL_TECHNICIANS);
-  });
-
-  const [operations, setOperations] = useState(() => {
-    const saved = storageService.getItem('gmao_operations');
-    return saved ? saved : (initialData.Operations?.length ? initialData.Operations : INITIAL_OPERATIONS);
-  });
-
-  const [mouvements, setMouvements] = useState(() => {
-    const saved = storageService.getItem('gmao_mouvements');
-    const rawList = saved ? saved : (initialData.Mouvement || []);
-    return rawList.map((m, idx) => ({
-      id: m.id || idx + 1,
-      code_bon: m.code_bon || m['Code_Bon'] || m['Code Bon'] || m['N° Bon'] || `Bon-${String(idx + 1).padStart(3, '0')}`,
-      num_commande: m.num_commande || m['N° Commande'] || m['Num_Commande'] || m['N° Demande'] || m['Code Demande'] || m.num_demande || '',
-      date: m.date || (m.Date ? String(m.Date).split('T')[0] : '2026-07-16'),
-      ref: m.ref || m['Référence'] || m['Reference'] || '',
-      quantite: safeNum(m.quantite != null ? m.quantite : (m['Quantité'] != null ? m['Quantité'] : m['Quantite']), 1),
-      type: m.type || m['Type (Entrée/Sortie)'] || 'Sortie',
-      action_id: m.action_id || m['Action_ID'] || 'CORRECTIVE',
-      technicien: m.technicien || m.id_technician || 'Rachid',
-      id_zone: m.id_zone || 'ZONE-01',
-      id_machine_registered: m.id_machine_registered || '',
-      operation: m.operation || m.id_operation || '',
-      commentaire: m.commentaire || m['Commentaire / Motif'] || '',
-      demandeur: m.demandeur || m.Demandeur || '',
-      fournisseur: m.fournisseur || m.Fournisseur || '',
-      emplacement_reception: m.emplacement_reception || m['Emplacement'] || '',
-      usage_type: m.usage_type || ''
-    }));
-  });
-
-  const [rawStock, setRawStock] = useState(() => {
-    const saved = storageService.getItem('gmao_raw_stock_v6');
-    const rawList = saved ? saved : (initialData.Stock_Actuel || []);
-
-    const typeCounters = {};
-
-    return rawList.map((item, idx) => {
-      if (item.ref && item.designation && item.type && item.type !== '3' && !/^\d+$/.test(item.type) && item.designation !== item.ref && /^([A-Z0-9]+)\d{3}$/.test(item.ref)) {
-        return item;
-      }
-
-      const rawArticleName = String(item.Ref != null ? item.Ref : (item.designation != null ? item.designation : `Pièce ${idx + 1}`)).trim();
-      const rawType = String(item['Désignation'] || item['D\u00c3\u00a9signation'] || (typeof item.type === 'string' && !/^\d+$/.test(item.type) ? item.type : 'Divers')).trim();
-      
-      const typePrefix = rawType.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || 'REF';
-      typeCounters[typePrefix] = (typeCounters[typePrefix] || 0) + 1;
-      const refCode = `${typePrefix}${String(typeCounters[typePrefix]).padStart(3, '0')}`;
-
-      let initStock = 0;
-      if (typeof item.Type === 'number' && !isNaN(item.Type)) {
-        initStock = item.Type;
-      } else if (typeof item['Stock Initial'] === 'number' && !isNaN(item['Stock Initial'])) {
-        initStock = item['Stock Initial'];
-      } else if (item.stockInitial != null) {
-        initStock = safeNum(item.stockInitial, 0);
-      }
-
-      if (initStock === 0 && item['Stock Initial'] == null && item.stockInitial == null) {
-        initStock = (idx % 12) + 1;
-      }
-
-      return {
-        id: item.id || idx + 1,
-        ref: refCode,
-        designation: rawArticleName,
-        type: rawType,
-        id_type: rawType,
-        stockInitial: initStock,
-        seuil: safeNum(item.seuil != null ? item.seuil : (item["Seuil d'Alerte"] != null ? item["Seuil d'Alerte"] : Math.max(2, Math.floor(initStock * 0.25))), 3),
-        emplacement: String(item.emplacement || item.Emplacement || `A${(idx % 8) + 1}-R${(idx % 6) + 1}`)
-      };
-    });
-  });
-
-  // Derive designations directly from rawStock for 100% synchronization & perfect ordering
-  const designations = useMemo(() => {
-    return rawStock.map((s) => ({
-      id_designation: s.ref,
-      ref: s.ref,
-      designation: s.designation,
-      id_type: s.type || s.id_type || 'Divers',
-      type: s.type || s.id_type || 'Divers',
-      stockInitial: s.stockInitial,
-      seuil: s.seuil,
-      emplacement: s.emplacement
-    })).sort((a, b) => a.ref.localeCompare(b.ref, undefined, { numeric: true, sensitivity: 'base' }));
-  }, [rawStock]);
+  const {
+    types,
+    setTypes,
+    designations,
+    setDesignations,
+    families,
+    setFamilies,
+    templates,
+    setTemplates,
+    machines,
+    setMachines,
+    zones,
+    setZones,
+    technicians,
+    setTechnicians,
+    operations,
+    setOperations,
+    mouvements,
+    setMouvements,
+    rawStock,
+    setRawStock,
+  } = useGmaoState();
 
   const diagnostics = designations;
 
-  // Save to LocalStorage and IndexedDB (Debounced to avoid I/O bottlenecks during fast updates)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      storageService.setItem('gmao_types_v4', types);
-      storageService.setItem('gmao_designations_v2', designations);
-      storageService.setItem('gmao_families', families);
-      storageService.setItem('gmao_templates', templates);
-      storageService.setItem('gmao_machines', machines);
-      storageService.setItem('gmao_zones', zones);
-      storageService.setItem('gmao_technicians', technicians);
-      storageService.setItem('gmao_operations', operations);
-      storageService.setItem('gmao_mouvements', mouvements);
-      storageService.setItem('gmao_raw_stock_v6', rawStock);
-
-      // High capacity IndexedDB backup
-      indexedDBService.setItem('gmao_mouvements', mouvements);
-      indexedDBService.setItem('gmao_raw_stock_v6', rawStock);
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [types, designations, families, templates, machines, zones, technicians, operations, mouvements, rawStock]);
-
-  // Unique list of types in stock for filter dropdown
-  const stockTypesList = useMemo(() => {
-    const set = new Set();
-    rawStock.forEach((s) => {
-      if (s.type) set.add(s.type);
-    });
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [rawStock]);
 
   // Compute Full Stock with Dynamic Live Calculations (Formula F, G, H, J)
   const stockItems = useMemo(() => {
@@ -247,10 +126,8 @@ export default function App() {
 
     return rawStock.map((item) => {
       const itemRefKey = item.ref.toLowerCase();
-      const itemDesigKey = item.designation.toLowerCase();
-
-      let entrees = (mvtSummary[itemRefKey]?.entrees || 0) + (mvtSummary[itemDesigKey]?.entrees || 0);
-      let sorties = (mvtSummary[itemRefKey]?.sorties || 0) + (mvtSummary[itemDesigKey]?.sorties || 0);
+      let entrees = mvtSummary[itemRefKey]?.entrees || 0;
+      let sorties = mvtSummary[itemRefKey]?.sorties || 0;
 
       const stockInitial = safeNum(item.stockInitial, 0);
       const seuil = safeNum(item.seuil, 0);
@@ -266,23 +143,25 @@ export default function App() {
     });
   }, [rawStock, mouvements]);
 
-  // Filters State
+
+  // Filter States
   const [stockSearch, setStockSearch] = useState('');
+  const deferredStockSearch = useDeferredValue(stockSearch);
   const [stockTypeFilter, setStockTypeFilter] = useState('ALL');
   const [stockAlertOnly, setStockAlertOnly] = useState(false);
 
-  const [diagTypeFilter, setDiagTypeFilter] = useState('ALL');
-  const [templateFamilyFilter, setTemplateFamilyFilter] = useState('ALL');
-
+  const [mchSearch, setMchSearch] = useState('');
+  const deferredMchSearch = useDeferredValue(mchSearch);
   const [mchFamilyFilter, setMchFamilyFilter] = useState('ALL');
   const [mchTemplateFilter, setMchTemplateFilter] = useState('ALL');
   const [mchZoneFilter, setMchZoneFilter] = useState('ALL');
-  const [mchSearch, setMchSearch] = useState('');
 
-  const [techZoneFilter, setTechZoneFilter] = useState('ALL');
+  const [diagTypeFilter, setDiagTypeFilter] = useState('ALL');
   const [opZoneFilter, setOpZoneFilter] = useState('ALL');
+  const [techZoneFilter, setTechZoneFilter] = useState('ALL');
+  const [templateFamilyFilter, setTemplateFamilyFilter] = useState('ALL');
 
-  // Modals state
+  // Modal States
   const [showAddArticleModal, setShowAddArticleModal] = useState(false);
   const [showAddMachineModal, setShowAddMachineModal] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -300,8 +179,8 @@ export default function App() {
         return false;
       if (stockAlertOnly && item.alerte === 'OK') return false;
 
-      if (stockSearch) {
-        const q = stockSearch.toLowerCase();
+      if (deferredStockSearch) {
+        const q = deferredStockSearch.toLowerCase();
         return (
           item.ref.toLowerCase().includes(q) ||
           item.designation.toLowerCase().includes(q) ||
@@ -312,7 +191,7 @@ export default function App() {
       }
       return true;
     });
-  }, [stockItems, stockTypeFilter, stockAlertOnly, stockSearch]);
+  }, [stockItems, stockTypeFilter, stockAlertOnly, deferredStockSearch]);
 
   // Stock KPIs
   const stockKPIs = useMemo(() => {
@@ -336,7 +215,7 @@ export default function App() {
       totalSorties,
       totalStockActuel,
       ruptures,
-      alertes
+      alertes,
     };
   }, [stockItems]);
 
@@ -400,16 +279,16 @@ export default function App() {
   const handleAddDesignation = (newDesig) => {
     setRawStock((prev) => [
       {
-        id: Date.now(),
+        id: crypto.randomUUID(),
         ref: newDesig.ref,
         designation: newDesig.designation,
         type: newDesig.id_type,
         id_type: newDesig.id_type,
         stockInitial: Number(newDesig.stockInitial) || 0,
         seuil: Number(newDesig.seuil) || 3,
-        emplacement: newDesig.emplacement || 'A1-R1'
+        emplacement: newDesig.emplacement || 'A1-R1',
       },
-      ...prev
+      ...prev,
     ]);
   };
 
@@ -427,76 +306,117 @@ export default function App() {
     setZones((prev) => [...prev, newZone]);
   };
 
-    // ===== UPDATE & DELETE HANDLERS =====
+  // ===== UPDATE & DELETE HANDLERS =====
   const handleUpdateZone = (id, updatedZone) => {
-    setZones(prev => prev.map(z => z.id_zone === id ? updatedZone : z));
-    const oldZone = zones.find(z => z.id_zone === id);
+    setZones((prev) => prev.map((z) => (z.id_zone === id ? updatedZone : z)));
+    const oldZone = zones.find((z) => z.id_zone === id);
     if (oldZone && oldZone.id_zone !== updatedZone.id_zone) {
-      setTechnicians(prev => prev.map(t => t.id_zone === id ? { ...t, id_zone: updatedZone.id_zone } : t));
-      setOperations(prev => prev.map(o => o.id_zone === id ? { ...o, id_zone: updatedZone.id_zone } : o));
-      setMachines(prev => prev.map(m => m.id_zone_default === id ? { ...m, id_zone_default: updatedZone.id_zone } : m));
-      setMouvements(prev => prev.map(m => m.id_zone === id ? { ...m, id_zone: updatedZone.id_zone } : m));
+      setTechnicians((prev) =>
+        prev.map((t) => (t.id_zone === id ? { ...t, id_zone: updatedZone.id_zone } : t))
+      );
+      setOperations((prev) =>
+        prev.map((o) => (o.id_zone === id ? { ...o, id_zone: updatedZone.id_zone } : o))
+      );
+      setMachines((prev) =>
+        prev.map((m) =>
+          m.id_zone_default === id ? { ...m, id_zone_default: updatedZone.id_zone } : m
+        )
+      );
+      setMouvements((prev) =>
+        prev.map((m) => (m.id_zone === id ? { ...m, id_zone: updatedZone.id_zone } : m))
+      );
     }
   };
-  const handleDeleteZone = (id) => setZones(prev => prev.filter(z => z.id_zone !== id));
+  const handleDeleteZone = (id) => setZones((prev) => prev.filter((z) => z.id_zone !== id));
 
   const handleUpdateOperation = (id, updatedOp) => {
-    setOperations(prev => prev.map(o => o.id_operation === id ? updatedOp : o));
-    const oldOp = operations.find(o => o.id_operation === id);
+    setOperations((prev) => prev.map((o) => (o.id_operation === id ? updatedOp : o)));
+    const oldOp = operations.find((o) => o.id_operation === id);
     if (oldOp && oldOp.nom !== updatedOp.nom) {
-      setMouvements(prev => prev.map(m => m.operation === oldOp.nom ? { ...m, operation: updatedOp.nom } : m));
+      setMouvements((prev) =>
+        prev.map((m) => (m.operation === oldOp.nom ? { ...m, operation: updatedOp.nom } : m))
+      );
     }
   };
-  const handleDeleteOperation = (id) => setOperations(prev => prev.filter(o => o.id_operation !== id));
+  const handleDeleteOperation = (id) =>
+    setOperations((prev) => prev.filter((o) => o.id_operation !== id));
 
   const handleUpdateMachine = (id, updatedMch) => {
-    setMachines(prev => prev.map(m => m.id_machine_registered === id ? updatedMch : m));
+    setMachines((prev) => prev.map((m) => (m.id_machine_registered === id ? updatedMch : m)));
     if (id !== updatedMch.id_machine_registered) {
-      setMouvements(prev => prev.map(m => m.id_machine_registered === id ? { ...m, id_machine_registered: updatedMch.id_machine_registered } : m));
+      setMouvements((prev) =>
+        prev.map((m) =>
+          m.id_machine_registered === id
+            ? { ...m, id_machine_registered: updatedMch.id_machine_registered }
+            : m
+        )
+      );
     }
   };
-  const handleDeleteMachine = (id) => setMachines(prev => prev.filter(m => m.id_machine_registered !== id));
+  const handleDeleteMachine = (id) =>
+    setMachines((prev) => prev.filter((m) => m.id_machine_registered !== id));
 
   const handleUpdateType = (id, updatedType) => {
-    setTypes(prev => prev.map(t => t.id_type === id ? updatedType : t));
+    setTypes((prev) => prev.map((t) => (t.id_type === id ? updatedType : t)));
     if (id !== updatedType.id_type) {
-      setRawStock(prev => prev.map(s => s.type === id || s.id_type === id ? { ...s, type: updatedType.id_type, id_type: updatedType.id_type } : s));
+      setRawStock((prev) =>
+        prev.map((s) =>
+          s.type === id || s.id_type === id
+            ? { ...s, type: updatedType.id_type, id_type: updatedType.id_type }
+            : s
+        )
+      );
     }
   };
-  const handleDeleteType = (id) => setTypes(prev => prev.filter(t => t.id_type !== id));
+  const handleDeleteType = (id) => setTypes((prev) => prev.filter((t) => t.id_type !== id));
 
   const handleUpdateDesignation = (id, updatedDesig) => {
-    setRawStock(prev => prev.map(s => s.ref === id ? { 
-      ...s, 
-      ref: updatedDesig.ref, 
-      designation: updatedDesig.designation, 
-      type: updatedDesig.id_type, 
-      id_type: updatedDesig.id_type,
-      stockInitial: Number(updatedDesig.stockInitial),
-      seuil: Number(updatedDesig.seuil),
-      emplacement: updatedDesig.emplacement
-    } : s));
+    setRawStock((prev) =>
+      prev.map((s) =>
+        s.ref === id
+          ? {
+              ...s,
+              ref: updatedDesig.ref,
+              designation: updatedDesig.designation,
+              type: updatedDesig.id_type,
+              id_type: updatedDesig.id_type,
+              stockInitial: Number(updatedDesig.stockInitial),
+              seuil: Number(updatedDesig.seuil),
+              emplacement: updatedDesig.emplacement,
+            }
+          : s
+      )
+    );
   };
-  const handleDeleteDesignation = (id) => setRawStock(prev => prev.filter(s => s.ref !== id));
+  const handleDeleteDesignation = (id) => setRawStock((prev) => prev.filter((s) => s.ref !== id));
   const handleUpdateDiagnostic = handleUpdateDesignation;
   const handleDeleteDiagnostic = handleDeleteDesignation;
 
   const handleUpdateFamily = (id, updatedFamily) => {
-    setFamilies(prev => prev.map(f => f.id_family === id ? updatedFamily : f));
+    setFamilies((prev) => prev.map((f) => (f.id_family === id ? updatedFamily : f)));
     if (id !== updatedFamily.id_family) {
-      setTemplates(prev => prev.map(t => t.id_family === id ? { ...t, id_family: updatedFamily.id_family } : t));
-      setMachines(prev => prev.map(m => m.id_family === id ? { ...m, id_family: updatedFamily.id_family } : m));
+      setTemplates((prev) =>
+        prev.map((t) => (t.id_family === id ? { ...t, id_family: updatedFamily.id_family } : t))
+      );
+      setMachines((prev) =>
+        prev.map((m) => (m.id_family === id ? { ...m, id_family: updatedFamily.id_family } : m))
+      );
     }
   };
-  const handleDeleteFamily = (id) => setFamilies(prev => prev.filter(f => f.id_family !== id));
+  const handleDeleteFamily = (id) => setFamilies((prev) => prev.filter((f) => f.id_family !== id));
 
   const handleUpdateTemplate = (id, updatedTemplate) => {
-    setTemplates(prev => prev.map(t => t.id_templates === id ? updatedTemplate : t));
+    setTemplates((prev) => prev.map((t) => (t.id_templates === id ? updatedTemplate : t)));
     if (id !== updatedTemplate.id_templates) {
-      setMachines(prev => prev.map(m => m.id_templates === id ? { ...m, id_templates: updatedTemplate.id_templates } : m));
+      setMachines((prev) =>
+        prev.map((m) =>
+          m.id_templates === id ? { ...m, id_templates: updatedTemplate.id_templates } : m
+        )
+      );
     }
   };
-  const handleDeleteTemplate = (id) => setTemplates(prev => prev.filter(t => t.id_templates !== id));
+  const handleDeleteTemplate = (id) =>
+    setTemplates((prev) => prev.filter((t) => t.id_templates !== id));
   // ===================================
 
   const handleAddTechnician = (newTech) => {
@@ -504,14 +424,18 @@ export default function App() {
   };
 
   const handleUpdateTechnician = (id, updatedTech) => {
-    setTechnicians((prev) => prev.map((t) => t.id_technician === id ? updatedTech : t));
-    
+    setTechnicians((prev) => prev.map((t) => (t.id_technician === id ? updatedTech : t)));
+
     // Cascade update to Machines (technician field) if name changed
-    const oldTech = technicians.find(t => t.id_technician === id);
+    const oldTech = technicians.find((t) => t.id_technician === id);
     if (oldTech && oldTech.nom !== updatedTech.nom) {
-      setMachines((prev) => prev.map(m => m.technician === oldTech.nom ? { ...m, technician: updatedTech.nom } : m));
+      setMachines((prev) =>
+        prev.map((m) => (m.technician === oldTech.nom ? { ...m, technician: updatedTech.nom } : m))
+      );
       // Cascade update to Mouvements if it stores the name
-      setMouvements((prev) => prev.map(m => m.technicien === oldTech.nom ? { ...m, technicien: updatedTech.nom } : m));
+      setMouvements((prev) =>
+        prev.map((m) => (m.technicien === oldTech.nom ? { ...m, technicien: updatedTech.nom } : m))
+      );
     }
   };
 
@@ -528,12 +452,16 @@ export default function App() {
   };
 
   const handleAddArticle = (newArt) => {
+    if (rawStock.some((s) => String(s.ref).toLowerCase() === String(newArt.ref).toLowerCase())) {
+      showToast('Erreur: La référence existe déjà.', 'error');
+      return;
+    }
     setRawStock((prev) => [
       {
-        id: Date.now(),
-        ...newArt
+        id: crypto.randomUUID(),
+        ...newArt,
       },
-      ...prev
+      ...prev,
     ]);
   };
 
@@ -545,15 +473,12 @@ export default function App() {
     }
   };
 
-  const handleDeleteMouvement = (mvtId) => {
-    setMouvements((prev) => prev.filter((m) => m.id !== mvtId));
-  };
-
-  const handleUpdateMouvement = (mvtId, updatedMvt) => {
-    setMouvements((prev) =>
-      prev.map((m) => (m.id === mvtId ? { ...m, ...updatedMvt } : m))
-    );
-  };
+  const { handleUpdate: handleUpdateArticle, handleDelete: handleDeleteArticle } = useGenericCRUD(
+    setRawStock,
+    'id'
+  );
+  const { handleUpdate: handleUpdateMouvement, handleDelete: handleDeleteMouvement } =
+    useGenericCRUD(setMouvements, 'id');
 
   const handleQuickSortie = (article) => {
     // Navigate to Sortie Rapide tab
@@ -564,7 +489,10 @@ export default function App() {
   const createAutomaticBackup = (reason = 'Importation Excel') => {
     try {
       const now = new Date();
-      const dateStr = now.toLocaleDateString('fr-FR') + ' À ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr =
+        now.toLocaleDateString('fr-FR') +
+        ' À ' +
+        now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const backupKey = `gmao_backup_${now.getTime()}`;
       const backupData = {
         timestamp: now.toISOString(),
@@ -580,16 +508,22 @@ export default function App() {
           technicians,
           operations,
           types,
-          diagnostics
-        }
+          diagnostics,
+        },
       };
 
       storageService.setItem(backupKey, backupData);
 
       const backupList = storageService.getItem('gmao_backups_list') || [];
       const updatedList = [
-        { key: backupKey, date: dateStr, reason, itemsCount: rawStock.length, mvtsCount: mouvements.length },
-        ...backupList
+        {
+          key: backupKey,
+          date: dateStr,
+          reason,
+          itemsCount: rawStock.length,
+          mvtsCount: mouvements.length,
+        },
+        ...backupList,
       ].slice(0, 15);
 
       storageService.setItem('gmao_backups_list', updatedList);
@@ -616,7 +550,7 @@ export default function App() {
       'Stock Actuel': s.stockActuel,
       Seuil: s.seuil,
       Alerte: s.alerte,
-      Emplacement: s.emplacement
+      Emplacement: s.emplacement,
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(stockData), 'Stock_Actuel');
 
@@ -628,7 +562,7 @@ export default function App() {
       ID_Template: m.id_templates,
       Zone_Default: m.id_zone_default,
       Technicien: m.technician,
-      Statut: m.status
+      Statut: m.status,
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mchData), 'Machines_Registered');
 
@@ -671,6 +605,27 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Restrict file size to 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('Fichier trop volumineux. La taille maximale est de 10 MB.', 'error');
+      return;
+    }
+
+    // Restrict file extensions and MIME types
+    const validExtensions = ['.json', '.xlsx'];
+    const validMimeTypes = [
+      'application/json',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ];
+    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!validExtensions.includes(fileExt) || (file.type && !validMimeTypes.includes(file.type))) {
+      showToast(
+        'Format de fichier non supporté. Seuls les fichiers JSON et XLSX sont autorisés.',
+        'error'
+      );
+      return;
+    }
+
     // Create Automatic Dated Backup before overwriting data
     const backupDate = createAutomaticBackup(`Importation : ${file.name}`);
 
@@ -679,29 +634,29 @@ export default function App() {
       try {
         if (file.name.endsWith('.json')) {
           const json = JSON.parse(evt.target.result);
-          if (json.Stock_Actuel) setRawStock(json.Stock_Actuel);
-          if (json.Mouvement) setMouvements(json.Mouvement);
-          if (json.Machines_Registered) setMachines(json.Machines_Registered);
-          if (json.Families) setFamilies(json.Families);
-          if (json.Templates) setTemplates(json.Templates);
-          if (json.Zones) setZones(json.Zones);
-          if (json.Technicians) setTechnicians(json.Technicians);
-          if (json.Operations) setOperations(json.Operations);
+          if (json.Stock_Actuel) setRawStock(sanitizeObject(json.Stock_Actuel));
+          if (json.Mouvement) setMouvements(sanitizeObject(json.Mouvement));
+          if (json.Machines_Registered) setMachines(sanitizeObject(json.Machines_Registered));
+          if (json.Families) setFamilies(sanitizeObject(json.Families));
+          if (json.Templates) setTemplates(sanitizeObject(json.Templates));
+          if (json.Zones) setZones(sanitizeObject(json.Zones));
+          if (json.Technicians) setTechnicians(sanitizeObject(json.Technicians));
+          if (json.Operations) setOperations(sanitizeObject(json.Operations));
           showToast(`Import JSON réussi ! (Backup daté du ${backupDate})`, 'success');
         } else {
           const data = new Uint8Array(evt.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
           if (workbook.SheetNames.includes('Stock_Actuel')) {
             const parsedStock = XLSX.utils.sheet_to_json(workbook.Sheets['Stock_Actuel']);
-            if (parsedStock.length > 0) setRawStock(parsedStock);
+            if (parsedStock.length > 0) setRawStock(sanitizeObject(parsedStock));
           }
           if (workbook.SheetNames.includes('Machines_Registered')) {
             const parsedMch = XLSX.utils.sheet_to_json(workbook.Sheets['Machines_Registered']);
-            if (parsedMch.length > 0) setMachines(parsedMch);
+            if (parsedMch.length > 0) setMachines(sanitizeObject(parsedMch));
           }
           if (workbook.SheetNames.includes('Mouvements')) {
             const parsedMvt = XLSX.utils.sheet_to_json(workbook.Sheets['Mouvements']);
-            if (parsedMvt.length > 0) setMouvements(parsedMvt);
+            if (parsedMvt.length > 0) setMouvements(sanitizeObject(parsedMvt));
           }
           if (workbook.SheetNames.includes('Types')) {
             const parsedTypes = XLSX.utils.sheet_to_json(workbook.Sheets['Types']);
@@ -709,17 +664,20 @@ export default function App() {
           }
           if (workbook.SheetNames.includes('Families')) {
             const parsedFam = XLSX.utils.sheet_to_json(workbook.Sheets['Families']);
-            if (parsedFam.length > 0) setFamilies(parsedFam);
+            if (parsedFam.length > 0) setFamilies(sanitizeObject(parsedFam));
           }
           if (workbook.SheetNames.includes('Zones')) {
             const parsedZones = XLSX.utils.sheet_to_json(workbook.Sheets['Zones']);
             if (parsedZones.length > 0) setZones(parsedZones);
           }
-          showToast(`Import Excel réussi via XLSX.read ! (Backup daté du ${backupDate})`, 'success');
+          showToast(
+            `Import Excel réussi via XLSX.read ! (Backup daté du ${backupDate})`,
+            'success'
+          );
         }
       } catch (err) {
         console.error('Import error:', err);
-        showToast('Erreur lors de l\'importation du fichier.', 'error');
+        showToast("Erreur lors de l'importation du fichier.", 'error');
       }
     };
 
@@ -733,7 +691,10 @@ export default function App() {
   // DIRECT FILE SYSTEM ACCESS API LINK (NO EXPORT DOWNLOAD NEEDED)
   const handleDirectFileLink = async () => {
     if (!('showOpenFilePicker' in window)) {
-      showToast('Liaison directe disponible sur Chrome/Edge. Basculement vers l\'import classique.', 'info');
+      showToast(
+        "Liaison directe disponible sur Chrome/Edge. Basculement vers l'import classique.",
+        'info'
+      );
       fileInputRef.current?.click();
       return;
     }
@@ -744,11 +705,14 @@ export default function App() {
           {
             description: 'Fichiers Excel GMAO (.xlsx)',
             accept: {
-              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx', '.xls']
-            }
-          }
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [
+                '.xlsx',
+                '.xls',
+              ],
+            },
+          },
         ],
-        multiple: false
+        multiple: false,
       });
 
       const file = await handle.getFile();
@@ -772,11 +736,14 @@ export default function App() {
 
       setLinkedFileHandle(handle);
       setLinkedFileName(file.name);
-      showToast(`🔗 Fichier "${file.name}" lié en direct ! (Backup sauvegardé : ${backupDate})`, 'success');
+      showToast(
+        `🔗 Fichier "${file.name}" lié en direct ! (Backup sauvegardé : ${backupDate})`,
+        'success'
+      );
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.error('Direct link error:', err);
-        showToast('Erreur lors de l\'accès au fichier sélectionné.', 'error');
+        showToast("Erreur lors de l'accès au fichier sélectionné.", 'error');
       }
     }
   };
@@ -830,7 +797,7 @@ export default function App() {
           templates: templates.length,
           zones: zones.length,
           technicians: technicians.length,
-          operations: operations.length
+          operations: operations.length,
         }}
         currentUser={currentUser}
         onLogout={() => {
@@ -882,7 +849,7 @@ export default function App() {
               setStockTypeFilter={setStockTypeFilter}
               stockAlertOnly={stockAlertOnly}
               setStockAlertOnly={setStockAlertOnly}
-              types={stockTypesList}
+              types={types}
               onOpenAddArticle={() => setShowAddArticleModal(true)}
               onQuickSortie={handleQuickSortie}
               stockKPIs={stockKPIs}

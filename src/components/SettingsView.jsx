@@ -37,7 +37,7 @@ import {
   Lock,
   Unlock,
   Shield,
-  Key
+  Key,
 } from 'lucide-react';
 
 import {
@@ -48,7 +48,7 @@ import {
   INITIAL_MACHINES_REGISTERED,
   INITIAL_ZONES,
   INITIAL_TECHNICIANS,
-  INITIAL_OPERATIONS
+  INITIAL_OPERATIONS,
 } from '../data/seedData';
 import initialData from '../initialData.json';
 import { storageService } from '../utils/storageService';
@@ -78,16 +78,16 @@ export default function SettingsView({
   linkedFileName,
   setLinkedFileName,
   onDirectLink,
-  onDirectSave
+  onDirectSave,
 }) {
   const [activeTab, setActiveTab] = useState('overview'); // overview, injection, directory, matching, json-editor
-  
+
   // Local storage size computation
   const localStorageSizeKB = useMemo(() => {
     let total = 0;
     for (let x in localStorage) {
       if (localStorage.hasOwnProperty(x)) {
-        total += ((localStorage[x].length + x.length) * 2);
+        total += (localStorage[x].length + x.length) * 2;
       }
     }
     return (total / 1024).toFixed(1);
@@ -117,7 +117,9 @@ export default function SettingsView({
 
   // Admin & Security Config States
   const [tempRole, setTempRole] = useState(() => {
-    return localStorage.getItem('gmao_admin_role') || 'Gestionnaire Principal du Stock & Mouvements';
+    return (
+      localStorage.getItem('gmao_admin_role') || 'Gestionnaire Principal du Stock & Mouvements'
+    );
   });
 
   const [tempPin, setTempPin] = useState(() => {
@@ -139,7 +141,12 @@ export default function SettingsView({
 
   const [auditTarget, setAuditTarget] = useState('machines'); // machines, zones, utilisateurs
   const [showAuditUserModal, setShowAuditUserModal] = useState(false);
-  const [auditUserForm, setAuditUserForm] = useState({ type: 'TECHNICIEN', nom: '', id_zone: '', specialite: '' });
+  const [auditUserForm, setAuditUserForm] = useState({
+    type: 'TECHNICIEN',
+    nom: '',
+    id_zone: '',
+    specialite: '',
+  });
   const [showAuditZoneModal, setShowAuditZoneModal] = useState(false);
   const [auditZoneForm, setAuditZoneForm] = useState({ libelle: '' });
 
@@ -192,24 +199,55 @@ export default function SettingsView({
   // AUDIT & VERIFICATION ENGINE
   const discoveredItems = useMemo(() => {
     const candidates = {};
-    
+
     if (auditTarget === 'machines') {
-      const registeredIds = new Set(machines.map(m => String(m.id_machine_registered || '').toLowerCase().trim()));
-      
+      const registeredIds = new Set(
+        machines.map((m) =>
+          String(m.id_machine_registered || '')
+            .toLowerCase()
+            .trim()
+        )
+      );
+
       mouvements.forEach((m) => {
         const code = String(m.id_machine_registered || '').trim();
         if (code && !registeredIds.has(code.toLowerCase())) {
           candidates[code] = (candidates[code] || 0) + 1;
         }
       });
-      
+
       const mchRegex = /\b([A-Z]{2,4}-\d{2,3}|[A-Z]{2,4}-\d{1,2})\b/gi;
       const scanTexts = (texts) => {
         let match;
         mchRegex.lastIndex = 0;
         while ((match = mchRegex.exec(texts)) !== null) {
           const code = match[1].toUpperCase();
-          if (['B1', 'R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'REF', 'TPL', 'FAM', 'ZONE', 'TECH', 'CHEF', 'OP', 'MCH'].includes(code)) continue;
+          if (
+            [
+              'B1',
+              'R1',
+              'R2',
+              'R3',
+              'R4',
+              'R5',
+              'R6',
+              'A1',
+              'A2',
+              'A3',
+              'A4',
+              'A5',
+              'A6',
+              'REF',
+              'TPL',
+              'FAM',
+              'ZONE',
+              'TECH',
+              'CHEF',
+              'OP',
+              'MCH',
+            ].includes(code)
+          )
+            continue;
           if (!registeredIds.has(code.toLowerCase())) {
             candidates[code] = (candidates[code] || 0) + 1;
           }
@@ -222,31 +260,51 @@ export default function SettingsView({
       return Object.entries(candidates)
         .map(([code, count]) => ({ code, count }))
         .sort((a, b) => b.count - a.count);
-
     } else if (auditTarget === 'zones') {
       const registeredZones = new Set([
-        ...zones.map(z => String(z.id_zone || '').toLowerCase().trim()),
-        ...zones.map(z => String(z.libelle || '').toLowerCase().trim()),
-        ...zones.map(z => String(z.nom || '').toLowerCase().trim())
+        ...zones.map((z) =>
+          String(z.id_zone || '')
+            .toLowerCase()
+            .trim()
+        ),
+        ...zones.map((z) =>
+          String(z.libelle || '')
+            .toLowerCase()
+            .trim()
+        ),
+        ...zones.map((z) =>
+          String(z.nom || '')
+            .toLowerCase()
+            .trim()
+        ),
       ]);
 
-      mouvements.forEach(m => {
+      mouvements.forEach((m) => {
         const code = String(m.id_zone || '').trim();
-        if (code && !registeredZones.has(code.toLowerCase())) candidates[code] = (candidates[code] || 0) + 1;
+        if (code && !registeredZones.has(code.toLowerCase()))
+          candidates[code] = (candidates[code] || 0) + 1;
       });
-      machines.forEach(m => {
+      machines.forEach((m) => {
         const code = String(m.id_zone_default || '').trim();
-        if (code && !registeredZones.has(code.toLowerCase())) candidates[code] = (candidates[code] || 0) + 1;
+        if (code && !registeredZones.has(code.toLowerCase()))
+          candidates[code] = (candidates[code] || 0) + 1;
       });
 
       return Object.entries(candidates)
         .map(([code, count]) => ({ code, count }))
         .sort((a, b) => b.count - a.count);
-
     } else if (auditTarget === 'utilisateurs') {
       const registeredNames = new Set([
-        ...technicians.map(t => String(t.nom || '').toLowerCase().trim()),
-        ...operations.map(o => String(o.nom || '').toLowerCase().trim())
+        ...technicians.map((t) =>
+          String(t.nom || '')
+            .toLowerCase()
+            .trim()
+        ),
+        ...operations.map((o) =>
+          String(o.nom || '')
+            .toLowerCase()
+            .trim()
+        ),
       ]);
 
       const userMap = {};
@@ -259,7 +317,13 @@ export default function SettingsView({
         if (/^(OP-|CHEF-|TECH-)/i.test(name)) return;
 
         if (!userMap[name]) {
-          userMap[name] = { count: 0, techCount: 0, opCount: 0, demandeurCount: 0, sources: new Set() };
+          userMap[name] = {
+            count: 0,
+            techCount: 0,
+            opCount: 0,
+            demandeurCount: 0,
+            sources: new Set(),
+          };
         }
         userMap[name].count += 1;
         userMap[name].sources.add(sourceField);
@@ -268,13 +332,13 @@ export default function SettingsView({
         if (sourceField === 'Demandeur') userMap[name].demandeurCount += 1;
       };
 
-      mouvements.forEach(m => {
+      mouvements.forEach((m) => {
         if (m.technicien) addCandidate(m.technicien, 'Technicien');
         if (m.operation) addCandidate(m.operation, 'Opération/Chef');
         if (m.demandeur) addCandidate(m.demandeur, 'Demandeur');
       });
 
-      machines.forEach(m => {
+      machines.forEach((m) => {
         if (m.technician) addCandidate(m.technician, 'Parc Machine');
       });
 
@@ -295,7 +359,7 @@ export default function SettingsView({
             code: name,
             count: meta.count,
             inferredRole,
-            sourceList
+            sourceList,
           };
         })
         .sort((a, b) => b.count - a.count);
@@ -306,10 +370,10 @@ export default function SettingsView({
 
   const handleSaveAdminConfig = () => {
     if (!tempPin || tempPin.trim().length < 4) {
-      showToast("Le code PIN doit comporter au moins 4 caracteres.", "error");
+      showToast('Le code PIN doit comporter au moins 4 caracteres.', 'error');
       return;
     }
-    
+
     const hashed = storageService.hashPin(tempPin.trim());
     localStorage.setItem('gmao_admin_pin', hashed);
     localStorage.setItem('gmao_admin_role', tempRole.trim());
@@ -326,7 +390,7 @@ export default function SettingsView({
 
     // Dispatch event to sync state immediately
     window.dispatchEvent(new Event('storage'));
-    showToast("Configuration Administrateur enregistree et chiffree avec succes !", "success");
+    showToast('Configuration Administrateur enregistree et chiffree avec succes !', 'success');
   };
 
   // JSON Advanced Editor States
@@ -346,7 +410,18 @@ export default function SettingsView({
     else if (jsonTarget === 'operations') targetData = operations;
     else if (jsonTarget === 'types') targetData = types;
     return JSON.stringify(targetData, null, 2);
-  }, [jsonTarget, rawStock, mouvements, machines, families, templates, zones, technicians, operations, types]);
+  }, [
+    jsonTarget,
+    rawStock,
+    mouvements,
+    machines,
+    families,
+    templates,
+    zones,
+    technicians,
+    operations,
+    types,
+  ]);
 
   const isJsonModified = useMemo(() => {
     return jsonText !== originalJsonText;
@@ -367,7 +442,19 @@ export default function SettingsView({
 
     setJsonText(JSON.stringify(targetData, null, 2));
     setJsonError(null);
-  }, [jsonTarget, rawStock, mouvements, machines, families, templates, zones, technicians, operations, types, activeTab]);
+  }, [
+    jsonTarget,
+    rawStock,
+    mouvements,
+    machines,
+    families,
+    templates,
+    zones,
+    technicians,
+    operations,
+    types,
+    activeTab,
+  ]);
 
   const handleSaveJSON = () => {
     try {
@@ -425,7 +512,10 @@ export default function SettingsView({
         }
         setJsonText(JSON.stringify(parsed, null, 2));
         setJsonError(null);
-        showToast('Fichier charge dans l\'editeur. Veuillez l\'enregistrer pour appliquer.', 'success');
+        showToast(
+          "Fichier charge dans l'editeur. Veuillez l'enregistrer pour appliquer.",
+          'success'
+        );
       } catch (err) {
         setJsonError(`JSON invalide : ${err.message}`);
         showToast('Le fichier importe contient un JSON invalide.', 'error');
@@ -461,7 +551,10 @@ export default function SettingsView({
           const file = await linkedFileHandle.getFile();
           const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
           const date = new Date(file.lastModified);
-          const formattedDate = date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+          const formattedDate =
+            date.toLocaleDateString('fr-FR') +
+            ' ' +
+            date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
           setFileDetails({ size: `${sizeMB} Mo`, lastModified: formattedDate });
         } catch (e) {
           console.error(e);
@@ -482,7 +575,11 @@ export default function SettingsView({
 
   // DATA INJECTION HUB HANDLERS
   const handleResetToZero = () => {
-    if (window.confirm("Etes-vous sur de vouloir TOUT effacer ? Cette action videra les tables locales de stockage.")) {
+    if (
+      window.confirm(
+        'Etes-vous sur de vouloir TOUT effacer ? Cette action videra les tables locales de stockage.'
+      )
+    ) {
       setRawStock([]);
       setMouvements([]);
       setMachines([]);
@@ -502,7 +599,7 @@ export default function SettingsView({
         let initStock = 0;
         if (typeof item.Type === 'number' && !isNaN(item.Type)) initStock = item.Type;
         else if (item.stockInitial != null) initStock = Number(item.stockInitial) || 0;
-        
+
         return {
           id: item.id || idx + 1,
           ref: item.ref || `ART${String(idx + 1).padStart(3, '0')}`,
@@ -511,13 +608,15 @@ export default function SettingsView({
           id_type: item.type || item['Designation'] || 'Divers',
           stockInitial: initStock,
           seuil: Number(item.seuil) || 3,
-          emplacement: item.emplacement || `A${(idx % 8) + 1}-R${(idx % 6) + 1}`
+          emplacement: item.emplacement || `A${(idx % 8) + 1}-R${(idx % 6) + 1}`,
         };
       });
       setRawStock(mappedStock);
       const set = new Set();
-      mappedStock.forEach((s) => { if (s.type) set.add(s.type); });
-      setTypes(Array.from(set).map(t => ({ id_type: t, libelle: t })));
+      mappedStock.forEach((s) => {
+        if (s.type) set.add(s.type);
+      });
+      setTypes(Array.from(set).map((t) => ({ id_type: t, libelle: t })));
       showToast(`${mappedStock.length} articles injectes dans le stock.`, 'success');
     } else if (group === 'parc') {
       setMachines(INITIAL_MACHINES_REGISTERED);
@@ -532,8 +631,20 @@ export default function SettingsView({
     } else if (group === 'mouvements') {
       const mappedMvts = (initialData.Mouvement || []).map((m, idx) => ({
         id: m.id || idx + 1,
-        code_bon: m.code_bon || m['Code_Bon'] || m['Code Bon'] || m['N° Bon'] || `Bon-${String(idx + 1).padStart(3, '0')}`,
-        num_commande: m.num_commande || m['N° Commande'] || m['Num_Commande'] || m['N° Demande'] || m['Code Demande'] || m.num_demande || '',
+        code_bon:
+          m.code_bon ||
+          m['Code_Bon'] ||
+          m['Code Bon'] ||
+          m['N° Bon'] ||
+          `Bon-${String(idx + 1).padStart(3, '0')}`,
+        num_commande:
+          m.num_commande ||
+          m['N° Commande'] ||
+          m['Num_Commande'] ||
+          m['N° Demande'] ||
+          m['Code Demande'] ||
+          m.num_demande ||
+          '',
         date: m.date || '2026-07-16',
         ref: m.ref || m['Reference'] || '',
         quantite: Number(m.quantite) || 1,
@@ -544,7 +655,7 @@ export default function SettingsView({
         id_machine_registered: m.id_machine_registered || '',
         operation: m.operation || '',
         commentaire: m.commentaire || '',
-        demandeur: m.demandeur || ''
+        demandeur: m.demandeur || '',
       }));
       setMouvements(mappedMvts);
       showToast(`${mappedMvts.length} mouvements historiques injectes.`, 'success');
@@ -575,7 +686,7 @@ export default function SettingsView({
         id_templates: defaultTemplate,
         id_zone_default: defaultZone,
         technician: defaultTech,
-        status: 'En service'
+        status: 'En service',
       }));
       setMachines((prev) => [...prev, ...newMachines]);
       showToast(`${newMachines.length} machines enregistrées avec succès.`, 'success');
@@ -606,7 +717,7 @@ export default function SettingsView({
             nom: name,
             specialite: 'GMAO & Maintenance',
             contact: '',
-            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`
+            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`,
           });
           regTech++;
         } else if (role === 'CHEF') {
@@ -625,12 +736,14 @@ export default function SettingsView({
             nom: name,
             id_zone: zones[0]?.id_zone || 'ZONE-DET',
             type_profil: 'CHEF',
-            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`
+            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`,
           });
           regChef++;
         } else {
           const nums = nextOps
-            .filter((o) => o.type_profil === 'OPERATEUR' || !String(o.id_operation).startsWith('CHEF'))
+            .filter(
+              (o) => o.type_profil === 'OPERATEUR' || !String(o.id_operation).startsWith('CHEF')
+            )
             .map((o) => {
               const m = String(o.id_operation || '').match(/OP-(\d+)/i);
               return m ? parseInt(m[1], 10) : 0;
@@ -644,7 +757,7 @@ export default function SettingsView({
             nom: name,
             id_zone: zones[0]?.id_zone || 'ZONE-DET',
             type_profil: 'OPERATEUR',
-            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`
+            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`,
           });
           regOp++;
         }
@@ -657,20 +770,25 @@ export default function SettingsView({
         'success'
       );
     } else {
-      showToast("Veuillez enregistrer les zones manuellement pour attribuer leurs libellés.", "info");
+      showToast(
+        'Veuillez enregistrer les zones manuellement pour attribuer leurs libellés.',
+        'info'
+      );
     }
   };
 
   const getAuditLabel = () => {
     switch (auditTarget) {
-      case 'machines': return 'Machines';
-      case 'zones': return 'Zones';
-      case 'utilisateurs': return 'Utilisateurs';
-      default: return 'Eléments';
+      case 'machines':
+        return 'Machines';
+      case 'zones':
+        return 'Zones';
+      case 'utilisateurs':
+        return 'Utilisateurs';
+      default:
+        return 'Eléments';
     }
   };
-
-
 
   return (
     <AnimatedPage className="space-y-6">
@@ -684,10 +802,13 @@ export default function SettingsView({
             <div>
               <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <span>Configuration & Parametres</span>
-                <span className="text-xs font-normal text-slate-400 font-mono">/ Settings & Twin Engine</span>
+                <span className="text-xs font-normal text-slate-400 font-mono">
+                  / Settings & Twin Engine
+                </span>
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Supervision du stockage local, injection de maquettes, appairage automatique et liaison dossier reseau.
+                Supervision du stockage local, injection de maquettes, appairage automatique et
+                liaison dossier reseau.
               </p>
             </div>
           </div>
@@ -704,13 +825,83 @@ export default function SettingsView({
       <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-xs w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 w-full">
           {[
-            { id: 'overview', label: 'Supervision', sub: 'Supervision Stockage', icon: HardDrive, color: 'text-cyan-600', activeBg: 'bg-cyan-50/70', activeBorder: 'border-cyan-500', activeText: 'text-cyan-950', activeIconBg: 'bg-cyan-100/80' },
-            { id: 'mvt-logic', label: 'Logique Mouvements', sub: 'Intern/Extern & Commande', icon: RotateCcw, color: 'text-blue-600', activeBg: 'bg-blue-50/70', activeBorder: 'border-blue-500', activeText: 'text-blue-950', activeIconBg: 'bg-blue-100/80' },
-            { id: 'injection', label: 'Injection', sub: "Centre d'injection", icon: Sliders, color: 'text-emerald-600', activeBg: 'bg-emerald-50/70', activeBorder: 'border-emerald-500', activeText: 'text-emerald-950', activeIconBg: 'bg-emerald-100/80' },
-            { id: 'directory', label: 'Reseau & Excel', sub: 'Twin Dossier Reseau', icon: FileSpreadsheet, color: 'text-indigo-600', activeBg: 'bg-indigo-50/70', activeBorder: 'border-indigo-500', activeText: 'text-indigo-950', activeIconBg: 'bg-indigo-100/80' },
-            { id: 'matching', label: `Appairage (${discoveredItems.length})`, sub: 'Audit & Synchro', icon: ShieldAlert, color: 'text-amber-500', activeBg: 'bg-amber-50/70', activeBorder: 'border-amber-500', activeText: 'text-amber-950', activeIconBg: 'bg-amber-100/80' },
-            { id: 'json-editor', label: 'Base JSON', sub: 'Editeur de Base', icon: FileCode, color: 'text-rose-500', activeBg: 'bg-rose-50/70', activeBorder: 'border-rose-500', activeText: 'text-rose-950', activeIconBg: 'bg-rose-100/80' },
-            { id: 'admin', label: 'Compte Admin', sub: 'Profil & Securite', icon: UserCheck, color: 'text-violet-600', activeBg: 'bg-violet-50/70', activeBorder: 'border-violet-500', activeText: 'text-violet-950', activeIconBg: 'bg-violet-100/80' }
+            {
+              id: 'overview',
+              label: 'Supervision',
+              sub: 'Supervision Stockage',
+              icon: HardDrive,
+              color: 'text-cyan-600',
+              activeBg: 'bg-cyan-50/70',
+              activeBorder: 'border-cyan-500',
+              activeText: 'text-cyan-950',
+              activeIconBg: 'bg-cyan-100/80',
+            },
+            {
+              id: 'mvt-logic',
+              label: 'Logique Mouvements',
+              sub: 'Intern/Extern & Commande',
+              icon: RotateCcw,
+              color: 'text-blue-600',
+              activeBg: 'bg-blue-50/70',
+              activeBorder: 'border-blue-500',
+              activeText: 'text-blue-950',
+              activeIconBg: 'bg-blue-100/80',
+            },
+            {
+              id: 'injection',
+              label: 'Injection',
+              sub: "Centre d'injection",
+              icon: Sliders,
+              color: 'text-emerald-600',
+              activeBg: 'bg-emerald-50/70',
+              activeBorder: 'border-emerald-500',
+              activeText: 'text-emerald-950',
+              activeIconBg: 'bg-emerald-100/80',
+            },
+            {
+              id: 'directory',
+              label: 'Reseau & Excel',
+              sub: 'Twin Dossier Reseau',
+              icon: FileSpreadsheet,
+              color: 'text-indigo-600',
+              activeBg: 'bg-indigo-50/70',
+              activeBorder: 'border-indigo-500',
+              activeText: 'text-indigo-950',
+              activeIconBg: 'bg-indigo-100/80',
+            },
+            {
+              id: 'matching',
+              label: `Appairage (${discoveredItems.length})`,
+              sub: 'Audit & Synchro',
+              icon: ShieldAlert,
+              color: 'text-amber-500',
+              activeBg: 'bg-amber-50/70',
+              activeBorder: 'border-amber-500',
+              activeText: 'text-amber-950',
+              activeIconBg: 'bg-amber-100/80',
+            },
+            {
+              id: 'json-editor',
+              label: 'Base JSON',
+              sub: 'Editeur de Base',
+              icon: FileCode,
+              color: 'text-rose-500',
+              activeBg: 'bg-rose-50/70',
+              activeBorder: 'border-rose-500',
+              activeText: 'text-rose-950',
+              activeIconBg: 'bg-rose-100/80',
+            },
+            {
+              id: 'admin',
+              label: 'Compte Admin',
+              sub: 'Profil & Securite',
+              icon: UserCheck,
+              color: 'text-violet-600',
+              activeBg: 'bg-violet-50/70',
+              activeBorder: 'border-violet-500',
+              activeText: 'text-violet-950',
+              activeIconBg: 'bg-violet-100/80',
+            },
           ].map((tab) => {
             const IconComponent = tab.icon;
             const isActive = activeTab === tab.id;
@@ -724,12 +915,20 @@ export default function SettingsView({
                     : 'bg-slate-50/50 hover:bg-slate-50 border-slate-200/80 text-slate-600'
                 }`}
               >
-                <div className={`p-2 rounded-lg shrink-0 border transition-all ${isActive ? `${tab.activeBorder} ${tab.activeIconBg}` : 'bg-white border-slate-200/80'}`}>
+                <div
+                  className={`p-2 rounded-lg shrink-0 border transition-all ${isActive ? `${tab.activeBorder} ${tab.activeIconBg}` : 'bg-white border-slate-200/80'}`}
+                >
                   <IconComponent className={`w-4 h-4 ${tab.color}`} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className={`text-xs font-bold leading-tight truncate ${isActive ? 'text-slate-900' : 'text-slate-700'}`}>{tab.label}</div>
-                  <div className={`text-[10px] mt-0.5 font-mono truncate ${isActive ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <div
+                    className={`text-xs font-bold leading-tight truncate ${isActive ? 'text-slate-900' : 'text-slate-700'}`}
+                  >
+                    {tab.label}
+                  </div>
+                  <div
+                    className={`text-[10px] mt-0.5 font-mono truncate ${isActive ? 'text-slate-600' : 'text-slate-400'}`}
+                  >
                     {tab.sub}
                   </div>
                 </div>
@@ -741,15 +940,14 @@ export default function SettingsView({
 
       {/* Tab Panels */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 sm:p-6 w-full max-w-full overflow-hidden">
-        
         {/* PANEL 1: SUPERVISION */}
-        {activeTab === 'overview' &&
+        {activeTab === 'overview' && (
           <div className="space-y-6">
             <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
               <HardDrive className="w-4 h-4 text-cyan-600" />
               Statistiques globales du stockage local
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* LocalStorage Usage */}
               <div className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-3">
@@ -761,9 +959,9 @@ export default function SettingsView({
                   <span className="font-mono text-cyan-800">{localStorageSizeKB} KB / 5 MB</span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-slate-100 border border-slate-200 overflow-hidden">
-                  <div 
-                    className="h-full bg-cyan-600 rounded-full transition-all duration-500" 
-                    style={{ width: `${storagePercentage}%` }} 
+                  <div
+                    className="h-full bg-cyan-600 rounded-full transition-all duration-500"
+                    style={{ width: `${storagePercentage}%` }}
                   />
                 </div>
                 <div className="text-[11px] text-slate-400 font-medium">
@@ -778,12 +976,29 @@ export default function SettingsView({
                   Nombre de fiches enregistrees
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-[11px] font-medium text-slate-500 pt-1">
-                  <div>Articles: <b className="text-slate-900 font-mono font-bold">{rawStock.length}</b></div>
-                  <div>Machines: <b className="text-slate-900 font-mono font-bold">{machines.length}</b></div>
-                  <div>Mouvements: <b className="text-slate-900 font-mono font-bold">{mouvements.length}</b></div>
-                  <div>Zones: <b className="text-slate-900 font-mono font-bold">{zones.length}</b></div>
-                  <div>Techniciens: <b className="text-slate-900 font-mono font-bold">{technicians.length}</b></div>
-                  <div>Chefs & Ops: <b className="text-slate-900 font-mono font-bold">{operations.length}</b></div>
+                  <div>
+                    Articles:{' '}
+                    <b className="text-slate-900 font-mono font-bold">{rawStock.length}</b>
+                  </div>
+                  <div>
+                    Machines:{' '}
+                    <b className="text-slate-900 font-mono font-bold">{machines.length}</b>
+                  </div>
+                  <div>
+                    Mouvements:{' '}
+                    <b className="text-slate-900 font-mono font-bold">{mouvements.length}</b>
+                  </div>
+                  <div>
+                    Zones: <b className="text-slate-900 font-mono font-bold">{zones.length}</b>
+                  </div>
+                  <div>
+                    Techniciens:{' '}
+                    <b className="text-slate-900 font-mono font-bold">{technicians.length}</b>
+                  </div>
+                  <div>
+                    Chefs & Ops:{' '}
+                    <b className="text-slate-900 font-mono font-bold">{operations.length}</b>
+                  </div>
                 </div>
               </div>
 
@@ -794,23 +1009,39 @@ export default function SettingsView({
                   Fichier Excel lie
                 </div>
                 <div className="text-xs pt-1 space-y-1 text-slate-500 font-medium">
-                  <div className="truncate">Nom: <span className="text-slate-900 font-mono font-bold">{linkedFileName || 'GMAO_Light_Template.xlsx'}</span></div>
-                  <div>Taille: <span className="text-slate-900 font-mono">{fileDetails.size}</span></div>
-                  <div>Modifie le: <span className="text-slate-900 font-mono">{fileDetails.lastModified}</span></div>
+                  <div className="truncate">
+                    Nom:{' '}
+                    <span className="text-slate-900 font-mono font-bold">
+                      {linkedFileName || 'GMAO_Light_Template.xlsx'}
+                    </span>
+                  </div>
+                  <div>
+                    Taille: <span className="text-slate-900 font-mono">{fileDetails.size}</span>
+                  </div>
+                  <div>
+                    Modifie le:{' '}
+                    <span className="text-slate-900 font-mono">{fileDetails.lastModified}</span>
+                  </div>
                   <div className="flex items-center gap-1 text-[10px] font-bold mt-1 text-emerald-600">
                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                    Liaison: {linkedFileHandle ? "Connecte en Direct" : "Simulation Active (Excel Twin)"}
+                    Liaison:{' '}
+                    {linkedFileHandle ? 'Connecte en Direct' : 'Simulation Active (Excel Twin)'}
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-600 leading-relaxed max-w-full">
-              <div className="font-bold text-slate-900 mb-1">Mecanique d'unification de stockage:</div>
-              Toutes les operations s'effectuent directement dans le navigateur pour garantir une execution fluide et ultra-rapide hors ligne. Les donnees de votre inventaire, de vos mouvements et de votre parc de machines sont preservees localement meme en cas de coupure de reseau.
+              <div className="font-bold text-slate-900 mb-1">
+                Mecanique d'unification de stockage:
+              </div>
+              Toutes les operations s'effectuent directement dans le navigateur pour garantir une
+              execution fluide et ultra-rapide hors ligne. Les donnees de votre inventaire, de vos
+              mouvements et de votre parc de machines sont preservees localement meme en cas de
+              coupure de reseau.
             </div>
           </div>
-        }
+        )}
 
         {/* PANEL: LOGIQUE MOUVEMENTS (INTERN / EXTERN / COMMANDE) */}
         {activeTab === 'mvt-logic' && (
@@ -821,7 +1052,9 @@ export default function SettingsView({
                 <span>Logique des Mouvements de Stock (Usine Real-World Engine)</span>
               </h3>
               <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
-                Cartographie des flux d'usine : distinction nette entre flux Interne, Hors-site (Externe), et Commandes d'Achat en attente avec système intelligent de tags #INCONNU.
+                Cartographie des flux d'usine : distinction nette entre flux Interne, Hors-site
+                (Externe), et Commandes d'Achat en attente avec système intelligent de tags
+                #INCONNU.
               </p>
             </div>
 
@@ -833,14 +1066,22 @@ export default function SettingsView({
                     <span className="w-2 h-2 rounded-full bg-rose-600" />
                     1. Sortie Interne
                   </span>
-                  <span className="text-[10px] font-mono font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded">Stock ➔ Atelier</span>
+                  <span className="text-[10px] font-mono font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded">
+                    Stock ➔ Atelier
+                  </span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Consommation directe de pièces pour la maintenance corrective, préventive ou amélioration d'une machine.
+                  Consommation directe de pièces pour la maintenance corrective, préventive ou
+                  amélioration d'une machine.
                 </p>
                 <div className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-rose-200/80 space-y-1">
-                  <div><b>Traçabilité :</b> N° Bon + Tech + Zone + Machine</div>
-                  <div><b>Impact Stock :</b> Déduction immédiate (<span className="text-rose-600 font-bold">-Qte</span>)</div>
+                  <div>
+                    <b>Traçabilité :</b> N° Bon + Tech + Zone + Machine
+                  </div>
+                  <div>
+                    <b>Impact Stock :</b> Déduction immédiate (
+                    <span className="text-rose-600 font-bold">-Qte</span>)
+                  </div>
                 </div>
               </div>
 
@@ -851,14 +1092,22 @@ export default function SettingsView({
                     <span className="w-2 h-2 rounded-full bg-cyan-600" />
                     2. Entrée Interne (Retour)
                   </span>
-                  <span className="text-[10px] font-mono font-bold bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded">Atelier ➔ Stock</span>
+                  <span className="text-[10px] font-mono font-bold bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded">
+                    Atelier ➔ Stock
+                  </span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Restitution de pièces non utilisées ou trouvées sur le terrain. Si aucun Bon n'est fourni, le système applique le Tag <b>#INCONNU</b>.
+                  Restitution de pièces non utilisées ou trouvées sur le terrain. Si aucun Bon n'est
+                  fourni, le système applique le Tag <b>#INCONNU</b>.
                 </p>
                 <div className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-cyan-200/80 space-y-1">
-                  <div><b>Règle Bon Vide :</b> Génère N° Bon <b className="text-amber-700">INCONNU</b></div>
-                  <div><b>Impact Stock :</b> Ajout immédiat (<span className="text-emerald-600 font-bold">+Qte</span>)</div>
+                  <div>
+                    <b>Règle Bon Vide :</b> Génère N° Bon <b className="text-amber-700">INCONNU</b>
+                  </div>
+                  <div>
+                    <b>Impact Stock :</b> Ajout immédiat (
+                    <span className="text-emerald-600 font-bold">+Qte</span>)
+                  </div>
                 </div>
               </div>
 
@@ -869,14 +1118,22 @@ export default function SettingsView({
                     <span className="w-2 h-2 rounded-full bg-purple-600" />
                     3. Sortie Externe
                   </span>
-                  <span className="text-[10px] font-mono font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Stock ➔ Réparation/Prêt</span>
+                  <span className="text-[10px] font-mono font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+                    Stock ➔ Réparation/Prêt
+                  </span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Envoi d'un sous-ensemble (Moteur, Pompe) en réparation chez un sous-traitant extérieur ou prêt entre usines.
+                  Envoi d'un sous-ensemble (Moteur, Pompe) en réparation chez un sous-traitant
+                  extérieur ou prêt entre usines.
                 </p>
                 <div className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-purple-200/80 space-y-1">
-                  <div><b>Champs :</b> N° Bon Externe + Presta/Fournisseur</div>
-                  <div><b>Impact Stock :</b> Déduction (<span className="text-rose-600 font-bold">-Qte</span>)</div>
+                  <div>
+                    <b>Champs :</b> N° Bon Externe + Presta/Fournisseur
+                  </div>
+                  <div>
+                    <b>Impact Stock :</b> Déduction (
+                    <span className="text-rose-600 font-bold">-Qte</span>)
+                  </div>
                 </div>
               </div>
 
@@ -887,14 +1144,22 @@ export default function SettingsView({
                     <span className="w-2 h-2 rounded-full bg-emerald-600" />
                     4. Entrée Externe (Achat)
                   </span>
-                  <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Fournisseur ➔ Stock</span>
+                  <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">
+                    Fournisseur ➔ Stock
+                  </span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Réception de réapprovisionnement sous-traitant / fournisseur ou retour de pièce réparée de l'extérieur.
+                  Réception de réapprovisionnement sous-traitant / fournisseur ou retour de pièce
+                  réparée de l'extérieur.
                 </p>
                 <div className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-emerald-200/80 space-y-1">
-                  <div><b>Champs :</b> Fournisseur + Emplacement Réception</div>
-                  <div><b>Impact Stock :</b> Crédit immédiat (<span className="text-emerald-600 font-bold">+Qte</span>)</div>
+                  <div>
+                    <b>Champs :</b> Fournisseur + Emplacement Réception
+                  </div>
+                  <div>
+                    <b>Impact Stock :</b> Crédit immédiat (
+                    <span className="text-emerald-600 font-bold">+Qte</span>)
+                  </div>
                 </div>
               </div>
 
@@ -905,14 +1170,27 @@ export default function SettingsView({
                     <span className="w-2 h-2 rounded-full bg-amber-600" />
                     5. Demande / Commande en Attente
                   </span>
-                  <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">En Attente ➔ Dashboard</span>
+                  <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+                    En Attente ➔ Dashboard
+                  </span>
                 </div>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Demande de réapprovisionnement initiée par un technicien ou chef d'équipe. La demande apparaît sur le Dashboard principal dans la section <b>Commandes en Attente</b> sans modifier le Stock Actuel jusqu'à la confirmation de réception.
+                  Demande de réapprovisionnement initiée par un technicien ou chef d'équipe. La
+                  demande apparaît sur le Dashboard principal dans la section{' '}
+                  <b>Commandes en Attente</b> sans modifier le Stock Actuel jusqu'à la confirmation
+                  de réception.
                 </p>
                 <div className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-amber-200/80 flex flex-col sm:flex-row justify-between gap-2">
-                  <div><b>Tag Automatique :</b> <span className="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold">#COMMANDE_EN_ATTENTE</span></div>
-                  <div><b>Validation :</b> Clic sur "Valider Réception" ➔ Converti en <b>Entrée Externe</b></div>
+                  <div>
+                    <b>Tag Automatique :</b>{' '}
+                    <span className="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold">
+                      #COMMANDE_EN_ATTENTE
+                    </span>
+                  </div>
+                  <div>
+                    <b>Validation :</b> Clic sur "Valider Réception" ➔ Converti en{' '}
+                    <b>Entrée Externe</b>
+                  </div>
                 </div>
               </div>
             </div>
@@ -920,7 +1198,7 @@ export default function SettingsView({
         )}
 
         {/* PANEL 2: INJECTION HUB */}
-        {activeTab === 'injection' &&
+        {activeTab === 'injection' && (
           <div className="space-y-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
               <div className="min-w-0 flex-1">
@@ -929,7 +1207,8 @@ export default function SettingsView({
                   Centre d'injection des donnees d'usine
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-                  Injectez les structures et donnees initiales du projet ou videz completement la base.
+                  Injectez les structures et donnees initiales du projet ou videz completement la
+                  base.
                 </p>
               </div>
               <button
@@ -949,7 +1228,8 @@ export default function SettingsView({
                     Stock & Articles
                   </h4>
                   <p className="text-[11px] text-slate-500 leading-relaxed">
-                    Permet d'injecter 873 articles extraits de la maquette originale GMAO avec leurs codes et emplacements d'ateliers correspondants.
+                    Permet d'injecter 873 articles extraits de la maquette originale GMAO avec leurs
+                    codes et emplacements d'ateliers correspondants.
                   </p>
                 </div>
                 <button
@@ -968,7 +1248,8 @@ export default function SettingsView({
                     Parc Machines
                   </h4>
                   <p className="text-[11px] text-slate-500 leading-relaxed">
-                    Initialise 6 machines enregistrees de reference, leurs familles de production et les templates structurels associés.
+                    Initialise 6 machines enregistrees de reference, leurs familles de production et
+                    les templates structurels associés.
                   </p>
                 </div>
                 <button
@@ -987,7 +1268,8 @@ export default function SettingsView({
                     Zones & Equipes
                   </h4>
                   <p className="text-[11px] text-slate-500 leading-relaxed">
-                    Injecte les 4 zones geographiques d'ateliers d'usine, ainsi que l'equipe de techniciens et de coordinateurs GMAO.
+                    Injecte les 4 zones geographiques d'ateliers d'usine, ainsi que l'equipe de
+                    techniciens et de coordinateurs GMAO.
                   </p>
                 </div>
                 <button
@@ -1001,7 +1283,9 @@ export default function SettingsView({
 
             <div className="pt-5 border-t border-slate-100 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-4 min-w-0">
-                <span className="text-xs font-bold text-slate-700">Parametrage de demarrage par defaut:</span>
+                <span className="text-xs font-bold text-slate-700">
+                  Parametrage de demarrage par defaut:
+                </span>
                 <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-600">
                   <input
                     type="checkbox"
@@ -1029,10 +1313,10 @@ export default function SettingsView({
               </div>
             </div>
           </div>
-        }
+        )}
 
         {/* PANEL 3: EXCEL & DIRECTORY LINK */}
-        {activeTab === 'directory' &&
+        {activeTab === 'directory' && (
           <div className="space-y-6">
             <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
               <FolderOpen className="w-4 h-4 text-indigo-600" />
@@ -1040,12 +1324,16 @@ export default function SettingsView({
             </h3>
 
             <p className="text-xs text-slate-500 leading-relaxed max-w-3xl">
-              Pour deployer le systeme sur plusieurs machines d'ateliers et partager la meme source en temps reel, vous pouvez coupler l'application a un repertoire de stockage partagé sur votre serveur local d'usine.
+              Pour deployer le systeme sur plusieurs machines d'ateliers et partager la meme source
+              en temps reel, vous pouvez coupler l'application a un repertoire de stockage partagé
+              sur votre serveur local d'usine.
             </p>
 
             <div className="space-y-4 w-full bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200">
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700">Dossier reseau cible ou lecteur mappe partage :</label>
+                <label className="block text-xs font-bold text-slate-700">
+                  Dossier reseau cible ou lecteur mappe partage :
+                </label>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
@@ -1066,7 +1354,9 @@ export default function SettingsView({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-700">Ecriture Excel automatique :</label>
+                  <label className="block text-xs font-bold text-slate-700">
+                    Ecriture Excel automatique :
+                  </label>
                   <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-600">
                     <input
                       type="checkbox"
@@ -1079,7 +1369,9 @@ export default function SettingsView({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-700">Frequence de scrutation reseau (Auto-Reload) :</label>
+                  <label className="block text-xs font-bold text-slate-700">
+                    Frequence de scrutation reseau (Auto-Reload) :
+                  </label>
                   <select
                     value={pollingInterval}
                     onChange={(e) => setPollingInterval(e.target.value)}
@@ -1095,11 +1387,11 @@ export default function SettingsView({
 
               <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200">
                 <div className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
-                  Statut de couplage: 
+                  Statut de couplage:
                   {linkedFileHandle ? (
                     <span className="text-emerald-700 font-bold flex items-center gap-1.5 inline-flex">
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
-                      Connecté ({linkedFileName || "Fichier réseau partagé"})
+                      Connecté ({linkedFileName || 'Fichier réseau partagé'})
                     </span>
                   ) : (
                     <span className="text-rose-700 font-bold flex items-center gap-1.5 inline-flex">
@@ -1119,13 +1411,15 @@ export default function SettingsView({
 
             <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-600 leading-relaxed max-w-full">
               <div className="font-bold text-slate-900 mb-1">Architecture reseau multi-postes:</div>
-              En specifiant le meme chemin reseau partage d'ateliers pour chaque poste d'usine, l'application synchronisera ses ecrans automatiquement, garantissant aux operateurs, techniciens et coordinateurs un etat des stocks et un carnet de mouvements unifies.
+              En specifiant le meme chemin reseau partage d'ateliers pour chaque poste d'usine,
+              l'application synchronisera ses ecrans automatiquement, garantissant aux operateurs,
+              techniciens et coordinateurs un etat des stocks et un carnet de mouvements unifies.
             </div>
           </div>
-        }
+        )}
 
         {/* PANEL 4: AUDIT & MATCHING */}
-        {activeTab === 'matching' &&
+        {activeTab === 'matching' && (
           <div className="space-y-6">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
               <div className="min-w-0 flex-1">
@@ -1134,7 +1428,8 @@ export default function SettingsView({
                   Audit & vérification des données (Appairage)
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-                  Détection automatique des éléments (machines, zones, utilisateurs) présents dans l'historique mais manquants dans les fiches officielles.
+                  Détection automatique des éléments (machines, zones, utilisateurs) présents dans
+                  l'historique mais manquants dans les fiches officielles.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -1150,24 +1445,28 @@ export default function SettingsView({
                   </select>
                   <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
                 </div>
-                {(auditTarget === 'machines' || auditTarget === 'utilisateurs') && discoveredItems.length > 0 && (
-                  <button
-                    onClick={handleRegisterDiscovered}
-                    className="w-full lg:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Enregistrer les {getAuditLabel()} ({discoveredItems.length})
-                  </button>
-                )}
+                {(auditTarget === 'machines' || auditTarget === 'utilisateurs') &&
+                  discoveredItems.length > 0 && (
+                    <button
+                      onClick={handleRegisterDiscovered}
+                      className="w-full lg:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      Enregistrer les {getAuditLabel()} ({discoveredItems.length})
+                    </button>
+                  )}
               </div>
             </div>
 
             {discoveredItems.length === 0 ? (
               <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-100 space-y-2 max-w-full">
                 <Check className="w-8 h-8 text-emerald-500 mx-auto bg-emerald-50 p-1.5 rounded-full" />
-                <h4 className="text-sm font-bold text-slate-900">Tout est parfaitement apparié !</h4>
+                <h4 className="text-sm font-bold text-slate-900">
+                  Tout est parfaitement apparié !
+                </h4>
                 <p className="text-xs text-slate-400 max-w-md mx-auto">
-                  Aucun identifiant ou nom de {getAuditLabel().toLowerCase()} manquant n'a été détecté dans les historiques. Vos analyses sont pleinement fiables.
+                  Aucun identifiant ou nom de {getAuditLabel().toLowerCase()} manquant n'a été
+                  détecté dans les historiques. Vos analyses sont pleinement fiables.
                 </p>
               </div>
             ) : (
@@ -1175,8 +1474,14 @@ export default function SettingsView({
                 <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 text-xs text-amber-800 flex items-start gap-2.5 leading-relaxed">
                   <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold">Écart de base détecté :</span> Certains éléments de type "{getAuditLabel()}" apparaissent dans vos mouvements mais ne figurent pas dans la liste officielle.
-                    {auditTarget === 'machines' || auditTarget === 'utilisateurs' ? " Cliquez sur 'Enregistrer les " + getAuditLabel() + "' pour une inscription automatique ou enregistrez manuellement chaque élément." : " Cliquez sur Enregistrer à côté d'un élément pour ouvrir la fiche d'inscription manuelle et générer son identifiant séquentiel unique."}
+                    <span className="font-bold">Écart de base détecté :</span> Certains éléments de
+                    type "{getAuditLabel()}" apparaissent dans vos mouvements mais ne figurent pas
+                    dans la liste officielle.
+                    {auditTarget === 'machines' || auditTarget === 'utilisateurs'
+                      ? " Cliquez sur 'Enregistrer les " +
+                        getAuditLabel() +
+                        "' pour une inscription automatique ou enregistrez manuellement chaque élément."
+                      : " Cliquez sur Enregistrer à côté d'un élément pour ouvrir la fiche d'inscription manuelle et générer son identifiant séquentiel unique."}
                   </div>
                 </div>
 
@@ -1193,28 +1498,44 @@ export default function SettingsView({
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium">
                         {discoveredItems.map((dm) => {
-                          const proposedId = auditTarget === 'utilisateurs' ? getNextUserId(dm.inferredRole || 'TECHNICIEN') : null;
+                          const proposedId =
+                            auditTarget === 'utilisateurs'
+                              ? getNextUserId(dm.inferredRole || 'TECHNICIEN')
+                              : null;
                           return (
-                            <tr key={dm.code} className="hover:bg-slate-50 transition text-slate-700">
+                            <tr
+                              key={dm.code}
+                              className="hover:bg-slate-50 transition text-slate-700"
+                            >
                               <td className="p-3">
                                 <div className="flex items-center gap-2">
                                   <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
                                     {dm.code}
                                   </span>
                                   {auditTarget === 'utilisateurs' && (
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
-                                      dm.inferredRole === 'CHEF' ? 'bg-amber-50 text-amber-800 border-amber-200' :
-                                      dm.inferredRole === 'OPERATEUR' ? 'bg-indigo-50 text-indigo-800 border-indigo-200' :
-                                      'bg-cyan-50 text-cyan-800 border-cyan-200'
-                                    }`}>
+                                    <span
+                                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                                        dm.inferredRole === 'CHEF'
+                                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                          : dm.inferredRole === 'OPERATEUR'
+                                            ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                                            : 'bg-cyan-50 text-cyan-800 border-cyan-200'
+                                      }`}
+                                    >
                                       {dm.inferredRole}
                                     </span>
                                   )}
                                 </div>
                               </td>
                               <td className="p-3 text-slate-600 font-mono">
-                                <div className="font-bold text-slate-800">{dm.count} apparition{dm.count > 1 ? 's' : ''}</div>
-                                {dm.sourceList && <div className="text-[10px] text-slate-400 font-sans">{dm.sourceList}</div>}
+                                <div className="font-bold text-slate-800">
+                                  {dm.count} apparition{dm.count > 1 ? 's' : ''}
+                                </div>
+                                {dm.sourceList && (
+                                  <div className="text-[10px] text-slate-400 font-sans">
+                                    {dm.sourceList}
+                                  </div>
+                                )}
                               </td>
                               <td className="p-3">
                                 {auditTarget === 'utilisateurs' ? (
@@ -1240,10 +1561,13 @@ export default function SettingsView({
                                           id_templates: templates[0]?.id_templates || 'TPL-RCF100',
                                           id_zone_default: zones[0]?.id_zone || 'ZONE-DET',
                                           technician: technicians[0]?.nom || 'Technicien',
-                                          status: 'En service'
-                                        }
+                                          status: 'En service',
+                                        },
                                       ]);
-                                      showToast(`Machine "${dm.code}" ajoutée avec succès.`, 'success');
+                                      showToast(
+                                        `Machine "${dm.code}" ajoutée avec succès.`,
+                                        'success'
+                                      );
                                     } else if (auditTarget === 'zones') {
                                       setAuditZoneForm({ libelle: dm.code });
                                       setShowAuditZoneModal(true);
@@ -1252,7 +1576,10 @@ export default function SettingsView({
                                         type: dm.inferredRole || 'TECHNICIEN',
                                         nom: dm.code,
                                         id_zone: zones[0]?.id_zone || '',
-                                        specialite: dm.inferredRole === 'TECHNICIEN' ? 'GMAO & Maintenance' : ''
+                                        specialite:
+                                          dm.inferredRole === 'TECHNICIEN'
+                                            ? 'GMAO & Maintenance'
+                                            : '',
                                       });
                                       setShowAuditUserModal(true);
                                     }
@@ -1280,7 +1607,12 @@ export default function SettingsView({
                     <h3 className="text-sm font-bold text-slate-900">
                       Fiche d'enregistrement de Zone
                     </h3>
-                    <button onClick={() => setShowAuditZoneModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+                    <button
+                      onClick={() => setShowAuditZoneModal(false)}
+                      className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                    >
+                      ×
+                    </button>
                   </div>
                   <div className="space-y-3">
                     <div>
@@ -1290,7 +1622,9 @@ export default function SettingsView({
                       <input
                         type="text"
                         value={auditZoneForm.libelle}
-                        onChange={(e) => setAuditZoneForm(prev => ({ ...prev, libelle: e.target.value }))}
+                        onChange={(e) =>
+                          setAuditZoneForm((prev) => ({ ...prev, libelle: e.target.value }))
+                        }
                         className="w-full text-xs font-medium border border-slate-300 rounded-lg p-2"
                         placeholder="ex: Atelier Conditionnement"
                       />
@@ -1309,7 +1643,7 @@ export default function SettingsView({
                       type="button"
                       onClick={() => {
                         if (!auditZoneForm.libelle.trim()) {
-                          showToast("Veuillez saisir un nom de zone valide.", "error");
+                          showToast('Veuillez saisir un nom de zone valide.', 'error');
                           return;
                         }
 
@@ -1318,10 +1652,13 @@ export default function SettingsView({
                           id_zone: id,
                           libelle: auditZoneForm.libelle.trim(),
                           nom: auditZoneForm.libelle.trim(),
-                          description: ''
+                          description: '',
                         };
-                        setZones(prev => [...prev, newZone]);
-                        showToast(`Zone "${auditZoneForm.libelle.trim()}" enregistrée avec l'ID ${id}.`, 'success');
+                        setZones((prev) => [...prev, newZone]);
+                        showToast(
+                          `Zone "${auditZoneForm.libelle.trim()}" enregistrée avec l'ID ${id}.`,
+                          'success'
+                        );
                         setShowAuditZoneModal(false);
                       }}
                       className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs rounded-lg shadow-sm transition"
@@ -1351,19 +1688,27 @@ export default function SettingsView({
                         </p>
                       </div>
                     </div>
-                    <button onClick={() => setShowAuditUserModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">×</button>
+                    <button
+                      onClick={() => setShowAuditUserModal(false)}
+                      className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer"
+                    >
+                      ×
+                    </button>
                   </div>
 
                   {/* ID & Security Notice Badge */}
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-600">ID Sécurisé généré :</span>
+                      <span className="text-xs font-semibold text-slate-600">
+                        ID Sécurisé généré :
+                      </span>
                       <span className="font-mono font-extrabold text-xs bg-slate-900 text-white px-2.5 py-0.5 rounded-md">
                         {getNextUserId(auditUserForm.type)}
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-500 leading-tight">
-                      🔒 L'ID est unique et séquentiel. Il garantit la traçabilité intégrale des mouvements d'ateliers même si le nom est corrigé ultérieurement.
+                      🔒 L'ID est unique et séquentiel. Il garantit la traçabilité intégrale des
+                      mouvements d'ateliers même si le nom est corrigé ultérieurement.
                     </p>
                   </div>
 
@@ -1374,7 +1719,9 @@ export default function SettingsView({
                       </label>
                       <select
                         value={auditUserForm.type}
-                        onChange={(e) => setAuditUserForm(prev => ({ ...prev, type: e.target.value }))}
+                        onChange={(e) =>
+                          setAuditUserForm((prev) => ({ ...prev, type: e.target.value }))
+                        }
                         className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2 bg-white text-slate-800"
                       >
                         <option value="TECHNICIEN">Technicien (Maintenance / GMAO)</option>
@@ -1390,7 +1737,9 @@ export default function SettingsView({
                       <input
                         type="text"
                         value={auditUserForm.nom}
-                        onChange={(e) => setAuditUserForm(prev => ({ ...prev, nom: e.target.value }))}
+                        onChange={(e) =>
+                          setAuditUserForm((prev) => ({ ...prev, nom: e.target.value }))
+                        }
                         className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2 text-slate-800"
                         placeholder="Nom de l'utilisateur"
                       />
@@ -1404,7 +1753,9 @@ export default function SettingsView({
                         <input
                           type="text"
                           value={auditUserForm.specialite}
-                          onChange={(e) => setAuditUserForm(prev => ({ ...prev, specialite: e.target.value }))}
+                          onChange={(e) =>
+                            setAuditUserForm((prev) => ({ ...prev, specialite: e.target.value }))
+                          }
                           className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2 text-slate-800"
                           placeholder="Spécialité du technicien (ex: Mécanique, Électricité)"
                         />
@@ -1416,12 +1767,16 @@ export default function SettingsView({
                         </label>
                         <select
                           value={auditUserForm.id_zone}
-                          onChange={(e) => setAuditUserForm(prev => ({ ...prev, id_zone: e.target.value }))}
+                          onChange={(e) =>
+                            setAuditUserForm((prev) => ({ ...prev, id_zone: e.target.value }))
+                          }
                           className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2 bg-white text-slate-800"
                         >
                           <option value="">Sélectionner une zone</option>
-                          {zones.map(z => (
-                            <option key={z.id_zone} value={z.id_zone}>{z.libelle || z.nom}</option>
+                          {zones.map((z) => (
+                            <option key={z.id_zone} value={z.id_zone}>
+                              {z.libelle || z.nom}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -1440,7 +1795,7 @@ export default function SettingsView({
                       type="button"
                       onClick={() => {
                         if (!auditUserForm.nom.trim()) {
-                          showToast("Veuillez saisir un nom valide.", "error");
+                          showToast('Veuillez saisir un nom valide.', 'error');
                           return;
                         }
 
@@ -1453,21 +1808,24 @@ export default function SettingsView({
                             nom: auditUserForm.nom.trim(),
                             specialite: auditUserForm.specialite.trim() || 'Générale',
                             contact: '',
-                            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(auditUserForm.nom.trim())}`
+                            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(auditUserForm.nom.trim())}`,
                           };
-                          setTechnicians(prev => [...prev, newTech]);
+                          setTechnicians((prev) => [...prev, newTech]);
                         } else {
                           const newOp = {
                             id_operation: id,
                             nom: auditUserForm.nom.trim(),
                             id_zone: auditUserForm.id_zone || zones[0]?.id_zone || 'ZONE-DET',
                             type_profil: type,
-                            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(auditUserForm.nom.trim())}`
+                            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(auditUserForm.nom.trim())}`,
                           };
-                          setOperations(prev => [...prev, newOp]);
+                          setOperations((prev) => [...prev, newOp]);
                         }
 
-                        showToast(`Utilisateur "${auditUserForm.nom.trim()}" enregistré avec l'ID ${id}.`, 'success');
+                        showToast(
+                          `Utilisateur "${auditUserForm.nom.trim()}" enregistré avec l'ID ${id}.`,
+                          'success'
+                        );
                         setShowAuditUserModal(false);
                       }}
                       className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs rounded-lg shadow-xs transition cursor-pointer"
@@ -1479,10 +1837,10 @@ export default function SettingsView({
               </div>
             )}
           </div>
-        }
+        )}
 
         {/* PANEL 5: ADVANCED JSON PLAYGROUND */}
-        {activeTab === 'json-editor' &&
+        {activeTab === 'json-editor' && (
           <div className="space-y-6 max-w-full overflow-hidden">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
               <div className="min-w-0 flex-1">
@@ -1491,7 +1849,8 @@ export default function SettingsView({
                   Modification brute de la base de donnees locale au format JSON
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-                  Modifiez directement les collections brutes de votre GMAO sous forme de fichiers de donnees JSON.
+                  Modifiez directement les collections brutes de votre GMAO sous forme de fichiers
+                  de donnees JSON.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto shrink-0">
@@ -1520,7 +1879,7 @@ export default function SettingsView({
                     onChange={handleUploadJSON}
                     className="hidden"
                   />
-                  
+
                   <button
                     onClick={() => document.getElementById('json-file-upload-input').click()}
                     className="h-10 px-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
@@ -1547,7 +1906,9 @@ export default function SettingsView({
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1">
                   <div className="font-bold">Erreur de structure JSON :</div>
-                  <div className="mt-1 opacity-90 whitespace-pre-wrap break-all text-[11px]">{jsonError}</div>
+                  <div className="mt-1 opacity-90 whitespace-pre-wrap break-all text-[11px]">
+                    {jsonError}
+                  </div>
                 </div>
               </div>
             )}
@@ -1555,7 +1916,9 @@ export default function SettingsView({
             <div className="border border-slate-200 rounded-2xl overflow-hidden bg-slate-950 shadow-xs w-full max-w-full">
               <div className="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex flex-col sm:flex-row gap-2 justify-between sm:items-center text-xs text-slate-400 font-mono">
                 <span className="truncate">Editeur natif de code ({jsonTarget})</span>
-                <span className="text-[10px] bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-md border border-slate-700 w-fit shrink-0">Tableau d'objets attendu</span>
+                <span className="text-[10px] bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-md border border-slate-700 w-fit shrink-0">
+                  Tableau d'objets attendu
+                </span>
               </div>
               <textarea
                 value={jsonText}
@@ -1577,7 +1940,9 @@ export default function SettingsView({
                 }`}
                 title="Annuler les modifications et recharger les donnees d'origine"
               >
-                <RotateCcw className={`w-4 h-4 ${isJsonModified ? 'text-rose-600' : 'text-rose-400'}`} />
+                <RotateCcw
+                  className={`w-4 h-4 ${isJsonModified ? 'text-rose-600' : 'text-rose-400'}`}
+                />
                 <span>Annuler</span>
               </button>
 
@@ -1591,16 +1956,21 @@ export default function SettingsView({
                 }`}
                 title="Sauvegarder et appliquer definitivement le JSON"
               >
-                <Check className={`w-4 h-4 ${isJsonModified ? 'text-emerald-600' : 'text-emerald-400'}`} />
+                <Check
+                  className={`w-4 h-4 ${isJsonModified ? 'text-emerald-600' : 'text-emerald-400'}`}
+                />
                 <span>Enregistrer</span>
               </button>
             </div>
 
             <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-500 leading-relaxed max-w-full">
-              <span className="font-bold text-slate-700">Notice de sauvegarde :</span> Vous pouvez copier cette structure JSON pour conserver une sauvegarde externe de securite ou modifier directement les champs des elements. Veillez a respecter les correspondances de cles ID pour ne pas rompre la coherence relationnelle.
+              <span className="font-bold text-slate-700">Notice de sauvegarde :</span> Vous pouvez
+              copier cette structure JSON pour conserver une sauvegarde externe de securite ou
+              modifier directement les champs des elements. Veillez a respecter les correspondances
+              de cles ID pour ne pas rompre la coherence relationnelle.
             </div>
           </div>
-        }
+        )}
 
         {/* PANEL 6: ADMIN ACCOUNT & SECURITY SETTINGS */}
         {activeTab === 'admin' && (
@@ -1613,7 +1983,9 @@ export default function SettingsView({
                   Paramètres du Compte & Configuration d'Accès
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-                  Gérez les informations d'identification, modifiez la description de fonction du Responsable du Magasin, configurez le code PIN de sécurité ou activez l'accès direct sans code.
+                  Gérez les informations d'identification, modifiez la description de fonction du
+                  Responsable du Magasin, configurez le code PIN de sécurité ou activez l'accès
+                  direct sans code.
                 </p>
               </div>
             </div>
@@ -1626,13 +1998,16 @@ export default function SettingsView({
               <div className="text-center sm:text-left min-w-0 flex-1">
                 <h4 className="text-base font-black text-slate-900 flex items-center justify-center sm:justify-start gap-2">
                   <span>Responsable du Magasin</span>
-                  <span className="text-[10px] font-mono font-bold bg-violet-100 text-violet-700 border border-violet-200/50 px-2 py-0.5 rounded-full">Compte Principal</span>
+                  <span className="text-[10px] font-mono font-bold bg-violet-100 text-violet-700 border border-violet-200/50 px-2 py-0.5 rounded-full">
+                    Compte Principal
+                  </span>
                 </h4>
                 <p className="text-xs text-slate-500 mt-1 font-mono">
                   Fonction : <span className="font-semibold text-slate-800">{tempRole}</span>
                 </p>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Zone d'activité : Magasin Central • Privilèges : Écriture et Lecture Totale (Offline)
+                  Zone d'activité : Magasin Central • Privilèges : Écriture et Lecture Totale
+                  (Offline)
                 </p>
               </div>
               <div className="flex flex-col items-center sm:items-end gap-1.5 shrink-0">
@@ -1652,7 +2027,10 @@ export default function SettingsView({
                     <UserCheck className="w-4 h-4 text-violet-500" />
                     Rôle & Paramètres de Connexion
                   </h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Personnalisez votre étiquette de fonction et le comportement de l'écran d'accueil.</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Personnalisez votre étiquette de fonction et le comportement de l'écran
+                    d'accueil.
+                  </p>
                 </div>
 
                 {/* Description input */}
@@ -1668,7 +2046,8 @@ export default function SettingsView({
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-200 transition"
                   />
                   <p className="text-[10px] text-slate-400 mt-1">
-                    * Ce titre s'affichera sur l'écran d'accueil, le menu latéral, ainsi que sur toutes les impressions de bons et rapports d'activité.
+                    * Ce titre s'affichera sur l'écran d'accueil, le menu latéral, ainsi que sur
+                    toutes les impressions de bons et rapports d'activité.
                   </p>
                 </div>
 
@@ -1685,12 +2064,21 @@ export default function SettingsView({
                       />
                     </div>
                     <div className="text-xs">
-                      <label htmlFor="open-mode-checkbox" className="font-bold text-slate-800 cursor-pointer flex items-center gap-1.5">
-                        {tempOpenMode ? <Unlock className="w-3.5 h-3.5 text-emerald-600" /> : <Lock className="w-3.5 h-3.5 text-slate-500" />}
+                      <label
+                        htmlFor="open-mode-checkbox"
+                        className="font-bold text-slate-800 cursor-pointer flex items-center gap-1.5"
+                      >
+                        {tempOpenMode ? (
+                          <Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <Lock className="w-3.5 h-3.5 text-slate-500" />
+                        )}
                         Activer l'Accès Libre (Connexion sans code)
                       </label>
                       <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-                        Si coché, l'application se connectera directement en un clic sur le bouton de connexion sans exiger la saisie du code PIN. Idéal pour un usage rapide sur tablette ou PC dédié.
+                        Si coché, l'application se connectera directement en un clic sur le bouton
+                        de connexion sans exiger la saisie du code PIN. Idéal pour un usage rapide
+                        sur tablette ou PC dédié.
                       </p>
                     </div>
                   </div>
@@ -1704,7 +2092,10 @@ export default function SettingsView({
                     <Shield className="w-4 h-4 text-emerald-500" />
                     Code PIN de Sécurité
                   </h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Configurez votre code secret et visualisez le moteur de chiffrement local en direct.</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Configurez votre code secret et visualisez le moteur de chiffrement local en
+                    direct.
+                  </p>
                 </div>
 
                 {/* PIN Code input */}
@@ -1732,14 +2123,16 @@ export default function SettingsView({
                   </p>
                 </div>
 
-                 {/* Live Cryptographic Engine visualization */}
+                {/* Live Cryptographic Engine visualization */}
                 <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 font-mono text-[11px] space-y-2 max-w-full overflow-hidden">
                   <div className="flex items-center justify-between text-slate-300 border-b border-slate-800 pb-1.5 font-bold">
                     <span className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       MOTEUR DE CHIFFREMENT GMAO
                     </span>
-                    <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400">BCRYPT + AES</span>
+                    <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400">
+                      BCRYPT + AES
+                    </span>
                   </div>
                   <div className="grid grid-cols-3 gap-1">
                     <span className="text-slate-500">Algorithme:</span>
@@ -1747,7 +2140,9 @@ export default function SettingsView({
                   </div>
                   <div className="grid grid-cols-3 gap-1">
                     <span className="text-slate-500">Sel Local:</span>
-                    <span className="col-span-2 text-indigo-400 select-all truncate">CIOB_GMAO_CLIENT_PERSISTENCE_SALT_KEY</span>
+                    <span className="col-span-2 text-indigo-400 select-all truncate">
+                      CIOB_GMAO_CLIENT_PERSISTENCE_SALT_KEY
+                    </span>
                   </div>
                   <div className="grid grid-cols-3 gap-1">
                     <span className="text-slate-500">Texte Clair:</span>
@@ -1766,7 +2161,9 @@ export default function SettingsView({
             {/* Bottom Actions card */}
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
               <div className="text-xs text-slate-500">
-                <span className="font-bold text-slate-700">Notice de sécurité :</span> Vos modifications de sécurité seront enregistrées localement de manière sécurisée et prendront effet immédiatement.
+                <span className="font-bold text-slate-700">Notice de sécurité :</span> Vos
+                modifications de sécurité seront enregistrées localement de manière sécurisée et
+                prendront effet immédiatement.
               </div>
               <button
                 onClick={handleSaveAdminConfig}
@@ -1778,7 +2175,6 @@ export default function SettingsView({
             </div>
           </div>
         )}
-
       </div>
     </AnimatedPage>
   );

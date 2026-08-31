@@ -30,7 +30,8 @@ export default class ErrorBoundary extends React.Component {
             </div>
             <h1 className="text-lg font-bold text-slate-900">Une erreur inattendue est survenue</h1>
             <p className="text-xs text-slate-500">
-              L'application a rencontré un problème temporaire lors de l'affichage. Vos données restent sécurisées dans le stockage local.
+              L'application a rencontré un problème temporaire lors de l'affichage. Vos données
+              restent sécurisées dans le stockage local.
             </p>
             {this.state.error && (
               <div className="p-3 bg-slate-50 rounded-xl text-left font-mono text-[11px] text-slate-700 overflow-x-auto max-h-28 border border-slate-200">

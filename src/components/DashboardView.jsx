@@ -11,7 +11,7 @@ import {
   TrendingUp,
   Boxes,
   ArrowRight,
-  Plus
+  Plus,
 } from 'lucide-react';
 
 export default function DashboardView({
@@ -27,7 +27,7 @@ export default function DashboardView({
   onNavigateToMachines,
   onNavigateToSortie,
   onQuickSortie,
-  onUpdateMouvement
+  onUpdateMouvement,
 }) {
   const alertAndRuptureItems = stockItems.filter(
     (s) => s.alerte === 'RUPTURE' || s.alerte === 'ALERTE'
@@ -54,9 +54,7 @@ export default function DashboardView({
             <div className="text-2xl font-extrabold text-slate-900 mt-1 font-mono">
               {stockKPIs.totalArticles}
             </div>
-            <div className="text-[11px] text-slate-500 mt-0.5">
-              Ref cataloguées en magasin
-            </div>
+            <div className="text-[11px] text-slate-500 mt-0.5">Ref cataloguées en magasin</div>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <Package className="w-5 h-5" />
@@ -74,7 +72,9 @@ export default function DashboardView({
             </div>
             <div className="text-[11px] text-emerald-600 font-medium mt-0.5 flex items-center gap-1">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>+{stockKPIs.totalEntrees} entrées | -{stockKPIs.totalSorties} sorties</span>
+              <span>
+                +{stockKPIs.totalEntrees} entrées | -{stockKPIs.totalSorties} sorties
+              </span>
             </div>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -92,7 +92,8 @@ export default function DashboardView({
               {stockKPIs.ruptures + stockKPIs.alertes}
             </div>
             <div className="text-[11px] text-slate-500 mt-0.5">
-              <b className="text-rose-600">{stockKPIs.ruptures} ruptures</b> • <b className="text-amber-600">{stockKPIs.alertes} alertes</b>
+              <b className="text-rose-600">{stockKPIs.ruptures} ruptures</b> •{' '}
+              <b className="text-amber-600">{stockKPIs.alertes} alertes</b>
             </div>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
@@ -123,7 +124,9 @@ export default function DashboardView({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule Entrées (F)</div>
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+              Formule Entrées (F)
+            </div>
             <div className="font-mono text-xs text-blue-700 font-semibold mt-0.5">
               =SUMIFS(Qté, Ref, [@Ref], "Entrée")
             </div>
@@ -135,7 +138,9 @@ export default function DashboardView({
 
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule Sorties (G)</div>
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+              Formule Sorties (G)
+            </div>
             <div className="font-mono text-xs text-rose-700 font-semibold mt-0.5">
               =SUMIFS(Qté, Ref, [@Ref], "Sortie")
             </div>
@@ -147,7 +152,9 @@ export default function DashboardView({
 
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule Actuel (H)</div>
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+              Formule Actuel (H)
+            </div>
             <div className="font-mono text-xs text-emerald-700 font-bold mt-0.5">
               =[@[Initial]] + [@Entrees] - [@Sorties]
             </div>
@@ -159,7 +166,9 @@ export default function DashboardView({
 
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule Alerte (J)</div>
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+              Formule Alerte (J)
+            </div>
             <div className="font-mono text-xs text-amber-700 font-semibold mt-0.5">
               =IF(H&lt;=0, "RUPTURE", IF(H&lt;=I, "ALERTE", "OK"))
             </div>
@@ -185,7 +194,8 @@ export default function DashboardView({
                 </span>
               </h3>
               <p className="text-[11px] text-amber-800">
-                Demandes d'achat en cours — Cliquez sur "Valider Réception" pour basculer en Entrée Externe et créditer le Stock Actuel.
+                Demandes d'achat en cours — Cliquez sur "Valider Réception" pour basculer en Entrée
+                Externe et créditer le Stock Actuel.
               </p>
             </div>
           </div>
@@ -222,16 +232,28 @@ export default function DashboardView({
                       {art ? art.designation : cmd.designation || 'Article sur commande'}
                     </div>
                     <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center justify-between">
-                      <span>Quantité : <b className="text-slate-900">{cmd.quantite} pcs</b></span>
+                      <span>
+                        Quantité : <b className="text-slate-900">{cmd.quantite} pcs</b>
+                      </span>
                       <span>{cmd.date}</span>
                     </div>
                   </div>
 
                   {(cmd.technicien || cmd.id_zone || cmd.id_machine_registered) && (
                     <div className="text-[10.5px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono space-y-0.5">
-                      {cmd.technicien && <div>Demandeur : <b>{cmd.technicien}</b></div>}
+                      {cmd.technicien && (
+                        <div>
+                          Demandeur : <b>{cmd.technicien}</b>
+                        </div>
+                      )}
                       {(cmd.id_zone || cmd.id_machine_registered) && (
-                        <div>Affectation : <b>{cmd.id_zone || ''} {cmd.id_machine_registered ? `(${cmd.id_machine_registered})` : ''}</b></div>
+                        <div>
+                          Affectation :{' '}
+                          <b>
+                            {cmd.id_zone || ''}{' '}
+                            {cmd.id_machine_registered ? `(${cmd.id_machine_registered})` : ''}
+                          </b>
+                        </div>
                       )}
                     </div>
                   )}
@@ -243,7 +265,7 @@ export default function DashboardView({
                           type: 'Entrée Externe',
                           action_id: 'REAPPRO',
                           date: new Date().toISOString().split('T')[0],
-                          tags: ['#RECEPTION_VALIDE', '#ENTREE_EXTERNE']
+                          tags: ['#RECEPTION_VALIDE', '#ENTREE_EXTERNE'],
                         });
                       }
                     }}
@@ -257,7 +279,8 @@ export default function DashboardView({
           </div>
         ) : (
           <div className="bg-white/60 p-3 rounded-xl border border-amber-200/60 text-xs text-amber-800 text-center font-medium">
-            Aucune commande en attente. Pour initier une commande d'achat, créez un mouvement avec le type <b>"COMMANDE"</b>.
+            Aucune commande en attente. Pour initier une commande d'achat, créez un mouvement avec
+            le type <b>"COMMANDE"</b>.
           </div>
         )}
       </div>
@@ -306,12 +329,8 @@ export default function DashboardView({
               <tbody className="divide-y divide-slate-100">
                 {alertAndRuptureItems.slice(0, 8).map((item, idx) => (
                   <tr key={item.id || `${item.ref}-${idx}`} className="hover:bg-slate-50">
-                    <td className="py-2.5 px-3 font-mono font-bold text-slate-900">
-                      {item.ref}
-                    </td>
-                    <td className="py-2.5 px-3 font-medium text-slate-800">
-                      {item.designation}
-                    </td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-slate-900">{item.ref}</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-800">{item.designation}</td>
                     <td className="py-2.5 px-2 text-right font-mono font-bold text-rose-600">
                       {item.stockActuel}
                     </td>
@@ -331,9 +350,7 @@ export default function DashboardView({
                         </span>
                       )}
                     </td>
-                    <td className="py-2.5 px-3 font-mono text-slate-600">
-                      {item.emplacement}
-                    </td>
+                    <td className="py-2.5 px-3 font-mono text-slate-600">{item.emplacement}</td>
                     <td className="py-2.5 px-3 text-center">
                       <button
                         onClick={() => onQuickSortie(item)}
@@ -376,7 +393,9 @@ export default function DashboardView({
                     <div className="flex items-center gap-1.5">
                       <span
                         className={`text-[10px] font-bold px-1.5 py-0.2 rounded font-mono ${
-                          m.type === 'Sortie' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
+                          m.type === 'Sortie'
+                            ? 'bg-rose-100 text-rose-700'
+                            : 'bg-emerald-100 text-emerald-700'
                         }`}
                       >
                         {m.type}
@@ -387,7 +406,8 @@ export default function DashboardView({
                       {art ? art.designation : m.designation || 'Article'}
                     </div>
                     <div className="text-[10px] text-slate-400 font-mono">
-                      {m.code_bon || 'Bon'} • {m.date} • {m.technicien || 'Tech'}{m.num_commande ? ` • ${m.num_commande}` : ''}
+                      {m.code_bon || 'Bon'} • {m.date} • {m.technicien || 'Tech'}
+                      {m.num_commande ? ` • ${m.num_commande}` : ''}
                     </div>
                   </div>
                   <div className="text-right font-mono font-bold text-sm">

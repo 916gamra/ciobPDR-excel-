@@ -1,23 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Key, ArrowRight, Check, Package, Store, Lock, Unlock, AlertTriangle } from 'lucide-react';
+import {
+  ShieldCheck,
+  Key,
+  ArrowRight,
+  Check,
+  Package,
+  Store,
+  Lock,
+  Unlock,
+  AlertTriangle,
+} from 'lucide-react';
 import { storageService } from '../utils/storageService';
 
 export default function LoginScreen({ onLoginSuccess }) {
   // Load dynamic configuration from local storage
   const [managerRole, setManagerRole] = useState(() => {
-    return localStorage.getItem('gmao_admin_role') || 'Gestionnaire Principal du Stock & Mouvements';
+    return (
+      localStorage.getItem('gmao_admin_role') || 'Gestionnaire Principal du Stock & Mouvements'
+    );
   });
 
   const [storedPin, setStoredPin] = useState(() => {
-    const saved = localStorage.getItem('gmao_admin_pin');
-    if (saved) {
-      return saved;
-    }
-    // Default PIN is '1234' hashed
-    const defaultHash = storageService.hashPin('1234');
-    localStorage.setItem('gmao_admin_pin', defaultHash);
-    return defaultHash;
+    return localStorage.getItem('gmao_admin_pin') || null;
   });
+
+  const [isFirstRun, setIsFirstRun] = useState(() => !localStorage.getItem('gmao_admin_pin'));
+  const [confirmPin, setConfirmPin] = useState('');
 
   const [isOpenMode, setIsOpenMode] = useState(() => {
     return localStorage.getItem('gmao_admin_open_mode') === 'true';
@@ -36,10 +44,11 @@ export default function LoginScreen({ onLoginSuccess }) {
   // Sync state if localStorage changes
   useEffect(() => {
     const handleStorageChange = () => {
-      const role = localStorage.getItem('gmao_admin_role') || 'Gestionnaire Principal du Stock & Mouvements';
+      const role =
+        localStorage.getItem('gmao_admin_role') || 'Gestionnaire Principal du Stock & Mouvements';
       const pinSaved = localStorage.getItem('gmao_admin_pin');
       const open = localStorage.getItem('gmao_admin_open_mode') === 'true';
-      
+
       setManagerRole(role);
       if (pinSaved) {
         setStoredPin(pinSaved);
@@ -55,8 +64,20 @@ export default function LoginScreen({ onLoginSuccess }) {
     if (e) e.preventDefault();
     setErrorMsg(null);
 
-    // If Open Mode is false, we MUST validate the entered PIN code using storageService.verifyPin
-    if (!isOpenMode) {
+    if (isFirstRun) {
+      if (!pinCode || pinCode.length < 6) {
+        setErrorMsg('Le code PIN doit comporter au moins 6 caractères.');
+        return;
+      }
+      if (pinCode !== confirmPin) {
+        setErrorMsg('Les codes PIN ne correspondent pas.');
+        return;
+      }
+      const newHash = storageService.hashPin(pinCode);
+      localStorage.setItem('gmao_admin_pin', newHash);
+      setStoredPin(newHash);
+      setIsFirstRun(false);
+    } else if (!isOpenMode) {
       if (!storageService.verifyPin(pinCode, storedPin)) {
         setErrorMsg("Code PIN d'accès incorrect. Veuillez réessayer.");
         return;
@@ -69,7 +90,7 @@ export default function LoginScreen({ onLoginSuccess }) {
       titleFr: 'Responsable du Magasin',
       role: managerRole,
       zone: 'Magasin Central',
-      avatar: 'RM'
+      avatar: 'RM',
     };
 
     if (rememberMe) {
@@ -93,9 +114,7 @@ export default function LoginScreen({ onLoginSuccess }) {
             <Store className="w-7 h-7 text-white" />
           </div>
 
-          <h2 className="text-xl font-black tracking-tight text-white">
-            CIOB GMAO LIGHT
-          </h2>
+          <h2 className="text-xl font-black tracking-tight text-white">CIOB GMAO LIGHT</h2>
           <p className="text-xs text-emerald-100 font-medium mt-1">
             Espace d'Accès • Gateway Sécurisée
           </p>
@@ -166,32 +185,53 @@ export default function LoginScreen({ onLoginSuccess }) {
               )}
             </div>
 
-            {isOpenMode ? (
+            {isOpenMode && !isFirstRun ? (
               <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl text-center text-xs text-emerald-800 font-medium">
                 <Unlock className="w-5 h-5 text-emerald-600 mx-auto mb-1.5" />
-                L'accès libre est configuré. Cliquez simplement sur le bouton ci-dessous pour vous connecter directement.
+                L'accès libre est configuré. Cliquez simplement sur le bouton ci-dessous pour vous
+                connecter directement.
               </div>
             ) : (
-              <div className="relative">
-                <Key className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                <input
-                  type="password"
-                  value={pinCode}
-                  onChange={(e) => {
-                    setPinCode(e.target.value);
-                    if (errorMsg) setErrorMsg(null);
-                  }}
-                  placeholder="Saisir le code PIN d'accès..."
-                  maxLength={8}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono text-slate-900 tracking-widest focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition"
-                />
+              <div className="space-y-3">
+                {isFirstRun && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-800 font-medium">
+                    Bienvenue ! Veuillez configurer un nouveau code PIN (6 chiffres minimum) pour
+                    sécuriser l'accès.
+                  </div>
+                )}
+                <div className="relative">
+                  <Key className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="password"
+                    value={pinCode}
+                    onChange={(e) => {
+                      setPinCode(e.target.value);
+                      if (errorMsg) setErrorMsg(null);
+                    }}
+                    placeholder={
+                      isFirstRun ? 'Nouveau code PIN...' : "Saisir le code PIN d'accès..."
+                    }
+                    maxLength={16}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono text-slate-900 tracking-widest focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition"
+                  />
+                </div>
+                {isFirstRun && (
+                  <div className="relative">
+                    <Key className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                    <input
+                      type="password"
+                      value={confirmPin}
+                      onChange={(e) => {
+                        setConfirmPin(e.target.value);
+                        if (errorMsg) setErrorMsg(null);
+                      }}
+                      placeholder="Confirmer le nouveau code PIN..."
+                      maxLength={16}
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-xs font-mono text-slate-900 tracking-widest focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition"
+                    />
+                  </div>
+                )}
               </div>
-            )}
-            
-            {!isOpenMode && (
-              <p className="text-[10.5px] text-slate-500 mt-1.5 leading-snug">
-                * Saisissez le code configuré par l'administrateur (Par défaut: 1234).
-              </p>
             )}
           </div>
 
@@ -228,4 +268,3 @@ export default function LoginScreen({ onLoginSuccess }) {
     </div>
   );
 }
-

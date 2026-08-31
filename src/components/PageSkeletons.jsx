@@ -12,12 +12,17 @@ export function StockSkeleton() {
           { labelW: 'w-24', valW: 'w-12', color: 'bg-amber-50/70' },
           { labelW: 'w-20', valW: 'w-10', color: 'bg-rose-50/70' },
         ].map((card, idx) => (
-          <div key={`stock-kpi-${idx}`} className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div
+            key={`stock-kpi-${idx}`}
+            className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between"
+          >
             <div className="space-y-1.5">
               <div className={`h-3 ${card.labelW} bg-slate-200 rounded`} />
               <div className={`h-6 ${card.valW} bg-slate-300 rounded-md font-mono`} />
             </div>
-            <div className={`w-10 h-10 rounded-xl ${card.color} flex items-center justify-center shrink-0`}>
+            <div
+              className={`w-10 h-10 rounded-xl ${card.color} flex items-center justify-center shrink-0`}
+            >
               <div className="w-4 h-4 bg-slate-300/60 rounded" />
             </div>
           </div>
@@ -46,35 +51,83 @@ export function StockSkeleton() {
           <table className="w-full text-left text-xs border-collapse min-w-[1000px]">
             <thead className="bg-slate-100 border-b border-slate-200">
               <tr>
-                <th className="py-2.5 px-3"><div className="h-3 w-6 bg-slate-300 rounded mx-auto" /></th>
-                <th className="py-2.5 px-3"><div className="h-3 w-16 bg-slate-300 rounded" /></th>
-                <th className="py-2.5 px-3"><div className="h-3 w-32 bg-slate-300 rounded" /></th>
-                <th className="py-2.5 px-3"><div className="h-3 w-20 bg-slate-300 rounded" /></th>
-                <th className="py-2.5 px-2"><div className="h-3 w-12 bg-slate-300 rounded ml-auto" /></th>
-                <th className="py-2.5 px-2"><div className="h-3 w-12 bg-slate-300 rounded ml-auto" /></th>
-                <th className="py-2.5 px-2"><div className="h-3 w-12 bg-slate-300 rounded ml-auto" /></th>
-                <th className="py-2.5 px-2"><div className="h-3 w-14 bg-slate-300 rounded ml-auto" /></th>
-                <th className="py-2.5 px-2"><div className="h-3 w-10 bg-slate-300 rounded ml-auto" /></th>
-                <th className="py-2.5 px-3"><div className="h-3 w-14 bg-slate-300 rounded mx-auto" /></th>
-                <th className="py-2.5 px-3"><div className="h-3 w-16 bg-slate-300 rounded" /></th>
-                <th className="py-2.5 px-3"><div className="h-3 w-12 bg-slate-300 rounded mx-auto" /></th>
+                <th className="py-2.5 px-3">
+                  <div className="h-3 w-6 bg-slate-300 rounded mx-auto" />
+                </th>
+                <th className="py-2.5 px-3">
+                  <div className="h-3 w-16 bg-slate-300 rounded" />
+                </th>
+                <th className="py-2.5 px-3">
+                  <div className="h-3 w-32 bg-slate-300 rounded" />
+                </th>
+                <th className="py-2.5 px-3">
+                  <div className="h-3 w-20 bg-slate-300 rounded" />
+                </th>
+                <th className="py-2.5 px-2">
+                  <div className="h-3 w-12 bg-slate-300 rounded ml-auto" />
+                </th>
+                <th className="py-2.5 px-2">
+                  <div className="h-3 w-12 bg-slate-300 rounded ml-auto" />
+                </th>
+                <th className="py-2.5 px-2">
+                  <div className="h-3 w-12 bg-slate-300 rounded ml-auto" />
+                </th>
+                <th className="py-2.5 px-2">
+                  <div className="h-3 w-14 bg-slate-300 rounded ml-auto" />
+                </th>
+                <th className="py-2.5 px-2">
+                  <div className="h-3 w-10 bg-slate-300 rounded ml-auto" />
+                </th>
+                <th className="py-2.5 px-3">
+                  <div className="h-3 w-14 bg-slate-300 rounded mx-auto" />
+                </th>
+                <th className="py-2.5 px-3">
+                  <div className="h-3 w-16 bg-slate-300 rounded" />
+                </th>
+                <th className="py-2.5 px-3">
+                  <div className="h-3 w-12 bg-slate-300 rounded mx-auto" />
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {[...Array(9)].map((_, idx) => (
                 <tr key={`stock-skel-row-${idx}`} className="even:bg-slate-50/60 odd:bg-white">
-                  <td className="py-2.5 px-3"><div className="h-3.5 w-5 bg-slate-200 rounded mx-auto" /></td>
-                  <td className="py-2.5 px-3"><div className="h-4 w-20 bg-slate-200 rounded" /></td>
-                  <td className="py-2.5 px-3"><div className="h-4 w-44 bg-slate-200 rounded" /></td>
-                  <td className="py-2.5 px-3"><div className="h-5 w-24 bg-cyan-50 rounded-full" /></td>
-                  <td className="py-2.5 px-2"><div className="h-4 w-8 bg-slate-200 ml-auto" /></td>
-                  <td className="py-2.5 px-2"><div className="h-4 w-8 bg-emerald-100 ml-auto" /></td>
-                  <td className="py-2.5 px-2"><div className="h-4 w-8 bg-rose-100 ml-auto" /></td>
-                  <td className="py-2.5 px-2"><div className="h-4 w-10 bg-slate-300 ml-auto" /></td>
-                  <td className="py-2.5 px-2"><div className="h-4 w-8 bg-slate-200 ml-auto" /></td>
-                  <td className="py-2.5 px-3"><div className="h-5 w-16 bg-emerald-100/80 rounded-full mx-auto" /></td>
-                  <td className="py-2.5 px-3"><div className="h-4 w-14 bg-slate-200 rounded" /></td>
-                  <td className="py-2.5 px-3"><div className="h-6 w-16 bg-slate-200 rounded-lg mx-auto" /></td>
+                  <td className="py-2.5 px-3">
+                    <div className="h-3.5 w-5 bg-slate-200 rounded mx-auto" />
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <div className="h-4 w-20 bg-slate-200 rounded" />
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <div className="h-4 w-44 bg-slate-200 rounded" />
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <div className="h-5 w-24 bg-cyan-50 rounded-full" />
+                  </td>
+                  <td className="py-2.5 px-2">
+                    <div className="h-4 w-8 bg-slate-200 ml-auto" />
+                  </td>
+                  <td className="py-2.5 px-2">
+                    <div className="h-4 w-8 bg-emerald-100 ml-auto" />
+                  </td>
+                  <td className="py-2.5 px-2">
+                    <div className="h-4 w-8 bg-rose-100 ml-auto" />
+                  </td>
+                  <td className="py-2.5 px-2">
+                    <div className="h-4 w-10 bg-slate-300 ml-auto" />
+                  </td>
+                  <td className="py-2.5 px-2">
+                    <div className="h-4 w-8 bg-slate-200 ml-auto" />
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <div className="h-5 w-16 bg-emerald-100/80 rounded-full mx-auto" />
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <div className="h-4 w-14 bg-slate-200 rounded" />
+                  </td>
+                  <td className="py-2.5 px-3">
+                    <div className="h-6 w-16 bg-slate-200 rounded-lg mx-auto" />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -108,7 +161,10 @@ export function SortieRapideSkeleton() {
           { iconColor: 'bg-amber-100/60', badgeColor: 'bg-amber-50' },
           { iconColor: 'bg-emerald-100/60', badgeColor: 'bg-emerald-50' },
         ].map((card, idx) => (
-          <div key={`guide-skel-${idx}`} className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div
+            key={`guide-skel-${idx}`}
+            className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between"
+          >
             <div className="flex items-center gap-3">
               <div className={`w-8 h-8 rounded-xl ${card.iconColor} shrink-0`} />
               <div className="space-y-1.5">
@@ -160,7 +216,10 @@ export function SortieRapideSkeleton() {
 
           <div className="space-y-2">
             {[...Array(7)].map((_, idx) => (
-              <div key={`mvt-skel-row-${idx}`} className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
+              <div
+                key={`mvt-skel-row-${idx}`}
+                className="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between"
+              >
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2">
                     <div className="h-4 w-12 bg-rose-100/60 rounded" />
@@ -203,7 +262,10 @@ export function MachinesRegisteredSkeleton() {
 
         <div className="p-4 space-y-3">
           {[...Array(7)].map((_, i) => (
-            <div key={`mch-skel-${i}`} className="p-3 bg-slate-50/80 border border-slate-200/80 rounded-xl flex items-center justify-between gap-4">
+            <div
+              key={`mch-skel-${i}`}
+              className="p-3 bg-slate-50/80 border border-slate-200/80 rounded-xl flex items-center justify-between gap-4"
+            >
               <div className="flex items-center gap-3">
                 <div className="h-4 w-6 bg-slate-200 rounded font-mono" />
                 <div className="h-6 w-20 bg-slate-200 rounded-md font-mono" />
@@ -232,12 +294,17 @@ export function OperationsSkeleton() {
           { color: 'bg-emerald-50/70', w: 'w-24' },
           { color: 'bg-amber-50/70', w: 'w-20' },
         ].map((kpi, idx) => (
-          <div key={`op-kpi-${idx}`} className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div
+            key={`op-kpi-${idx}`}
+            className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between"
+          >
             <div className="space-y-1.5">
               <div className={`h-3 ${kpi.w} bg-slate-200 rounded`} />
               <div className="h-6 w-12 bg-slate-300 rounded font-mono" />
             </div>
-            <div className={`w-10 h-10 rounded-xl ${kpi.color} flex items-center justify-center shrink-0`}>
+            <div
+              className={`w-10 h-10 rounded-xl ${kpi.color} flex items-center justify-center shrink-0`}
+            >
               <div className="w-4 h-4 bg-slate-300/60 rounded" />
             </div>
           </div>
@@ -258,7 +325,10 @@ export function OperationsSkeleton() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 space-y-3">
           {[...Array(6)].map((_, i) => (
-            <div key={`op-skel-row-${i}`} className="p-3 bg-slate-50/80 border border-slate-200/80 rounded-xl flex items-center justify-between">
+            <div
+              key={`op-skel-row-${i}`}
+              className="p-3 bg-slate-50/80 border border-slate-200/80 rounded-xl flex items-center justify-between"
+            >
               <div className="flex items-center gap-3">
                 <div className="h-4 w-6 bg-slate-200 rounded font-mono" />
                 <div className="h-6 w-20 bg-slate-200 rounded-lg font-mono" />
@@ -296,7 +366,10 @@ export function GenericTableSkeleton() {
         </div>
         <div className="p-4 space-y-3">
           {[...Array(6)].map((_, i) => (
-            <div key={`generic-skel-${i}`} className="p-3 bg-slate-50/80 border border-slate-200/80 rounded-xl flex items-center justify-between">
+            <div
+              key={`generic-skel-${i}`}
+              className="p-3 bg-slate-50/80 border border-slate-200/80 rounded-xl flex items-center justify-between"
+            >
               <div className="flex items-center gap-4">
                 <div className="h-6 w-16 bg-slate-200 rounded-lg font-mono" />
                 <div className="h-4 w-48 bg-slate-200 rounded" />
@@ -336,7 +409,10 @@ export function GuidanceCardsTableSkeleton() {
           { badgeColor: 'bg-indigo-50', line1: 'w-32', line2: 'w-48' },
           { badgeColor: 'bg-emerald-50', line1: 'w-28', line2: 'w-40' },
         ].map((card, idx) => (
-          <div key={`form-guide-${idx}`} className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div
+            key={`form-guide-${idx}`}
+            className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between"
+          >
             <div className="space-y-2">
               <div className={`h-2.5 ${card.line1} bg-slate-200 rounded`} />
               <div className={`h-3 ${card.line2} bg-slate-200 rounded`} />
@@ -361,26 +437,46 @@ export function GuidanceCardsTableSkeleton() {
           <div className="h-4 w-64 bg-slate-200 rounded" />
           <div className="h-3 w-48 bg-slate-200 rounded hidden lg:block" />
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-100 border-b border-slate-200">
               <tr>
-                <th className="py-2.5 px-3 w-12 border-r border-slate-200"><div className="h-3 w-6 bg-slate-300 rounded mx-auto" /></th>
-                <th className="py-2.5 px-3"><div className="h-3 w-20 bg-slate-300 rounded" /></th>
-                <th className="py-2.5 px-3"><div className="h-3 w-32 bg-slate-300 rounded" /></th>
-                <th className="py-2.5 px-3"><div className="h-3 w-24 bg-slate-300 rounded" /></th>
-                <th className="py-2.5 px-3 w-24"><div className="h-3 w-12 bg-slate-300 rounded mx-auto" /></th>
+                <th className="py-2.5 px-3 w-12 border-r border-slate-200">
+                  <div className="h-3 w-6 bg-slate-300 rounded mx-auto" />
+                </th>
+                <th className="py-2.5 px-3">
+                  <div className="h-3 w-20 bg-slate-300 rounded" />
+                </th>
+                <th className="py-2.5 px-3">
+                  <div className="h-3 w-32 bg-slate-300 rounded" />
+                </th>
+                <th className="py-2.5 px-3">
+                  <div className="h-3 w-24 bg-slate-300 rounded" />
+                </th>
+                <th className="py-2.5 px-3 w-24">
+                  <div className="h-3 w-12 bg-slate-300 rounded mx-auto" />
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {[...Array(6)].map((_, i) => (
                 <tr key={`td-table-row-${i}`} className="bg-white">
-                  <td className="py-2.5 px-3 border-r border-slate-100"><div className="h-4 w-5 bg-slate-200 rounded mx-auto" /></td>
-                  <td className="py-3 px-3"><div className="h-4 w-24 bg-slate-200 rounded font-mono" /></td>
-                  <td className="py-3 px-3"><div className="h-4 w-48 bg-slate-200 rounded" /></td>
-                  <td className="py-3 px-3"><div className="h-6 w-20 bg-indigo-50 rounded-full" /></td>
-                  <td className="py-3 px-3"><div className="h-6 w-16 bg-emerald-50 rounded-full mx-auto" /></td>
+                  <td className="py-2.5 px-3 border-r border-slate-100">
+                    <div className="h-4 w-5 bg-slate-200 rounded mx-auto" />
+                  </td>
+                  <td className="py-3 px-3">
+                    <div className="h-4 w-24 bg-slate-200 rounded font-mono" />
+                  </td>
+                  <td className="py-3 px-3">
+                    <div className="h-4 w-48 bg-slate-200 rounded" />
+                  </td>
+                  <td className="py-3 px-3">
+                    <div className="h-6 w-20 bg-indigo-50 rounded-full" />
+                  </td>
+                  <td className="py-3 px-3">
+                    <div className="h-6 w-16 bg-emerald-50 rounded-full mx-auto" />
+                  </td>
                 </tr>
               ))}
             </tbody>

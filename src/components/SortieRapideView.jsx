@@ -49,7 +49,7 @@ import {
   ExternalLink,
   ShoppingCart,
   Building2,
-  HelpCircle
+  HelpCircle,
 } from 'lucide-react';
 
 import { validateMovementWithContext } from '../utils/formulaEngine';
@@ -69,14 +69,16 @@ export default function SortieRapideView({
   onOpenAddZone,
   onOpenAddTech,
   onOpenAddChef,
-  onOpenAddOperator
+  onOpenAddOperator,
 }) {
   // Find Zone Maintenance (e.g. ZONE-ATEL or any atelier zone or first zone)
-  const maintenanceZone = zones.find((z) => 
-    z.id_zone.toLowerCase().includes('atel') || 
-    z.libelle.toLowerCase().includes('maintenance') || 
-    z.libelle.toLowerCase().includes('atelier')
-  ) || zones[0];
+  const maintenanceZone =
+    zones.find(
+      (z) =>
+        z.id_zone.toLowerCase().includes('atel') ||
+        z.libelle.toLowerCase().includes('maintenance') ||
+        z.libelle.toLowerCase().includes('atelier')
+    ) || zones[0];
 
   // Auto-calculation of next sequential Bon code (e.g. Bon-001, Bon-002, ...)
   const getNextBonCode = (mvtList = []) => {
@@ -107,14 +109,16 @@ export default function SortieRapideView({
     fournisseur: 'Fournisseur Central Industriel',
     emplacement_reception: stockItems[0]?.emplacement || 'Magasin Central - R1',
     motif_retour: 'Surplus intervention / Non utilisé',
-    commentaire: ''
+    commentaire: '',
   });
 
   // Keep code_bon up to date when movements collection updates
   useEffect(() => {
     setForm((prev) => ({
       ...prev,
-      code_bon: prev.is_inconnu ? `${getNextBonCode(mouvements)}-INCONNU` : getNextBonCode(mouvements)
+      code_bon: prev.is_inconnu
+        ? `${getNextBonCode(mouvements)}-INCONNU`
+        : getNextBonCode(mouvements),
     }));
   }, [mouvements]);
 
@@ -126,7 +130,7 @@ export default function SortieRapideView({
       'ELECTRO-AUTO S.A.R.L.',
       'OUTILLAGE PRO & MAINTENANCE',
       'Atelier Réparation Extérieur',
-      'Entreprise de Sous-traitance'
+      'Entreprise de Sous-traitance',
     ]);
     (mouvements || []).forEach((m) => {
       if (m.fournisseur && String(m.fournisseur).trim()) set.add(String(m.fournisseur).trim());
@@ -141,7 +145,7 @@ export default function SortieRapideView({
       'Magasin Central - R2',
       'Magasin Central - R3',
       'Atelier Maintenance - Z1',
-      'Zone Stock Tampon'
+      'Zone Stock Tampon',
     ]);
     (stockItems || []).forEach((s) => {
       if (s.emplacement && String(s.emplacement).trim()) set.add(String(s.emplacement).trim());
@@ -151,11 +155,12 @@ export default function SortieRapideView({
 
   // Pending Commande Movements
   const pendingCommandes = useMemo(() => {
-    return (mouvements || []).filter((m) =>
-      m.type === 'COMMANDE' ||
-      m.action_id === 'COMMANDE_STOCK' ||
-      (m.tags && m.tags.includes('#COMMANDE_EN_ATTENTE')) ||
-      m.statut === 'En attente'
+    return (mouvements || []).filter(
+      (m) =>
+        m.type === 'COMMANDE' ||
+        m.action_id === 'COMMANDE_STOCK' ||
+        (m.tags && m.tags.includes('#COMMANDE_EN_ATTENTE')) ||
+        m.statut === 'En attente'
     );
   }, [mouvements]);
 
@@ -171,7 +176,8 @@ export default function SortieRapideView({
       technicien: cmd.technicien || technicians[0]?.nom || '',
       id_technician: cmd.id_technician || technicians[0]?.id_technician || '',
       emplacement_reception: targetArt?.emplacement || 'Magasin Central - R1',
-      commentaire: `[Réception Commande ${cmd.num_commande || cmd.code_bon}] ${cmd.commentaire || ''}`.trim()
+      commentaire:
+        `[Réception Commande ${cmd.num_commande || cmd.code_bon}] ${cmd.commentaire || ''}`.trim(),
     }));
     setMouvementItems([{ ref: cmd.ref, quantite: cmd.quantite || 1, validated: true }]);
     setEditingIndex(null);
@@ -180,7 +186,7 @@ export default function SortieRapideView({
 
   // Unified items list for both Sortie and Entrée (multi-articles up to 5 items)
   const [mouvementItems, setMouvementItems] = useState([
-    { ref: stockItems[0]?.ref || '', quantite: 1, validated: false }
+    { ref: stockItems[0]?.ref || '', quantite: 1, validated: false },
   ]);
   const [editingIndex, setEditingIndex] = useState(0);
 
@@ -194,7 +200,7 @@ export default function SortieRapideView({
   // Filter for movements table
   const [tableFilterType, setTableFilterType] = useState('ALL'); // 'ALL' | 'Sortie' | 'Entrée'
   const [tableFilterAction, setTableFilterAction] = useState('ALL');
-  
+
   const [localTableSearchText, setLocalTableSearchText] = useState('');
   const [tableSearchText, setTableSearchText] = useState('');
 
@@ -214,7 +220,7 @@ export default function SortieRapideView({
     operation: '',
     fournisseur: '',
     emplacement_reception: '',
-    commentaire: ''
+    commentaire: '',
   });
 
   // Delete movement modal state
@@ -263,14 +269,10 @@ export default function SortieRapideView({
   );
 
   // Available techs for selected zone
-  const availableTechs = technicians.filter(
-    (t) => !form.id_zone || t.id_zone === form.id_zone
-  );
+  const availableTechs = technicians.filter((t) => !form.id_zone || t.id_zone === form.id_zone);
 
   // Available ops for selected zone
-  const availableOps = operations.filter(
-    (op) => !form.id_zone || op.id_zone === form.id_zone
-  );
+  const availableOps = operations.filter((op) => !form.id_zone || op.id_zone === form.id_zone);
 
   // List of chefs and operators
   const chefsList = operations.filter(
@@ -281,12 +283,23 @@ export default function SortieRapideView({
   );
 
   // Current Flow Classification Flags
-  const isSortieFlow = form.type === 'Sortie Interne' || form.type === 'Sortie Externe' || form.type === 'Sortie';
-  const isSortieInterne = form.type === 'Sortie Interne' || (form.type === 'Sortie' && form.action_id !== 'REPARATION_EXTERNE' && form.action_id !== 'SOUS_TRAITANCE');
-  const isSortieExterne = form.type === 'Sortie Externe' || form.action_id === 'REPARATION_EXTERNE' || form.action_id === 'SOUS_TRAITANCE';
-  const isEntreeFlow = form.type === 'Entrée Interne' || form.type === 'Entrée Externe' || form.type === 'Entrée';
-  const isEntreeInterne = form.type === 'Entrée Interne' || (form.type === 'Entrée' && form.action_id === 'RETOUR');
-  const isEntreeExterne = form.type === 'Entrée Externe' || (form.type === 'Entrée' && form.action_id === 'REAPPRO');
+  const isSortieFlow =
+    form.type === 'Sortie Interne' || form.type === 'Sortie Externe' || form.type === 'Sortie';
+  const isSortieInterne =
+    form.type === 'Sortie Interne' ||
+    (form.type === 'Sortie' &&
+      form.action_id !== 'REPARATION_EXTERNE' &&
+      form.action_id !== 'SOUS_TRAITANCE');
+  const isSortieExterne =
+    form.type === 'Sortie Externe' ||
+    form.action_id === 'REPARATION_EXTERNE' ||
+    form.action_id === 'SOUS_TRAITANCE';
+  const isEntreeFlow =
+    form.type === 'Entrée Interne' || form.type === 'Entrée Externe' || form.type === 'Entrée';
+  const isEntreeInterne =
+    form.type === 'Entrée Interne' || (form.type === 'Entrée' && form.action_id === 'RETOUR');
+  const isEntreeExterne =
+    form.type === 'Entrée Externe' || (form.type === 'Entrée' && form.action_id === 'REAPPRO');
   const isCommandeFlow = form.type === 'COMMANDE' || form.action_id === 'COMMANDE_STOCK';
 
   // Unique article types for search filter
@@ -306,10 +319,18 @@ export default function SortieRapideView({
         return false;
       }
       if (!q) return true;
-      const refMatch = String(item.ref || '').toLowerCase().includes(q);
-      const desMatch = String(item.designation || '').toLowerCase().includes(q);
-      const typeMatch = String(item.id_type || '').toLowerCase().includes(q);
-      const empMatch = String(item.emplacement || '').toLowerCase().includes(q);
+      const refMatch = String(item.ref || '')
+        .toLowerCase()
+        .includes(q);
+      const desMatch = String(item.designation || '')
+        .toLowerCase()
+        .includes(q);
+      const typeMatch = String(item.id_type || '')
+        .toLowerCase()
+        .includes(q);
+      const empMatch = String(item.emplacement || '')
+        .toLowerCase()
+        .includes(q);
       return refMatch || desMatch || typeMatch || empMatch;
     });
   }, [stockItems, searchQuery, filterType]);
@@ -329,9 +350,7 @@ export default function SortieRapideView({
     return (
       <>
         {before}
-        <mark className="bg-amber-200 text-amber-900 font-bold px-0.5 rounded">
-          {match}
-        </mark>
+        <mark className="bg-amber-200 text-amber-900 font-bold px-0.5 rounded">{match}</mark>
         {after}
       </>
     );
@@ -347,7 +366,7 @@ export default function SortieRapideView({
         operation: '',
         id_zone: zones[0]?.id_zone || '',
         id_machine_registered: machines[0]?.id_machine_registered || '',
-        technicien: technicians[0]?.nom || ''
+        technicien: technicians[0]?.nom || '',
       }));
     } else if (newType === 'Entrée Interne') {
       setForm((prev) => ({
@@ -359,7 +378,7 @@ export default function SortieRapideView({
         operation: '',
         technicien: technicians[0]?.nom || '',
         motif_retour: 'Pièce non utilisée / Surplus intervention',
-        emplacement_reception: stockItems[0]?.emplacement || 'Magasin Central - R1'
+        emplacement_reception: stockItems[0]?.emplacement || 'Magasin Central - R1',
       }));
     } else if (newType === 'Sortie Externe') {
       setForm((prev) => ({
@@ -370,7 +389,7 @@ export default function SortieRapideView({
         id_machine_registered: machines[0]?.id_machine_registered || '',
         technicien: technicians[0]?.nom || '',
         fournisseur: 'Sous-traitant Réparation Externe',
-        commentaire: 'Envoi pour réparation / sous-traitance hors-site'
+        commentaire: 'Envoi pour réparation / sous-traitance hors-site',
       }));
     } else if (newType === 'Entrée Externe' || newType === 'Entrée') {
       setForm((prev) => ({
@@ -382,7 +401,7 @@ export default function SortieRapideView({
         operation: '',
         technicien: technicians[0]?.nom || '',
         fournisseur: 'Fournisseur Central Industriel',
-        emplacement_reception: stockItems[0]?.emplacement || 'Magasin Central - R1'
+        emplacement_reception: stockItems[0]?.emplacement || 'Magasin Central - R1',
       }));
     } else if (newType === 'COMMANDE') {
       setForm((prev) => ({
@@ -393,7 +412,7 @@ export default function SortieRapideView({
         id_machine_registered: machines[0]?.id_machine_registered || '',
         technicien: technicians[0]?.nom || '',
         num_commande: `CMD-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
-        commentaire: 'Demande d\'approvisionnement en attente de validation'
+        commentaire: "Demande d'approvisionnement en attente de validation",
       }));
     }
   };
@@ -407,12 +426,14 @@ export default function SortieRapideView({
       updated.operation = '';
       if (!updated.id_zone && zones.length > 0) updated.id_zone = zones[0].id_zone;
       if (!updated.technicien && technicians.length > 0) updated.technicien = technicians[0].nom;
-      if (!updated.id_machine_registered && machines.length > 0) updated.id_machine_registered = machines[0].id_machine_registered;
+      if (!updated.id_machine_registered && machines.length > 0)
+        updated.id_machine_registered = machines[0].id_machine_registered;
     } else if (newAction === 'PREVENTIVE' || newAction === 'AMELIORATIVE') {
       // Tech + Zone + Machine (+ optional Op/Gamme)
       if (!updated.id_zone && zones.length > 0) updated.id_zone = zones[0].id_zone;
       if (!updated.technicien && technicians.length > 0) updated.technicien = technicians[0].nom;
-      if (!updated.id_machine_registered && machines.length > 0) updated.id_machine_registered = machines[0].id_machine_registered;
+      if (!updated.id_machine_registered && machines.length > 0)
+        updated.id_machine_registered = machines[0].id_machine_registered;
     } else if (newAction === 'USAGE') {
       // Personal Usage -> No Machine
       updated.id_machine_registered = '';
@@ -455,7 +476,8 @@ export default function SortieRapideView({
       if (!updated.fournisseur) updated.fournisseur = 'Entreprise de Sous-traitance';
       if (!updated.id_zone && zones.length > 0) updated.id_zone = zones[0].id_zone;
     } else if (newAction === 'COMMANDE_STOCK') {
-      if (!updated.num_commande) updated.num_commande = `CMD-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+      if (!updated.num_commande)
+        updated.num_commande = `CMD-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
       if (!updated.technicien && technicians.length > 0) updated.technicien = technicians[0].nom;
     }
 
@@ -494,7 +516,12 @@ export default function SortieRapideView({
     setForm((prev) => ({
       ...prev,
       technicien: techNom,
-      id_zone: prev.action_id === 'USAGE' ? (maintenanceZone ? maintenanceZone.id_zone : (techObj?.id_zone || prev.id_zone)) : prev.id_zone
+      id_zone:
+        prev.action_id === 'USAGE'
+          ? maintenanceZone
+            ? maintenanceZone.id_zone
+            : techObj?.id_zone || prev.id_zone
+          : prev.id_zone,
     }));
   };
 
@@ -504,7 +531,7 @@ export default function SortieRapideView({
     setForm((prev) => ({
       ...prev,
       operation: opNom,
-      id_zone: opObj?.id_zone ? opObj.id_zone : prev.id_zone
+      id_zone: opObj?.id_zone ? opObj.id_zone : prev.id_zone,
     }));
   };
 
@@ -520,7 +547,7 @@ export default function SortieRapideView({
     }
     setForm((prev) => ({
       ...prev,
-      emplacement_reception: art.emplacement || prev.emplacement_reception
+      emplacement_reception: art.emplacement || prev.emplacement_reception,
     }));
     setIsArticleSearchOpen(false);
     setSearchQuery('');
@@ -532,7 +559,8 @@ export default function SortieRapideView({
 
     const userTypedBon = (form.code_bon || getNextBonCode(mouvements)).trim();
     const manualOrderNum = (form.num_commande || '').trim();
-    const isCmdInconnu = form.is_inconnu || !manualOrderNum || manualOrderNum.toUpperCase() === 'INCONNU';
+    const isCmdInconnu =
+      form.is_inconnu || !manualOrderNum || manualOrderNum.toUpperCase() === 'INCONNU';
     const finalNumCommande = isCmdInconnu ? 'INCONNU' : manualOrderNum;
 
     const tags = [];
@@ -548,7 +576,7 @@ export default function SortieRapideView({
       technicians,
       operations,
       zones,
-      machines
+      machines,
     };
 
     const validItems = mouvementItems.filter((i) => i.ref && Number(i.quantite) > 0);
@@ -558,14 +586,17 @@ export default function SortieRapideView({
     }
 
     // Is it an outgoing flow from stock (Sortie Interne or Sortie Externe)?
-    const isSortieFlow = form.type === 'Sortie Interne' || form.type === 'Sortie Externe' || form.type === 'Sortie';
+    const isSortieFlow =
+      form.type === 'Sortie Interne' || form.type === 'Sortie Externe' || form.type === 'Sortie';
 
     if (isSortieFlow) {
       // Check stock availability
       for (const item of validItems) {
         const art = stockItems.find((s) => s.ref === item.ref);
         if (art && Number(item.quantite) > Number(art.stockActuel)) {
-          setValidationErrors([`Erreur : La quantité demandée pour ${item.ref} (${item.quantite}) dépasse le stock disponible (${art.stockActuel}).`]);
+          setValidationErrors([
+            `Erreur : La quantité demandée pour ${item.ref} (${item.quantite}) dépasse le stock disponible (${art.stockActuel}).`,
+          ]);
           return;
         }
       }
@@ -597,16 +628,20 @@ export default function SortieRapideView({
         num_commande: finalNumCommande,
         action_id: form.action_id,
         id_zone: form.id_zone || '',
-        id_machine_registered: (form.usage_type === 'operation' || form.usage_type === 'chef') ? '' : (form.id_machine_registered || ''),
+        id_machine_registered:
+          form.usage_type === 'operation' || form.usage_type === 'chef'
+            ? ''
+            : form.id_machine_registered || '',
         technicien: form.technicien || '',
         id_technician: form.id_technician || techObj?.id_technician || '',
         operation: form.operation || '',
         id_operation: form.id_operation || opObj?.id_operation || '',
         fournisseur: form.fournisseur || '',
-        emplacement_reception: art?.emplacement || form.emplacement_reception || 'Magasin Central - R1',
+        emplacement_reception:
+          art?.emplacement || form.emplacement_reception || 'Magasin Central - R1',
         commentaire: commentText,
         tags,
-        isBonEmpty: isCmdInconnu
+        isBonEmpty: isCmdInconnu,
       };
 
       const validationResult = validateMovementWithContext(newMvt, context);
@@ -624,7 +659,7 @@ export default function SortieRapideView({
       ...prev,
       num_commande: '',
       commentaire: '',
-      code_bon: getNextBonCode(mouvements)
+      code_bon: getNextBonCode(mouvements),
     }));
     setMouvementItems([{ ref: stockItems[0]?.ref || '', quantite: 1, validated: false }]);
     setEditingIndex(0);
@@ -635,13 +670,27 @@ export default function SortieRapideView({
     const list = mouvements.filter((m) => {
       if (tableFilterType !== 'ALL') {
         if (tableFilterType === 'Sortie Interne') {
-          if (m.type !== 'Sortie Interne' && !(m.type === 'Sortie' && m.action_id !== 'REPARATION_EXTERNE' && m.action_id !== 'SOUS_TRAITANCE')) return false;
+          if (
+            m.type !== 'Sortie Interne' &&
+            !(
+              m.type === 'Sortie' &&
+              m.action_id !== 'REPARATION_EXTERNE' &&
+              m.action_id !== 'SOUS_TRAITANCE'
+            )
+          )
+            return false;
         } else if (tableFilterType === 'Entrée Interne') {
-          if (m.type !== 'Entrée Interne' && !(m.type === 'Entrée' && m.action_id === 'RETOUR')) return false;
+          if (m.type !== 'Entrée Interne' && !(m.type === 'Entrée' && m.action_id === 'RETOUR'))
+            return false;
         } else if (tableFilterType === 'Sortie Externe') {
-          if (m.type !== 'Sortie Externe' && !(m.action_id === 'REPARATION_EXTERNE' || m.action_id === 'SOUS_TRAITANCE')) return false;
+          if (
+            m.type !== 'Sortie Externe' &&
+            !(m.action_id === 'REPARATION_EXTERNE' || m.action_id === 'SOUS_TRAITANCE')
+          )
+            return false;
         } else if (tableFilterType === 'Entrée Externe') {
-          if (m.type !== 'Entrée Externe' && !(m.type === 'Entrée' && m.action_id === 'REAPPRO')) return false;
+          if (m.type !== 'Entrée Externe' && !(m.type === 'Entrée' && m.action_id === 'REAPPRO'))
+            return false;
         } else if (tableFilterType === 'COMMANDE') {
           if (m.type !== 'COMMANDE' && m.action_id !== 'COMMANDE_STOCK') return false;
         } else if (tableFilterType === 'Sortie') {
@@ -655,16 +704,44 @@ export default function SortieRapideView({
       if (tableFilterAction !== 'ALL' && m.action_id !== tableFilterAction) return false;
       if (tableSearchText.trim()) {
         const q = tableSearchText.trim().toLowerCase();
-        const bonMatch = String(m.code_bon || '').toLowerCase().includes(q);
-        const cmdMatch = String(m.num_commande || '').toLowerCase().includes(q);
-        const refMatch = String(m.ref || '').toLowerCase().includes(q);
-        const techMatch = String(m.technicien || '').toLowerCase().includes(q);
-        const techIdMatch = String(m.id_technician || '').toLowerCase().includes(q);
-        const opMatch = String(m.operation || '').toLowerCase().includes(q);
-        const opIdMatch = String(m.id_operation || '').toLowerCase().includes(q);
-        const mchMatch = String(m.id_machine_registered || '').toLowerCase().includes(q);
-        const comMatch = String(m.commentaire || '').toLowerCase().includes(q);
-        return bonMatch || cmdMatch || refMatch || techMatch || techIdMatch || opMatch || opIdMatch || mchMatch || comMatch;
+        const bonMatch = String(m.code_bon || '')
+          .toLowerCase()
+          .includes(q);
+        const cmdMatch = String(m.num_commande || '')
+          .toLowerCase()
+          .includes(q);
+        const refMatch = String(m.ref || '')
+          .toLowerCase()
+          .includes(q);
+        const techMatch = String(m.technicien || '')
+          .toLowerCase()
+          .includes(q);
+        const techIdMatch = String(m.id_technician || '')
+          .toLowerCase()
+          .includes(q);
+        const opMatch = String(m.operation || '')
+          .toLowerCase()
+          .includes(q);
+        const opIdMatch = String(m.id_operation || '')
+          .toLowerCase()
+          .includes(q);
+        const mchMatch = String(m.id_machine_registered || '')
+          .toLowerCase()
+          .includes(q);
+        const comMatch = String(m.commentaire || '')
+          .toLowerCase()
+          .includes(q);
+        return (
+          bonMatch ||
+          cmdMatch ||
+          refMatch ||
+          techMatch ||
+          techIdMatch ||
+          opMatch ||
+          opIdMatch ||
+          mchMatch ||
+          comMatch
+        );
       }
       return true;
     });
@@ -688,7 +765,14 @@ export default function SortieRapideView({
       if (valA > valB) return tableSortOrder === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [mouvements, tableFilterType, tableFilterAction, tableSearchText, tableSortField, tableSortOrder]);
+  }, [
+    mouvements,
+    tableFilterType,
+    tableFilterAction,
+    tableSearchText,
+    tableSortField,
+    tableSortOrder,
+  ]);
 
   // Statistics for the filtered dataset
   const tableKPIs = useMemo(() => {
@@ -713,7 +797,7 @@ export default function SortieRapideView({
       totalEntreesQty,
       countSorties,
       countEntrees,
-      totalCount: filteredMouvements.length
+      totalCount: filteredMouvements.length,
     };
   }, [filteredMouvements]);
 
@@ -737,7 +821,9 @@ export default function SortieRapideView({
             <span>Sortie & Entrée Rapide (Formulaire Gouverné)</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Gouvernance stricte par Type d'Action : Cartes adaptatives dynamiques selon le flux (<b className="text-rose-700">Sortie</b> ou <b className="text-emerald-700">Entrée</b>), traçabilité par <b className="text-indigo-700">Bon-#</b> et recherche d'article avancée.
+            Gouvernance stricte par Type d'Action : Cartes adaptatives dynamiques selon le flux (
+            <b className="text-rose-700">Sortie</b> ou <b className="text-emerald-700">Entrée</b>),
+            traçabilité par <b className="text-indigo-700">Bon-#</b> et recherche d'article avancée.
           </p>
         </div>
       </div>
@@ -750,11 +836,15 @@ export default function SortieRapideView({
               <Wrench className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Corrective</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Corrective
+              </div>
               <div className="text-xs font-semibold text-rose-700">Machine + Tech + Zone</div>
             </div>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">Sortie</span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+            Sortie
+          </span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
@@ -763,11 +853,15 @@ export default function SortieRapideView({
               <Layers className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Préventive / Amélio</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Préventive / Amélio
+              </div>
               <div className="text-xs font-semibold text-blue-700">Tech + Zone + Machine</div>
             </div>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Sortie</span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+            Sortie
+          </span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
@@ -776,11 +870,17 @@ export default function SortieRapideView({
               <Users className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Usage Métier</div>
-              <div className="text-xs font-semibold text-amber-700">Tech / Op / Chef (Sans Machine)</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Usage Métier
+              </div>
+              <div className="text-xs font-semibold text-amber-700">
+                Tech / Op / Chef (Sans Machine)
+              </div>
             </div>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Sortie</span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+            Sortie
+          </span>
         </div>
 
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
@@ -789,11 +889,15 @@ export default function SortieRapideView({
               <Truck className="w-4 h-4" />
             </div>
             <div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Réappro Fournisseur</div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Réappro Fournisseur
+              </div>
               <div className="text-xs font-semibold text-emerald-700">Tech Demandeur + Magasin</div>
             </div>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Entrée</span>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Entrée
+          </span>
         </div>
       </div>
 
@@ -807,10 +911,13 @@ export default function SortieRapideView({
               </div>
               <div>
                 <h3 className="text-xs font-extrabold text-amber-950 uppercase tracking-wider flex items-center gap-2">
-                  <span>Demandes de Commande en Attente de Livraison ({pendingCommandes.length})</span>
+                  <span>
+                    Demandes de Commande en Attente de Livraison ({pendingCommandes.length})
+                  </span>
                 </h3>
                 <p className="text-[11px] text-amber-800">
-                  Cliquez sur "Réceptionner" pour pré-remplir le bon d'entrée externe et valider l'arrivée en stock.
+                  Cliquez sur "Réceptionner" pour pré-remplir le bon d'entrée externe et valider
+                  l'arrivée en stock.
                 </p>
               </div>
             </div>
@@ -818,7 +925,10 @@ export default function SortieRapideView({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {pendingCommandes.slice(0, 6).map((cmd) => (
-              <div key={cmd.id} className="bg-white p-3 rounded-xl border border-amber-200/80 shadow-2xs flex flex-col justify-between gap-2">
+              <div
+                key={cmd.id}
+                className="bg-white p-3 rounded-xl border border-amber-200/80 shadow-2xs flex flex-col justify-between gap-2"
+              >
                 <div>
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded-md">
@@ -830,7 +940,9 @@ export default function SortieRapideView({
                     Ref: {cmd.ref}
                   </div>
                   <div className="text-[11px] text-slate-600 flex items-center gap-2 mt-0.5">
-                    <span>Quantité: <b className="text-amber-900 font-extrabold">{cmd.quantite}</b></span>
+                    <span>
+                      Quantité: <b className="text-amber-900 font-extrabold">{cmd.quantite}</b>
+                    </span>
                     <span>•</span>
                     <span>Demandeur: {cmd.technicien || 'Anonyme'}</span>
                   </div>
@@ -859,9 +971,14 @@ export default function SortieRapideView({
                 <FileText className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold text-sm text-slate-900 leading-tight">Nouveau Mouvement</h3>
+                <h3 className="font-bold text-sm text-slate-900 leading-tight">
+                  Nouveau Mouvement
+                </h3>
                 <div className="text-[11px] font-mono font-bold text-indigo-700 mt-0.5">
-                  N° Bon Système : <span className="underline decoration-indigo-300 underline-offset-2">{form.code_bon}</span>
+                  N° Bon Système :{' '}
+                  <span className="underline decoration-indigo-300 underline-offset-2">
+                    {form.code_bon}
+                  </span>
                 </div>
               </div>
             </div>
@@ -911,7 +1028,8 @@ export default function SortieRapideView({
                 type="button"
                 onClick={() => handleTypeChange('Entrée Externe')}
                 className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
-                  form.type === 'Entrée Externe' || (form.type === 'Entrée' && form.action_id === 'REAPPRO')
+                  form.type === 'Entrée Externe' ||
+                  (form.type === 'Entrée' && form.action_id === 'REAPPRO')
                     ? 'bg-emerald-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
@@ -955,7 +1073,10 @@ export default function SortieRapideView({
               {/* N° Bon (Auto-Sequence Locked) */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1 truncate" title="N° Bon de Saisie (Généré Automatiquement)">
+                  <label
+                    className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1 truncate"
+                    title="N° Bon de Saisie (Généré Automatiquement)"
+                  >
                     <Lock className="w-3 h-3 text-indigo-600 shrink-0" />
                     <span>N° Bon</span>
                   </label>
@@ -988,7 +1109,10 @@ export default function SortieRapideView({
               {/* N° Demande / Commande / OT (Where INCONNU applies) */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider truncate" title="N° Commande / Ordre de Travail / Demande">
+                  <label
+                    className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider truncate"
+                    title="N° Commande / Ordre de Travail / Demande"
+                  >
                     N° OT / Commande
                   </label>
                   <label className="flex items-center gap-1 cursor-pointer text-[9.5px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-1.5 py-0.5 rounded border border-amber-200 transition">
@@ -1000,7 +1124,11 @@ export default function SortieRapideView({
                         setForm((prev) => ({
                           ...prev,
                           is_inconnu: checked,
-                          num_commande: checked ? 'INCONNU' : (prev.num_commande === 'INCONNU' ? '' : prev.num_commande)
+                          num_commande: checked
+                            ? 'INCONNU'
+                            : prev.num_commande === 'INCONNU'
+                              ? ''
+                              : prev.num_commande,
                         }));
                       }}
                       className="rounded text-amber-600 focus:ring-amber-500 w-3 h-3 cursor-pointer"
@@ -1029,12 +1157,22 @@ export default function SortieRapideView({
                 <div className="flex items-center gap-2">
                   <Package className="w-4 h-4 text-indigo-600" />
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                    {isSortieFlow ? 'Articles à Sortir (Multi-Pièces)' : isCommandeFlow ? 'Articles à Commander (Multi-Pièces)' : 'Articles Entrants (Multi-Pièces)'}
+                    {isSortieFlow
+                      ? 'Articles à Sortir (Multi-Pièces)'
+                      : isCommandeFlow
+                        ? 'Articles à Commander (Multi-Pièces)'
+                        : 'Articles Entrants (Multi-Pièces)'}
                   </span>
                 </div>
-                <span className={`text-[10.5px] font-bold px-2 py-0.5 rounded-lg border ${
-                  isSortieFlow ? 'bg-rose-50 text-rose-800 border-rose-200' : isCommandeFlow ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                }`}>
+                <span
+                  className={`text-[10.5px] font-bold px-2 py-0.5 rounded-lg border ${
+                    isSortieFlow
+                      ? 'bg-rose-50 text-rose-800 border-rose-200'
+                      : isCommandeFlow
+                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                        : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  }`}
+                >
                   {mouvementItems.length}/5 pièces
                 </span>
               </div>
@@ -1065,11 +1203,11 @@ export default function SortieRapideView({
                   const isValidated = Boolean(item.validated && editingIndex !== idx);
                   const currentStock = art ? Number(art.stockActuel) : 0;
                   const itemQty = Number(item.quantite) || 1;
-                  const resultingStock = isSortieFlow 
+                  const resultingStock = isSortieFlow
                     ? Math.max(0, currentStock - itemQty)
                     : isCommandeFlow
-                    ? currentStock
-                    : (currentStock + itemQty);
+                      ? currentStock
+                      : currentStock + itemQty;
                   const isZero = isSortieFlow && resultingStock === 0;
                   const isMax = isSortieFlow && itemQty >= currentStock;
 
@@ -1095,17 +1233,23 @@ export default function SortieRapideView({
                                     ? 'bg-rose-50 text-rose-700 border-rose-200'
                                     : 'bg-amber-50 text-amber-800 border-amber-200'
                                   : isCommandeFlow
-                                  ? 'bg-amber-100 text-amber-900 border-amber-300'
-                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               }`}
                             >
-                              {isSortieFlow ? `Sortie : -${item.quantite} pcs` : isCommandeFlow ? `Commande : ${item.quantite} pcs` : `Entrée : +${item.quantite} pcs`}
+                              {isSortieFlow
+                                ? `Sortie : -${item.quantite} pcs`
+                                : isCommandeFlow
+                                  ? `Commande : ${item.quantite} pcs`
+                                  : `Entrée : +${item.quantite} pcs`}
                             </span>
                             <button
                               type="button"
                               onClick={() => {
                                 setMouvementItems((prev) =>
-                                  prev.map((it, i) => (i === idx ? { ...it, validated: false } : it))
+                                  prev.map((it, i) =>
+                                    i === idx ? { ...it, validated: false } : it
+                                  )
                                 );
                                 setEditingIndex(idx);
                               }}
@@ -1150,16 +1294,27 @@ export default function SortieRapideView({
                                 </span>
                               </div>
                               <div className="text-slate-500 mt-0.5">
-                                Emplacement : <span className="font-mono font-bold text-slate-700">{art.emplacement || 'R1-B01'}</span>
+                                Emplacement :{' '}
+                                <span className="font-mono font-bold text-slate-700">
+                                  {art.emplacement || 'R1-B01'}
+                                </span>
                               </div>
                             </div>
                             <div className="text-right">
                               <div className="text-slate-500 text-[10px]">
-                                {isSortieFlow ? 'Nouveau Stock' : isCommandeFlow ? 'Stock Inchangé' : 'Nouveau Stock'}
+                                {isSortieFlow
+                                  ? 'Nouveau Stock'
+                                  : isCommandeFlow
+                                    ? 'Stock Inchangé'
+                                    : 'Nouveau Stock'}
                               </div>
                               <div
                                 className={`font-mono font-bold text-sm ${
-                                  isSortieFlow && isZero ? 'text-rose-600' : isCommandeFlow ? 'text-amber-800' : 'text-emerald-700'
+                                  isSortieFlow && isZero
+                                    ? 'text-rose-600'
+                                    : isCommandeFlow
+                                      ? 'text-amber-800'
+                                      : 'text-emerald-700'
                                 }`}
                               >
                                 {resultingStock} {isSortieFlow && isZero ? '⚠️' : '✓'}
@@ -1185,8 +1340,8 @@ export default function SortieRapideView({
                             {isSortieFlow
                               ? `${currentStock} - ${item.quantite} = ${resultingStock} ${isZero ? '⚠️ (Stock épuisé)' : 'pcs'}`
                               : isCommandeFlow
-                              ? `Stock actuel : ${currentStock} pcs (Commande : +${item.quantite} pcs en attente ⏳)`
-                              : `${currentStock} + ${item.quantite} = ${resultingStock} pcs ✓`}
+                                ? `Stock actuel : ${currentStock} pcs (Commande : +${item.quantite} pcs en attente ⏳)`
+                                : `${currentStock} + ${item.quantite} = ${resultingStock} pcs ✓`}
                           </span>
                         </div>
                       </div>
@@ -1237,7 +1392,9 @@ export default function SortieRapideView({
                           label: `[${s.ref}] ${s.designation}`,
                           badge: s.stockActuel <= 0 ? 'Rupture (0)' : `Stock: ${s.stockActuel}`,
                           badgeColor:
-                            s.stockActuel <= 0 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-800'
+                            s.stockActuel <= 0
+                              ? 'bg-rose-100 text-rose-700'
+                              : 'bg-emerald-100 text-emerald-800',
                         }))}
                         placeholder="-- Choisir un Article (Déjà choisi exclu) --"
                         searchable={true}
@@ -1261,7 +1418,10 @@ export default function SortieRapideView({
                               </span>
                             </div>
                             <div className="text-slate-500 mt-0.5">
-                              Emplacement : <span className="font-mono font-bold text-slate-700">{art.emplacement || 'R1-B01'}</span>
+                              Emplacement :{' '}
+                              <span className="font-mono font-bold text-slate-700">
+                                {art.emplacement || 'R1-B01'}
+                              </span>
                             </div>
                           </div>
                           <div className="text-right">
@@ -1300,7 +1460,10 @@ export default function SortieRapideView({
                             type="button"
                             onClick={() => {
                               const updated = [...mouvementItems];
-                              updated[idx].quantite = Math.max(1, Number(updated[idx].quantite) - 1);
+                              updated[idx].quantite = Math.max(
+                                1,
+                                Number(updated[idx].quantite) - 1
+                              );
                               setMouvementItems(updated);
                             }}
                             disabled={Number(item.quantite) <= 1}
@@ -1375,8 +1538,8 @@ export default function SortieRapideView({
                             {isSortieFlow
                               ? `${currentStock} - ${itemQty} = ${resultingStock} ${isZero ? '⚠️ (Stock sera à 0)' : 'pcs'}`
                               : isCommandeFlow
-                              ? `Stock actuel : ${currentStock} pcs (Commande : +${itemQty} pcs en attente ⏳)`
-                              : `${currentStock} + ${itemQty} = ${resultingStock} pcs ✓`}
+                                ? `Stock actuel : ${currentStock} pcs (Commande : +${itemQty} pcs en attente ⏳)`
+                                : `${currentStock} + ${itemQty} = ${resultingStock} pcs ✓`}
                           </span>
                         </div>
                       )}
@@ -1415,7 +1578,7 @@ export default function SortieRapideView({
                         const nextIdx = mouvementItems.length;
                         setMouvementItems((prev) => [
                           ...prev.map((it) => ({ ...it, validated: true })),
-                          { ref: '', quantite: 1, validated: false }
+                          { ref: '', quantite: 1, validated: false },
                         ]);
                         setEditingIndex(nextIdx);
                       }}
@@ -1445,14 +1608,20 @@ export default function SortieRapideView({
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                      form.action_id === 'CORRECTIVE' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                        form.action_id === 'CORRECTIVE'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-blue-100 text-blue-700'
+                      }`}
+                    >
                       <Wrench className="w-3.5 h-3.5" />
                     </div>
                     <div className="truncate">
                       <div className="text-[11px] leading-tight">Corrective</div>
-                      <div className="text-[9.5px] text-slate-500 font-normal">Dépannage Machine</div>
+                      <div className="text-[9.5px] text-slate-500 font-normal">
+                        Dépannage Machine
+                      </div>
                     </div>
                   </button>
 
@@ -1465,14 +1634,20 @@ export default function SortieRapideView({
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                      form.action_id === 'PREVENTIVE' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                        form.action_id === 'PREVENTIVE'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-emerald-100 text-emerald-700'
+                      }`}
+                    >
                       <Layers className="w-3.5 h-3.5" />
                     </div>
                     <div className="truncate">
                       <div className="text-[11px] leading-tight">Préventive</div>
-                      <div className="text-[9.5px] text-slate-500 font-normal">Planifiée & Gamme</div>
+                      <div className="text-[9.5px] text-slate-500 font-normal">
+                        Planifiée & Gamme
+                      </div>
                     </div>
                   </button>
 
@@ -1485,14 +1660,20 @@ export default function SortieRapideView({
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                      form.action_id === 'AMELIORATIVE' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                        form.action_id === 'AMELIORATIVE'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-purple-100 text-purple-700'
+                      }`}
+                    >
                       <ChevronsUp className="w-3.5 h-3.5" />
                     </div>
                     <div className="truncate">
                       <div className="text-[11px] leading-tight">Améliorative</div>
-                      <div className="text-[9.5px] text-slate-500 font-normal">Rétrofit & Modif</div>
+                      <div className="text-[9.5px] text-slate-500 font-normal">
+                        Rétrofit & Modif
+                      </div>
                     </div>
                   </button>
 
@@ -1505,9 +1686,13 @@ export default function SortieRapideView({
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                      form.action_id === 'USAGE' ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-700'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                        form.action_id === 'USAGE'
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
                       <Users className="w-3.5 h-3.5" />
                     </div>
                     <div className="truncate">
@@ -1527,14 +1712,20 @@ export default function SortieRapideView({
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                      form.action_id === 'REPARATION_EXTERNE' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                        form.action_id === 'REPARATION_EXTERNE'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-purple-100 text-purple-700'
+                      }`}
+                    >
                       <ExternalLink className="w-3.5 h-3.5" />
                     </div>
                     <div className="truncate">
                       <div className="text-[11px] leading-tight">Réparation Extérieure</div>
-                      <div className="text-[9.5px] text-slate-500 font-normal">Prestataire / Atelier Ext.</div>
+                      <div className="text-[9.5px] text-slate-500 font-normal">
+                        Prestataire / Atelier Ext.
+                      </div>
                     </div>
                   </button>
 
@@ -1547,14 +1738,20 @@ export default function SortieRapideView({
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                      form.action_id === 'SOUS_TRAITANCE' ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-700'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                        form.action_id === 'SOUS_TRAITANCE'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-indigo-100 text-indigo-700'
+                      }`}
+                    >
                       <Building2 className="w-3.5 h-3.5" />
                     </div>
                     <div className="truncate">
                       <div className="text-[11px] leading-tight">Sous-Traitance</div>
-                      <div className="text-[9.5px] text-slate-500 font-normal">Intervention Externe</div>
+                      <div className="text-[9.5px] text-slate-500 font-normal">
+                        Intervention Externe
+                      </div>
                     </div>
                   </button>
                 </div>
@@ -1569,14 +1766,20 @@ export default function SortieRapideView({
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                      form.action_id === 'RETOUR' ? 'bg-cyan-600 text-white' : 'bg-cyan-100 text-cyan-700'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                        form.action_id === 'RETOUR'
+                          ? 'bg-cyan-600 text-white'
+                          : 'bg-cyan-100 text-cyan-700'
+                      }`}
+                    >
                       <RotateCcw className="w-3.5 h-3.5" />
                     </div>
                     <div className="truncate">
                       <div className="text-[11px] leading-tight">Retour Atelier</div>
-                      <div className="text-[9.5px] text-slate-500 font-normal">Réintégration Pièce / Surplus</div>
+                      <div className="text-[9.5px] text-slate-500 font-normal">
+                        Réintégration Pièce / Surplus
+                      </div>
                     </div>
                   </button>
                 </div>
@@ -1591,14 +1794,20 @@ export default function SortieRapideView({
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                      form.action_id === 'COMMANDE_STOCK' ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-700'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                        form.action_id === 'COMMANDE_STOCK'
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
                       <ShoppingCart className="w-3.5 h-3.5" />
                     </div>
                     <div className="truncate">
                       <div className="text-[11px] leading-tight">Demande d'Achat</div>
-                      <div className="text-[9.5px] text-slate-500 font-normal">Commande de Réapprovisionnement</div>
+                      <div className="text-[9.5px] text-slate-500 font-normal">
+                        Commande de Réapprovisionnement
+                      </div>
                     </div>
                   </button>
                 </div>
@@ -1614,14 +1823,20 @@ export default function SortieRapideView({
                         : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 font-medium'
                     }`}
                   >
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                      form.action_id === 'REAPPRO' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700'
-                    }`}>
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                        form.action_id === 'REAPPRO'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-emerald-100 text-emerald-700'
+                      }`}
+                    >
                       <Truck className="w-3.5 h-3.5" />
                     </div>
                     <div className="truncate">
                       <div className="text-[11px] leading-tight">Réappro Fournisseur</div>
-                      <div className="text-[9.5px] text-slate-500 font-normal">Achat & Livraison Directe</div>
+                      <div className="text-[9.5px] text-slate-500 font-normal">
+                        Achat & Livraison Directe
+                      </div>
                     </div>
                   </button>
                 </div>
@@ -1635,7 +1850,9 @@ export default function SortieRapideView({
               <div className="p-3.5 rounded-2xl bg-emerald-50/40 border border-emerald-200 space-y-3">
                 <div className="flex items-center gap-2 border-b border-emerald-200/60 pb-2">
                   <Truck className="w-4 h-4 text-emerald-700" />
-                  <span className="font-bold text-xs text-emerald-950">Gouvernance de Réception (Achat / Réapprovisionnement)</span>
+                  <span className="font-bold text-xs text-emerald-950">
+                    Gouvernance de Réception (Achat / Réapprovisionnement)
+                  </span>
                 </div>
 
                 {/* Technicien Réceptionnaire */}
@@ -1650,7 +1867,7 @@ export default function SortieRapideView({
                       value: t.nom,
                       label: `${t.id_technician} - ${t.nom}`,
                       badge: t.id_zone,
-                      sublabel: t.specialite
+                      sublabel: t.specialite,
                     }))}
                     placeholder="-- Sélectionner Technicien --"
                     onAddNew={onOpenAddTech}
@@ -1670,7 +1887,7 @@ export default function SortieRapideView({
                       onChange={(val) => setForm({ ...form, emplacement_reception: val })}
                       options={emplacementOptions.map((emp) => ({
                         value: emp,
-                        label: emp
+                        label: emp,
                       }))}
                       placeholder="-- Sélectionner Emplacement --"
                     />
@@ -1686,7 +1903,7 @@ export default function SortieRapideView({
                       onChange={(val) => setForm({ ...form, fournisseur: val })}
                       options={supplierOptions.map((f) => ({
                         value: f,
-                        label: f
+                        label: f,
                       }))}
                       placeholder="-- Sélectionner Fournisseur --"
                     />
@@ -1701,7 +1918,9 @@ export default function SortieRapideView({
                 <div className="flex items-center justify-between border-b border-cyan-200/60 pb-2">
                   <div className="flex items-center gap-2">
                     <RotateCcw className="w-4 h-4 text-cyan-700" />
-                    <span className="font-bold text-xs text-cyan-950">Gouvernance Retour Atelier (Réintégration Stock)</span>
+                    <span className="font-bold text-xs text-cyan-950">
+                      Gouvernance Retour Atelier (Réintégration Stock)
+                    </span>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-100 text-cyan-900 border border-cyan-200">
                     Interne
@@ -1720,7 +1939,7 @@ export default function SortieRapideView({
                       value: t.nom,
                       label: `${t.id_technician} - ${t.nom}`,
                       badge: t.id_zone,
-                      sublabel: t.specialite
+                      sublabel: t.specialite,
                     }))}
                     placeholder="-- Sélectionner Technicien Restituant --"
                     onAddNew={onOpenAddTech}
@@ -1741,8 +1960,8 @@ export default function SortieRapideView({
                         { value: '', label: '-- Atelier Général --' },
                         ...zones.map((z) => ({
                           value: z.id_zone,
-                          label: `${z.libelle} (${z.id_zone})`
-                        }))
+                          label: `${z.libelle} (${z.id_zone})`,
+                        })),
                       ]}
                       placeholder="-- Atelier Général --"
                       onAddNew={onOpenAddZone}
@@ -1762,8 +1981,8 @@ export default function SortieRapideView({
                         ...(form.id_zone ? availableMachines : machines).map((m) => ({
                           value: m.id_machine_registered,
                           label: `[${m.id_machine_registered}] ${m.designation}`,
-                          badge: m.id_zone_default
-                        }))
+                          badge: m.id_zone_default,
+                        })),
                       ]}
                       placeholder="-- Non spécifiée --"
                       onAddNew={onOpenAddMachine}
@@ -1784,7 +2003,7 @@ export default function SortieRapideView({
                       onChange={(val) => setForm({ ...form, emplacement_reception: val })}
                       options={emplacementOptions.map((emp) => ({
                         value: emp,
-                        label: emp
+                        label: emp,
                       }))}
                       placeholder="-- Sélectionner Emplacement --"
                     />
@@ -1799,7 +2018,9 @@ export default function SortieRapideView({
                       onChange={(e) => setForm({ ...form, motif_retour: e.target.value })}
                       className="w-full h-8 px-2 rounded-xl border border-cyan-200 bg-white text-xs text-slate-800 focus:outline-none"
                     >
-                      <option value="Surplus intervention / Non utilisé">Surplus / Non utilisé</option>
+                      <option value="Surplus intervention / Non utilisé">
+                        Surplus / Non utilisé
+                      </option>
                       <option value="Pièce rénovée / Révisée">Pièce révisée & prête</option>
                       <option value="Erreur de prélèvement initial">Erreur de prélèvement</option>
                       <option value="Démontage réutilisable">Démontage réutilisable</option>
@@ -1811,625 +2032,153 @@ export default function SortieRapideView({
             )}
 
             {/* CASE 2: SORTIE -> USAGE (Personal Usage Card) */}
-            {(isSortieInterne || String(form.type).includes('Sortie')) && form.action_id === 'USAGE' && (
-              <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-3">
-                <div>
-                  <label className="text-[10.5px] font-bold uppercase tracking-wider text-amber-900 block mb-1.5 flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Bénéficiaire de l'Usage (Sans Machine)</span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleUsageTypeChange('technician')}
-                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                        form.usage_type === 'technician'
-                          ? 'bg-amber-600 text-white shadow-xs'
-                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-amber-100/50'
-                      }`}
-                    >
-                      <Users className="w-3 h-3" />
-                      <span>Technicien</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleUsageTypeChange('operation')}
-                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                        form.usage_type === 'operation'
-                          ? 'bg-indigo-600 text-white shadow-xs'
-                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-indigo-50'
-                      }`}
-                    >
-                      <UserCheck className="w-3 h-3" />
-                      <span>Opérateur</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleUsageTypeChange('chef')}
-                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
-                        form.usage_type === 'chef'
-                          ? 'bg-amber-700 text-white shadow-xs'
-                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-amber-100/50'
-                      }`}
-                    >
-                      <Crown className="w-3 h-3" />
-                      <span>Chef</span>
-                    </button>
+            {(isSortieInterne || String(form.type).includes('Sortie')) &&
+              form.action_id === 'USAGE' && (
+                <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-3">
+                  <div>
+                    <label className="text-[10.5px] font-bold uppercase tracking-wider text-amber-900 block mb-1.5 flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Bénéficiaire de l'Usage (Sans Machine)</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleUsageTypeChange('technician')}
+                        className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                          form.usage_type === 'technician'
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-amber-100/50'
+                        }`}
+                      >
+                        <Users className="w-3 h-3" />
+                        <span>Technicien</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUsageTypeChange('operation')}
+                        className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                          form.usage_type === 'operation'
+                            ? 'bg-indigo-600 text-white shadow-xs'
+                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-indigo-50'
+                        }`}
+                      >
+                        <UserCheck className="w-3 h-3" />
+                        <span>Opérateur</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUsageTypeChange('chef')}
+                        className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 cursor-pointer ${
+                          form.usage_type === 'chef'
+                            ? 'bg-amber-700 text-white shadow-xs'
+                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-amber-100/50'
+                        }`}
+                      >
+                        <Crown className="w-3 h-3" />
+                        <span>Chef</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {form.usage_type === 'technician' && (
+                    <div>
+                      <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                        Technicien Bénéficiaire
+                      </label>
+                      <CustomSelect
+                        value={form.technicien}
+                        onChange={(val) => handleTechnicianChange(val)}
+                        options={technicians.map((t) => ({
+                          value: t.nom,
+                          label: `[${t.id_technician}] ${t.nom}`,
+                          badge: t.id_zone,
+                          sublabel: t.specialite,
+                        }))}
+                        placeholder="-- Sélectionner Technicien --"
+                        onAddNew={onOpenAddTech}
+                        addNewLabel="Ajouter un nouveau Technicien..."
+                      />
+                    </div>
+                  )}
+
+                  {form.usage_type === 'operation' && (
+                    <div>
+                      <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                        Opérateur Bénéficiaire
+                      </label>
+                      <CustomSelect
+                        value={form.operation}
+                        onChange={(val) => handleOperationChange(val)}
+                        options={operatorsList.map((op) => ({
+                          value: op.nom,
+                          label: `[${op.id_operation}] ${op.nom}`,
+                          badge: `Zone: ${op.id_zone}`,
+                        }))}
+                        placeholder="-- Sélectionner Opérateur --"
+                        onAddNew={onOpenAddOperator}
+                        addNewLabel="Ajouter un nouvel Opérateur..."
+                      />
+                    </div>
+                  )}
+
+                  {form.usage_type === 'chef' && (
+                    <div>
+                      <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                        Chef d'Équipe Bénéficiaire
+                      </label>
+                      <CustomSelect
+                        value={form.operation}
+                        onChange={(val) => handleOperationChange(val)}
+                        options={chefsList.map((op) => ({
+                          value: op.nom,
+                          label: `👑 [${op.id_operation}] ${op.nom}`,
+                          badge: `Zone: ${op.id_zone}`,
+                          badgeColor: 'bg-amber-100 text-amber-900',
+                        }))}
+                        placeholder="-- Sélectionner Chef d'Équipe --"
+                        onAddNew={onOpenAddChef}
+                        addNewLabel="Ajouter un nouveau Chef d'Équipe..."
+                      />
+                    </div>
+                  )}
+
+                  {/* Zone auto deduced */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                      Zone Déduite Automatiquement
+                    </label>
+                    <div className="h-8 px-3 rounded-lg border border-slate-200 bg-white flex items-center justify-between text-xs font-medium text-slate-800">
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-amber-600" />
+                        <span>
+                          {zones.find((z) => z.id_zone === form.id_zone)?.libelle ||
+                            form.id_zone ||
+                            'Zone Déduite'}
+                        </span>
+                      </span>
+                      <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+                        {form.id_zone || 'AUTO'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-
-                {form.usage_type === 'technician' && (
-                  <div>
-                    <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                      Technicien Bénéficiaire
-                    </label>
-                    <CustomSelect
-                      value={form.technicien}
-                      onChange={(val) => handleTechnicianChange(val)}
-                      options={technicians.map((t) => ({
-                        value: t.nom,
-                        label: `[${t.id_technician}] ${t.nom}`,
-                        badge: t.id_zone,
-                        sublabel: t.specialite
-                      }))}
-                      placeholder="-- Sélectionner Technicien --"
-                      onAddNew={onOpenAddTech}
-                      addNewLabel="Ajouter un nouveau Technicien..."
-                    />
-                  </div>
-                )}
-
-                {form.usage_type === 'operation' && (
-                  <div>
-                    <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                      Opérateur Bénéficiaire
-                    </label>
-                    <CustomSelect
-                      value={form.operation}
-                      onChange={(val) => handleOperationChange(val)}
-                      options={operatorsList.map((op) => ({
-                        value: op.nom,
-                        label: `[${op.id_operation}] ${op.nom}`,
-                        badge: `Zone: ${op.id_zone}`
-                      }))}
-                      placeholder="-- Sélectionner Opérateur --"
-                      onAddNew={onOpenAddOperator}
-                      addNewLabel="Ajouter un nouvel Opérateur..."
-                    />
-                  </div>
-                )}
-
-                {form.usage_type === 'chef' && (
-                  <div>
-                    <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                      Chef d'Équipe Bénéficiaire
-                    </label>
-                    <CustomSelect
-                      value={form.operation}
-                      onChange={(val) => handleOperationChange(val)}
-                      options={chefsList.map((op) => ({
-                        value: op.nom,
-                        label: `👑 [${op.id_operation}] ${op.nom}`,
-                        badge: `Zone: ${op.id_zone}`,
-                        badgeColor: 'bg-amber-100 text-amber-900'
-                      }))}
-                      placeholder="-- Sélectionner Chef d'Équipe --"
-                      onAddNew={onOpenAddChef}
-                      addNewLabel="Ajouter un nouveau Chef d'Équipe..."
-                    />
-                  </div>
-                )}
-
-                {/* Zone auto deduced */}
-                <div>
-                  <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                    Zone Déduite Automatiquement
-                  </label>
-                  <div className="h-8 px-3 rounded-lg border border-slate-200 bg-white flex items-center justify-between text-xs font-medium text-slate-800">
-                    <span className="flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-amber-600" />
-                      <span>{zones.find((z) => z.id_zone === form.id_zone)?.libelle || form.id_zone || 'Zone Déduite'}</span>
-                    </span>
-                    <span className="text-[10px] font-mono font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
-                      {form.id_zone || 'AUTO'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+              )}
 
             {/* CASE 3: SORTIE -> CORRECTIVE CARD (Technicien Libre / Partout, Machine & Zone Optionnelles) */}
-            {(isSortieInterne || String(form.type).includes('Sortie')) && form.action_id === 'CORRECTIVE' && (
-              <div className="p-3.5 rounded-2xl bg-blue-50/40 border border-blue-200 space-y-3">
-                <div className="flex items-center gap-2 border-b border-blue-200/60 pb-2">
-                  <Wrench className="w-4 h-4 text-blue-700" />
-                  <span className="font-bold text-xs text-blue-950">Gouvernance Corrective (Dépannage Rapide)</span>
-                </div>
+            {(isSortieInterne || String(form.type).includes('Sortie')) &&
+              form.action_id === 'CORRECTIVE' && (
+                <div className="p-3.5 rounded-2xl bg-blue-50/40 border border-blue-200 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-blue-200/60 pb-2">
+                    <Wrench className="w-4 h-4 text-blue-700" />
+                    <span className="font-bold text-xs text-blue-950">
+                      Gouvernance Corrective (Dépannage Rapide)
+                    </span>
+                  </div>
 
-                {/* Technicien Intervenant */}
-                <div>
-                  <label className="text-[10.5px] font-bold text-blue-900 uppercase tracking-wider block mb-1">
-                    Technicien Intervenant
-                  </label>
-                  <CustomSelect
-                    value={form.technicien}
-                    onChange={(val) => setForm({ ...form, technicien: val })}
-                    options={technicians.map((t) => ({
-                      value: t.nom,
-                      label: `${t.id_technician} - ${t.nom}`,
-                      badge: t.id_zone,
-                      sublabel: t.specialite
-                    }))}
-                    placeholder="-- Sélectionner Technicien --"
-                    onAddNew={onOpenAddTech}
-                    addNewLabel="Ajouter un nouveau Technicien..."
-                  />
-                </div>
-
-                {/* Zone & Machine (Optionnelles pour Correctif libre) */}
-                <div className="grid grid-cols-2 gap-2.5">
+                  {/* Technicien Intervenant */}
                   <div>
                     <label className="text-[10.5px] font-bold text-blue-900 uppercase tracking-wider block mb-1">
-                      Zone (Optionnelle)
-                    </label>
-                    <CustomSelect
-                      value={form.id_zone}
-                      onChange={(val) => setForm({ ...form, id_zone: val })}
-                      options={[
-                        { value: '', label: '-- Partout / Non spécifique --' },
-                        ...zones.map((z) => ({
-                          value: z.id_zone,
-                          label: `${z.libelle} (${z.id_zone})`
-                        }))
-                      ]}
-                      placeholder="-- Partout / Non spécifique --"
-                      onAddNew={onOpenAddZone}
-                      addNewLabel="Créer une nouvelle Zone..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10.5px] font-bold text-blue-900 uppercase tracking-wider block mb-1">
-                      Machine (Optionnelle)
-                    </label>
-                    <CustomSelect
-                      value={form.id_machine_registered}
-                      onChange={(val) => setForm({ ...form, id_machine_registered: val })}
-                      options={[
-                        { value: '', label: '-- Non spécifiée / Dépannage Général --' },
-                        ...(form.id_zone ? availableMachines : machines).map((m) => ({
-                          value: m.id_machine_registered,
-                          label: `[${m.id_machine_registered}] ${m.designation}`,
-                          badge: m.id_zone_default
-                        }))
-                      ]}
-                      placeholder="-- Non spécifiée / Dépannage Général --"
-                      onAddNew={onOpenAddMachine}
-                      addNewLabel="Créer une nouvelle Machine..."
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* CASE 4: SORTIE -> PREVENTIVE CARD (Machine + Tech + Zone + Gamme Opérateur/Chef liés) */}
-            {(isSortieInterne || String(form.type).includes('Sortie')) && form.action_id === 'PREVENTIVE' && (
-              <div className="p-3.5 rounded-2xl bg-emerald-50/40 border border-emerald-200 space-y-3">
-                <div className="flex items-center gap-2 border-b border-emerald-200/60 pb-2">
-                  <Layers className="w-4 h-4 text-emerald-700" />
-                  <span className="font-bold text-xs text-emerald-950">
-                    Gouvernance Préventive (Planifiée & Gammes)
-                  </span>
-                </div>
-
-                {/* Zone & Machine side by side */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[10.5px] font-bold text-emerald-900 uppercase tracking-wider block mb-1">
-                      Zone
-                    </label>
-                    <CustomSelect
-                      value={form.id_zone}
-                      onChange={(val) => setForm({ ...form, id_zone: val })}
-                      options={zones.map((z) => ({
-                        value: z.id_zone,
-                        label: `${z.libelle} (${z.id_zone})`
-                      }))}
-                      placeholder="-- Zone --"
-                      onAddNew={onOpenAddZone}
-                      addNewLabel="Créer une nouvelle Zone..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10.5px] font-bold text-emerald-900 uppercase tracking-wider block mb-1">
-                      Machine
-                    </label>
-                    <CustomSelect
-                      value={form.id_machine_registered}
-                      onChange={(val) => setForm({ ...form, id_machine_registered: val })}
-                      options={[
-                        { value: '', label: '-- Non spécifiée / Atelier --' },
-                        ...(availableMachines.length > 0 ? availableMachines : machines).map((m) => ({
-                          value: m.id_machine_registered,
-                          label: `[${m.id_machine_registered}] ${m.designation}`,
-                          badge: m.id_zone_default
-                        }))
-                      ]}
-                      placeholder="-- Non spécifiée / Atelier --"
-                      onAddNew={onOpenAddMachine}
-                      addNewLabel="Créer une nouvelle Machine..."
-                    />
-                  </div>
-                </div>
-
-                {/* Technicien */}
-                <div>
-                  <label className="text-[10.5px] font-bold text-emerald-900 uppercase tracking-wider block mb-1">
-                    Technicien Intervenant
-                  </label>
-                  <CustomSelect
-                    value={form.technicien}
-                    onChange={(val) => setForm({ ...form, technicien: val })}
-                    options={(availableTechs.length > 0 ? availableTechs : technicians).map((t) => ({
-                      value: t.nom,
-                      label: `${t.id_technician} - ${t.nom}`,
-                      badge: t.id_zone,
-                      sublabel: t.specialite
-                    }))}
-                    placeholder="-- Sélectionner Technicien --"
-                    onAddNew={onOpenAddTech}
-                    addNewLabel="Ajouter un nouveau Technicien..."
-                  />
-                </div>
-
-                {/* Gamme d'Opération / Superviseur */}
-                <div>
-                  <label className="text-[10.5px] font-bold text-emerald-900 uppercase tracking-wider block mb-1">
-                    Gamme d'Opération / Superviseur (Optionnel)
-                  </label>
-                  <CustomSelect
-                    value={form.operation}
-                    onChange={(val) => setForm({ ...form, operation: val })}
-                    options={[
-                      { value: '', label: '-- Aucune Gamme Spécifique --' },
-                      ...chefsList.map((op) => ({
-                        group: "👑 Chefs d'Équipe (Supervision)",
-                        value: op.nom,
-                        label: `[${op.id_operation}] ${op.nom}`,
-                        badge: op.id_zone
-                      })),
-                      ...operatorsList.map((op) => ({
-                        group: '🔧 Gammes Opérateurs',
-                        value: op.nom,
-                        label: `[${op.id_operation}] ${op.nom}`,
-                        badge: op.id_zone
-                      }))
-                    ]}
-                    placeholder="-- Aucune Gamme Spécifique --"
-                    onAddNew={onOpenAddOperator}
-                    addNewLabel="Ajouter un Opérateur / Gamme..."
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* CASE 5: SORTIE -> AMELIORATIVE CARD (Machine + Tech + Zone + Gamme Opérateur/Chef) */}
-            {(isSortieInterne || String(form.type).includes('Sortie')) && form.action_id === 'AMELIORATIVE' && (
-              <div className="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-200 space-y-3">
-                <div className="flex items-center gap-2 border-b border-purple-200/60 pb-2">
-                  <ChevronsUp className="w-4 h-4 text-purple-700" />
-                  <span className="font-bold text-xs text-purple-950">
-                    Gouvernance Améliorative (Rétrofit & Amélioration)
-                  </span>
-                </div>
-
-                {/* Zone & Machine side by side */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
-                      Zone
-                    </label>
-                    <CustomSelect
-                      value={form.id_zone}
-                      onChange={(val) => setForm({ ...form, id_zone: val })}
-                      options={zones.map((z) => ({
-                        value: z.id_zone,
-                        label: `${z.libelle} (${z.id_zone})`
-                      }))}
-                      placeholder="-- Zone --"
-                      onAddNew={onOpenAddZone}
-                      addNewLabel="Créer une nouvelle Zone..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
-                      Machine Concernée
-                    </label>
-                    <CustomSelect
-                      value={form.id_machine_registered}
-                      onChange={(val) => setForm({ ...form, id_machine_registered: val })}
-                      options={[
-                        { value: '', label: '-- Non spécifiée / Rétrofit Général --' },
-                        ...(availableMachines.length > 0 ? availableMachines : machines).map((m) => ({
-                          value: m.id_machine_registered,
-                          label: `[${m.id_machine_registered}] ${m.designation}`,
-                          badge: m.id_zone_default
-                        }))
-                      ]}
-                      placeholder="-- Non spécifiée / Rétrofit Général --"
-                      onAddNew={onOpenAddMachine}
-                      addNewLabel="Créer une nouvelle Machine..."
-                    />
-                  </div>
-                </div>
-
-                {/* Technicien */}
-                <div>
-                  <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
-                    Technicien Intervenant
-                  </label>
-                  <CustomSelect
-                    value={form.technicien}
-                    onChange={(val) => setForm({ ...form, technicien: val })}
-                    options={(availableTechs.length > 0 ? availableTechs : technicians).map((t) => ({
-                      value: t.nom,
-                      label: `${t.id_technician} - ${t.nom}`,
-                      badge: t.id_zone,
-                      sublabel: t.specialite
-                    }))}
-                    placeholder="-- Sélectionner Technicien --"
-                    onAddNew={onOpenAddTech}
-                    addNewLabel="Ajouter un nouveau Technicien..."
-                  />
-                </div>
-
-                {/* Gamme d'Opération / Superviseur */}
-                <div>
-                  <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
-                    Gamme de Rétrofit / Superviseur (Optionnel)
-                  </label>
-                  <CustomSelect
-                    value={form.operation}
-                    onChange={(val) => setForm({ ...form, operation: val })}
-                    options={[
-                      { value: '', label: '-- Aucune Gamme Spécifique --' },
-                      ...chefsList.map((op) => ({
-                        group: "👑 Chefs d'Équipe (Supervision)",
-                        value: op.nom,
-                        label: `[${op.id_operation}] ${op.nom}`,
-                        badge: op.id_zone
-                      })),
-                      ...operatorsList.map((op) => ({
-                        group: '🔧 Gammes Opérateurs',
-                        value: op.nom,
-                        label: `[${op.id_operation}] ${op.nom}`,
-                        badge: op.id_zone
-                      }))
-                    ]}
-                    placeholder="-- Aucune Gamme Spécifique --"
-                    onAddNew={onOpenAddOperator}
-                    addNewLabel="Ajouter un Opérateur / Gamme..."
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* CASE 6: SORTIE EXTERNE -> REPARATION_EXTERNE */}
-            {(isSortieExterne || form.action_id === 'REPARATION_EXTERNE') && form.action_id === 'REPARATION_EXTERNE' && (
-              <div className="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-200 space-y-3">
-                <div className="flex items-center gap-2 border-b border-purple-200/60 pb-2">
-                  <ExternalLink className="w-4 h-4 text-purple-700" />
-                  <span className="font-bold text-xs text-purple-950">
-                    Gouvernance Réparation Extérieure (Expédition Hors-Site)
-                  </span>
-                </div>
-
-                {/* Technicien Responsable Envoi */}
-                <div>
-                  <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
-                    Technicien Responsable de l'Expédition
-                  </label>
-                  <CustomSelect
-                    value={form.technicien}
-                    onChange={(val) => setForm({ ...form, technicien: val })}
-                    options={technicians.map((t) => ({
-                      value: t.nom,
-                      label: `${t.id_technician} - ${t.nom}`,
-                      badge: t.id_zone,
-                      sublabel: t.specialite
-                    }))}
-                    placeholder="-- Sélectionner Technicien Suivi --"
-                    onAddNew={onOpenAddTech}
-                    addNewLabel="Ajouter un nouveau Technicien..."
-                  />
-                </div>
-
-                {/* Fournisseur / Atelier Extérieur */}
-                <div>
-                  <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1 flex items-center gap-1">
-                    <Factory className="w-3 h-3 text-purple-600" />
-                    <span>Atelier / Prestataire Extérieur</span>
-                  </label>
-                  <CustomSelect
-                    value={form.fournisseur}
-                    onChange={(val) => setForm({ ...form, fournisseur: val })}
-                    options={supplierOptions.map((f) => ({
-                      value: f,
-                      label: f
-                    }))}
-                    placeholder="-- Sélectionner Prestataire --"
-                  />
-                </div>
-
-                {/* Zone & Machine (Optionnelles) */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
-                      Zone Provenance (Optionnelle)
-                    </label>
-                    <CustomSelect
-                      value={form.id_zone}
-                      onChange={(val) => setForm({ ...form, id_zone: val })}
-                      options={[
-                        { value: '', label: '-- Non spécifiée --' },
-                        ...zones.map((z) => ({
-                          value: z.id_zone,
-                          label: `${z.libelle} (${z.id_zone})`
-                        }))
-                      ]}
-                      placeholder="-- Non spécifiée --"
-                      onAddNew={onOpenAddZone}
-                      addNewLabel="Créer une nouvelle Zone..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
-                      Machine Concernée (Optionnelle)
-                    </label>
-                    <CustomSelect
-                      value={form.id_machine_registered}
-                      onChange={(val) => setForm({ ...form, id_machine_registered: val })}
-                      options={[
-                        { value: '', label: '-- Non spécifiée --' },
-                        ...(availableMachines.length > 0 ? availableMachines : machines).map((m) => ({
-                          value: m.id_machine_registered,
-                          label: `[${m.id_machine_registered}] ${m.designation}`,
-                          badge: m.id_zone_default
-                        }))
-                      ]}
-                      placeholder="-- Non spécifiée --"
-                      onAddNew={onOpenAddMachine}
-                      addNewLabel="Créer une nouvelle Machine..."
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* CASE 7: SORTIE EXTERNE -> SOUS_TRAITANCE */}
-            {(isSortieExterne || form.action_id === 'SOUS_TRAITANCE') && form.action_id === 'SOUS_TRAITANCE' && (
-              <div className="p-3.5 rounded-2xl bg-indigo-50/40 border border-indigo-200 space-y-3">
-                <div className="flex items-center gap-2 border-b border-indigo-200/60 pb-2">
-                  <Building2 className="w-4 h-4 text-indigo-700" />
-                  <span className="font-bold text-xs text-indigo-950">
-                    Gouvernance Intervention Sous-Traitance (Prestataire Extérieur)
-                  </span>
-                </div>
-
-                {/* Technicien Suivi */}
-                <div>
-                  <label className="text-[10.5px] font-bold text-indigo-900 uppercase tracking-wider block mb-1">
-                    Technicien Responsable du Suivi
-                  </label>
-                  <CustomSelect
-                    value={form.technicien}
-                    onChange={(val) => setForm({ ...form, technicien: val })}
-                    options={technicians.map((t) => ({
-                      value: t.nom,
-                      label: `${t.id_technician} - ${t.nom}`,
-                      badge: t.id_zone,
-                      sublabel: t.specialite
-                    }))}
-                    placeholder="-- Sélectionner Technicien Suivi --"
-                    onAddNew={onOpenAddTech}
-                    addNewLabel="Ajouter un nouveau Technicien..."
-                  />
-                </div>
-
-                {/* Société Sous-traitante */}
-                <div>
-                  <label className="text-[10.5px] font-bold text-indigo-900 uppercase tracking-wider block mb-1 flex items-center gap-1">
-                    <Building2 className="w-3 h-3 text-indigo-600" />
-                    <span>Entreprise Sous-traitante</span>
-                  </label>
-                  <CustomSelect
-                    value={form.fournisseur}
-                    onChange={(val) => setForm({ ...form, fournisseur: val })}
-                    options={supplierOptions.map((f) => ({
-                      value: f,
-                      label: f
-                    }))}
-                    placeholder="-- Sélectionner Entreprise --"
-                  />
-                </div>
-
-                {/* Zone & Machine */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[10.5px] font-bold text-indigo-900 uppercase tracking-wider block mb-1">
-                      Zone / Site d'Intervention
-                    </label>
-                    <CustomSelect
-                      value={form.id_zone}
-                      onChange={(val) => setForm({ ...form, id_zone: val })}
-                      options={[
-                        { value: '', label: '-- Non spécifiée --' },
-                        ...zones.map((z) => ({
-                          value: z.id_zone,
-                          label: `${z.libelle} (${z.id_zone})`
-                        }))
-                      ]}
-                      placeholder="-- Non spécifiée --"
-                      onAddNew={onOpenAddZone}
-                      addNewLabel="Créer une nouvelle Zone..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10.5px] font-bold text-indigo-900 uppercase tracking-wider block mb-1">
-                      Machine Concernée
-                    </label>
-                    <CustomSelect
-                      value={form.id_machine_registered}
-                      onChange={(val) => setForm({ ...form, id_machine_registered: val })}
-                      options={[
-                        { value: '', label: '-- Non spécifiée --' },
-                        ...(availableMachines.length > 0 ? availableMachines : machines).map((m) => ({
-                          value: m.id_machine_registered,
-                          label: `[${m.id_machine_registered}] ${m.designation}`,
-                          badge: m.id_zone_default
-                        }))
-                      ]}
-                      placeholder="-- Non spécifiée --"
-                      onAddNew={onOpenAddMachine}
-                      addNewLabel="Créer une nouvelle Machine..."
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* CASE 8: COMMANDE -> COMMANDE_STOCK */}
-            {(isCommandeFlow || form.action_id === 'COMMANDE_STOCK') && form.action_id === 'COMMANDE_STOCK' && (
-              <div className="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-200 space-y-3">
-                <div className="flex items-center gap-2 border-b border-amber-200/60 pb-2">
-                  <ShoppingCart className="w-4 h-4 text-amber-700" />
-                  <span className="font-bold text-xs text-amber-950">
-                    Gouvernance Demande d'Achat & Approvisionnement (COMMANDE)
-                  </span>
-                </div>
-
-                {/* Grid: N° Commande & Demandeur */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[10.5px] font-bold text-amber-900 uppercase tracking-wider block mb-1">
-                      N° Référence Demande
-                    </label>
-                    <input
-                      type="text"
-                      value={form.num_commande}
-                      onChange={(e) => setForm({ ...form, num_commande: e.target.value })}
-                      placeholder="ex: CMD-2026-001"
-                      className="w-full h-8 px-2.5 rounded-xl border border-amber-200 bg-white text-xs font-mono font-bold text-amber-950"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10.5px] font-bold text-amber-900 uppercase tracking-wider block mb-1">
-                      Demandeur / Responsable
+                      Technicien Intervenant
                     </label>
                     <CustomSelect
                       value={form.technicien}
@@ -2438,75 +2187,574 @@ export default function SortieRapideView({
                         value: t.nom,
                         label: `${t.id_technician} - ${t.nom}`,
                         badge: t.id_zone,
-                        sublabel: t.specialite
+                        sublabel: t.specialite,
                       }))}
-                      placeholder="-- Sélectionner Demandeur --"
+                      placeholder="-- Sélectionner Technicien --"
                       onAddNew={onOpenAddTech}
-                      addNewLabel="Ajouter un nouveau Demandeur..."
+                      addNewLabel="Ajouter un nouveau Technicien..."
                     />
                   </div>
-                </div>
 
-                {/* Fournisseur Suggéré */}
-                <div>
-                  <label className="text-[10.5px] font-bold text-amber-900 uppercase tracking-wider block mb-1 flex items-center gap-1">
-                    <Factory className="w-3 h-3 text-amber-600" />
-                    <span>Fournisseur Suggéré (Optionnel)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={form.fournisseur}
-                    onChange={(e) => setForm({ ...form, fournisseur: e.target.value })}
-                    placeholder="Nom du fournisseur habituel"
-                    className="w-full h-8 px-2.5 rounded-xl border border-amber-200 bg-white text-xs font-medium text-slate-800"
-                  />
-                </div>
+                  {/* Zone & Machine (Optionnelles pour Correctif libre) */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10.5px] font-bold text-blue-900 uppercase tracking-wider block mb-1">
+                        Zone (Optionnelle)
+                      </label>
+                      <CustomSelect
+                        value={form.id_zone}
+                        onChange={(val) => setForm({ ...form, id_zone: val })}
+                        options={[
+                          { value: '', label: '-- Partout / Non spécifique --' },
+                          ...zones.map((z) => ({
+                            value: z.id_zone,
+                            label: `${z.libelle} (${z.id_zone})`,
+                          })),
+                        ]}
+                        placeholder="-- Partout / Non spécifique --"
+                        onAddNew={onOpenAddZone}
+                        addNewLabel="Créer une nouvelle Zone..."
+                      />
+                    </div>
 
-                {/* Zone & Machine Destinataire */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[10.5px] font-bold text-amber-900 uppercase tracking-wider block mb-1">
-                      Zone Destinataire (Optionnelle)
-                    </label>
-                    <CustomSelect
-                      value={form.id_zone}
-                      onChange={(val) => setForm({ ...form, id_zone: val })}
-                      options={[
-                        { value: '', label: '-- Stock Général --' },
-                        ...zones.map((z) => ({
+                    <div>
+                      <label className="text-[10.5px] font-bold text-blue-900 uppercase tracking-wider block mb-1">
+                        Machine (Optionnelle)
+                      </label>
+                      <CustomSelect
+                        value={form.id_machine_registered}
+                        onChange={(val) => setForm({ ...form, id_machine_registered: val })}
+                        options={[
+                          { value: '', label: '-- Non spécifiée / Dépannage Général --' },
+                          ...(form.id_zone ? availableMachines : machines).map((m) => ({
+                            value: m.id_machine_registered,
+                            label: `[${m.id_machine_registered}] ${m.designation}`,
+                            badge: m.id_zone_default,
+                          })),
+                        ]}
+                        placeholder="-- Non spécifiée / Dépannage Général --"
+                        onAddNew={onOpenAddMachine}
+                        addNewLabel="Créer une nouvelle Machine..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* CASE 4: SORTIE -> PREVENTIVE CARD (Machine + Tech + Zone + Gamme Opérateur/Chef liés) */}
+            {(isSortieInterne || String(form.type).includes('Sortie')) &&
+              form.action_id === 'PREVENTIVE' && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50/40 border border-emerald-200 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-emerald-200/60 pb-2">
+                    <Layers className="w-4 h-4 text-emerald-700" />
+                    <span className="font-bold text-xs text-emerald-950">
+                      Gouvernance Préventive (Planifiée & Gammes)
+                    </span>
+                  </div>
+
+                  {/* Zone & Machine side by side */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10.5px] font-bold text-emerald-900 uppercase tracking-wider block mb-1">
+                        Zone
+                      </label>
+                      <CustomSelect
+                        value={form.id_zone}
+                        onChange={(val) => setForm({ ...form, id_zone: val })}
+                        options={zones.map((z) => ({
                           value: z.id_zone,
-                          label: `${z.libelle} (${z.id_zone})`
-                        }))
-                      ]}
-                      placeholder="-- Stock Général --"
-                      onAddNew={onOpenAddZone}
-                      addNewLabel="Créer une nouvelle Zone..."
+                          label: `${z.libelle} (${z.id_zone})`,
+                        }))}
+                        placeholder="-- Zone --"
+                        onAddNew={onOpenAddZone}
+                        addNewLabel="Créer une nouvelle Zone..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10.5px] font-bold text-emerald-900 uppercase tracking-wider block mb-1">
+                        Machine
+                      </label>
+                      <CustomSelect
+                        value={form.id_machine_registered}
+                        onChange={(val) => setForm({ ...form, id_machine_registered: val })}
+                        options={[
+                          { value: '', label: '-- Non spécifiée / Atelier --' },
+                          ...(availableMachines.length > 0 ? availableMachines : machines).map(
+                            (m) => ({
+                              value: m.id_machine_registered,
+                              label: `[${m.id_machine_registered}] ${m.designation}`,
+                              badge: m.id_zone_default,
+                            })
+                          ),
+                        ]}
+                        placeholder="-- Non spécifiée / Atelier --"
+                        onAddNew={onOpenAddMachine}
+                        addNewLabel="Créer une nouvelle Machine..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Technicien */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-emerald-900 uppercase tracking-wider block mb-1">
+                      Technicien Intervenant
+                    </label>
+                    <CustomSelect
+                      value={form.technicien}
+                      onChange={(val) => setForm({ ...form, technicien: val })}
+                      options={(availableTechs.length > 0 ? availableTechs : technicians).map(
+                        (t) => ({
+                          value: t.nom,
+                          label: `${t.id_technician} - ${t.nom}`,
+                          badge: t.id_zone,
+                          sublabel: t.specialite,
+                        })
+                      )}
+                      placeholder="-- Sélectionner Technicien --"
+                      onAddNew={onOpenAddTech}
+                      addNewLabel="Ajouter un nouveau Technicien..."
                     />
                   </div>
 
+                  {/* Gamme d'Opération / Superviseur */}
                   <div>
-                    <label className="text-[10.5px] font-bold text-amber-900 uppercase tracking-wider block mb-1">
-                      Machine Destinataire (Optionnelle)
+                    <label className="text-[10.5px] font-bold text-emerald-900 uppercase tracking-wider block mb-1">
+                      Gamme d'Opération / Superviseur (Optionnel)
                     </label>
                     <CustomSelect
-                      value={form.id_machine_registered}
-                      onChange={(val) => setForm({ ...form, id_machine_registered: val })}
+                      value={form.operation}
+                      onChange={(val) => setForm({ ...form, operation: val })}
                       options={[
-                        { value: '', label: '-- Non spécifiée --' },
-                        ...(availableMachines.length > 0 ? availableMachines : machines).map((m) => ({
-                          value: m.id_machine_registered,
-                          label: `[${m.id_machine_registered}] ${m.designation}`,
-                          badge: m.id_zone_default
-                        }))
+                        { value: '', label: '-- Aucune Gamme Spécifique --' },
+                        ...chefsList.map((op) => ({
+                          group: "👑 Chefs d'Équipe (Supervision)",
+                          value: op.nom,
+                          label: `[${op.id_operation}] ${op.nom}`,
+                          badge: op.id_zone,
+                        })),
+                        ...operatorsList.map((op) => ({
+                          group: '🔧 Gammes Opérateurs',
+                          value: op.nom,
+                          label: `[${op.id_operation}] ${op.nom}`,
+                          badge: op.id_zone,
+                        })),
                       ]}
-                      placeholder="-- Non spécifiée --"
-                      onAddNew={onOpenAddMachine}
-                      addNewLabel="Créer une nouvelle Machine..."
+                      placeholder="-- Aucune Gamme Spécifique --"
+                      onAddNew={onOpenAddOperator}
+                      addNewLabel="Ajouter un Opérateur / Gamme..."
                     />
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+
+            {/* CASE 5: SORTIE -> AMELIORATIVE CARD (Machine + Tech + Zone + Gamme Opérateur/Chef) */}
+            {(isSortieInterne || String(form.type).includes('Sortie')) &&
+              form.action_id === 'AMELIORATIVE' && (
+                <div className="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-200 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-purple-200/60 pb-2">
+                    <ChevronsUp className="w-4 h-4 text-purple-700" />
+                    <span className="font-bold text-xs text-purple-950">
+                      Gouvernance Améliorative (Rétrofit & Amélioration)
+                    </span>
+                  </div>
+
+                  {/* Zone & Machine side by side */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
+                        Zone
+                      </label>
+                      <CustomSelect
+                        value={form.id_zone}
+                        onChange={(val) => setForm({ ...form, id_zone: val })}
+                        options={zones.map((z) => ({
+                          value: z.id_zone,
+                          label: `${z.libelle} (${z.id_zone})`,
+                        }))}
+                        placeholder="-- Zone --"
+                        onAddNew={onOpenAddZone}
+                        addNewLabel="Créer une nouvelle Zone..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
+                        Machine Concernée
+                      </label>
+                      <CustomSelect
+                        value={form.id_machine_registered}
+                        onChange={(val) => setForm({ ...form, id_machine_registered: val })}
+                        options={[
+                          { value: '', label: '-- Non spécifiée / Rétrofit Général --' },
+                          ...(availableMachines.length > 0 ? availableMachines : machines).map(
+                            (m) => ({
+                              value: m.id_machine_registered,
+                              label: `[${m.id_machine_registered}] ${m.designation}`,
+                              badge: m.id_zone_default,
+                            })
+                          ),
+                        ]}
+                        placeholder="-- Non spécifiée / Rétrofit Général --"
+                        onAddNew={onOpenAddMachine}
+                        addNewLabel="Créer une nouvelle Machine..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Technicien */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
+                      Technicien Intervenant
+                    </label>
+                    <CustomSelect
+                      value={form.technicien}
+                      onChange={(val) => setForm({ ...form, technicien: val })}
+                      options={(availableTechs.length > 0 ? availableTechs : technicians).map(
+                        (t) => ({
+                          value: t.nom,
+                          label: `${t.id_technician} - ${t.nom}`,
+                          badge: t.id_zone,
+                          sublabel: t.specialite,
+                        })
+                      )}
+                      placeholder="-- Sélectionner Technicien --"
+                      onAddNew={onOpenAddTech}
+                      addNewLabel="Ajouter un nouveau Technicien..."
+                    />
+                  </div>
+
+                  {/* Gamme d'Opération / Superviseur */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
+                      Gamme de Rétrofit / Superviseur (Optionnel)
+                    </label>
+                    <CustomSelect
+                      value={form.operation}
+                      onChange={(val) => setForm({ ...form, operation: val })}
+                      options={[
+                        { value: '', label: '-- Aucune Gamme Spécifique --' },
+                        ...chefsList.map((op) => ({
+                          group: "👑 Chefs d'Équipe (Supervision)",
+                          value: op.nom,
+                          label: `[${op.id_operation}] ${op.nom}`,
+                          badge: op.id_zone,
+                        })),
+                        ...operatorsList.map((op) => ({
+                          group: '🔧 Gammes Opérateurs',
+                          value: op.nom,
+                          label: `[${op.id_operation}] ${op.nom}`,
+                          badge: op.id_zone,
+                        })),
+                      ]}
+                      placeholder="-- Aucune Gamme Spécifique --"
+                      onAddNew={onOpenAddOperator}
+                      addNewLabel="Ajouter un Opérateur / Gamme..."
+                    />
+                  </div>
+                </div>
+              )}
+
+            {/* CASE 6: SORTIE EXTERNE -> REPARATION_EXTERNE */}
+            {(isSortieExterne || form.action_id === 'REPARATION_EXTERNE') &&
+              form.action_id === 'REPARATION_EXTERNE' && (
+                <div className="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-200 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-purple-200/60 pb-2">
+                    <ExternalLink className="w-4 h-4 text-purple-700" />
+                    <span className="font-bold text-xs text-purple-950">
+                      Gouvernance Réparation Extérieure (Expédition Hors-Site)
+                    </span>
+                  </div>
+
+                  {/* Technicien Responsable Envoi */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
+                      Technicien Responsable de l'Expédition
+                    </label>
+                    <CustomSelect
+                      value={form.technicien}
+                      onChange={(val) => setForm({ ...form, technicien: val })}
+                      options={technicians.map((t) => ({
+                        value: t.nom,
+                        label: `${t.id_technician} - ${t.nom}`,
+                        badge: t.id_zone,
+                        sublabel: t.specialite,
+                      }))}
+                      placeholder="-- Sélectionner Technicien Suivi --"
+                      onAddNew={onOpenAddTech}
+                      addNewLabel="Ajouter un nouveau Technicien..."
+                    />
+                  </div>
+
+                  {/* Fournisseur / Atelier Extérieur */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1 flex items-center gap-1">
+                      <Factory className="w-3 h-3 text-purple-600" />
+                      <span>Atelier / Prestataire Extérieur</span>
+                    </label>
+                    <CustomSelect
+                      value={form.fournisseur}
+                      onChange={(val) => setForm({ ...form, fournisseur: val })}
+                      options={supplierOptions.map((f) => ({
+                        value: f,
+                        label: f,
+                      }))}
+                      placeholder="-- Sélectionner Prestataire --"
+                    />
+                  </div>
+
+                  {/* Zone & Machine (Optionnelles) */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
+                        Zone Provenance (Optionnelle)
+                      </label>
+                      <CustomSelect
+                        value={form.id_zone}
+                        onChange={(val) => setForm({ ...form, id_zone: val })}
+                        options={[
+                          { value: '', label: '-- Non spécifiée --' },
+                          ...zones.map((z) => ({
+                            value: z.id_zone,
+                            label: `${z.libelle} (${z.id_zone})`,
+                          })),
+                        ]}
+                        placeholder="-- Non spécifiée --"
+                        onAddNew={onOpenAddZone}
+                        addNewLabel="Créer une nouvelle Zone..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10.5px] font-bold text-purple-900 uppercase tracking-wider block mb-1">
+                        Machine Concernée (Optionnelle)
+                      </label>
+                      <CustomSelect
+                        value={form.id_machine_registered}
+                        onChange={(val) => setForm({ ...form, id_machine_registered: val })}
+                        options={[
+                          { value: '', label: '-- Non spécifiée --' },
+                          ...(availableMachines.length > 0 ? availableMachines : machines).map(
+                            (m) => ({
+                              value: m.id_machine_registered,
+                              label: `[${m.id_machine_registered}] ${m.designation}`,
+                              badge: m.id_zone_default,
+                            })
+                          ),
+                        ]}
+                        placeholder="-- Non spécifiée --"
+                        onAddNew={onOpenAddMachine}
+                        addNewLabel="Créer une nouvelle Machine..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* CASE 7: SORTIE EXTERNE -> SOUS_TRAITANCE */}
+            {(isSortieExterne || form.action_id === 'SOUS_TRAITANCE') &&
+              form.action_id === 'SOUS_TRAITANCE' && (
+                <div className="p-3.5 rounded-2xl bg-indigo-50/40 border border-indigo-200 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-indigo-200/60 pb-2">
+                    <Building2 className="w-4 h-4 text-indigo-700" />
+                    <span className="font-bold text-xs text-indigo-950">
+                      Gouvernance Intervention Sous-Traitance (Prestataire Extérieur)
+                    </span>
+                  </div>
+
+                  {/* Technicien Suivi */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-indigo-900 uppercase tracking-wider block mb-1">
+                      Technicien Responsable du Suivi
+                    </label>
+                    <CustomSelect
+                      value={form.technicien}
+                      onChange={(val) => setForm({ ...form, technicien: val })}
+                      options={technicians.map((t) => ({
+                        value: t.nom,
+                        label: `${t.id_technician} - ${t.nom}`,
+                        badge: t.id_zone,
+                        sublabel: t.specialite,
+                      }))}
+                      placeholder="-- Sélectionner Technicien Suivi --"
+                      onAddNew={onOpenAddTech}
+                      addNewLabel="Ajouter un nouveau Technicien..."
+                    />
+                  </div>
+
+                  {/* Société Sous-traitante */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-indigo-900 uppercase tracking-wider block mb-1 flex items-center gap-1">
+                      <Building2 className="w-3 h-3 text-indigo-600" />
+                      <span>Entreprise Sous-traitante</span>
+                    </label>
+                    <CustomSelect
+                      value={form.fournisseur}
+                      onChange={(val) => setForm({ ...form, fournisseur: val })}
+                      options={supplierOptions.map((f) => ({
+                        value: f,
+                        label: f,
+                      }))}
+                      placeholder="-- Sélectionner Entreprise --"
+                    />
+                  </div>
+
+                  {/* Zone & Machine */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10.5px] font-bold text-indigo-900 uppercase tracking-wider block mb-1">
+                        Zone / Site d'Intervention
+                      </label>
+                      <CustomSelect
+                        value={form.id_zone}
+                        onChange={(val) => setForm({ ...form, id_zone: val })}
+                        options={[
+                          { value: '', label: '-- Non spécifiée --' },
+                          ...zones.map((z) => ({
+                            value: z.id_zone,
+                            label: `${z.libelle} (${z.id_zone})`,
+                          })),
+                        ]}
+                        placeholder="-- Non spécifiée --"
+                        onAddNew={onOpenAddZone}
+                        addNewLabel="Créer une nouvelle Zone..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10.5px] font-bold text-indigo-900 uppercase tracking-wider block mb-1">
+                        Machine Concernée
+                      </label>
+                      <CustomSelect
+                        value={form.id_machine_registered}
+                        onChange={(val) => setForm({ ...form, id_machine_registered: val })}
+                        options={[
+                          { value: '', label: '-- Non spécifiée --' },
+                          ...(availableMachines.length > 0 ? availableMachines : machines).map(
+                            (m) => ({
+                              value: m.id_machine_registered,
+                              label: `[${m.id_machine_registered}] ${m.designation}`,
+                              badge: m.id_zone_default,
+                            })
+                          ),
+                        ]}
+                        placeholder="-- Non spécifiée --"
+                        onAddNew={onOpenAddMachine}
+                        addNewLabel="Créer une nouvelle Machine..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* CASE 8: COMMANDE -> COMMANDE_STOCK */}
+            {(isCommandeFlow || form.action_id === 'COMMANDE_STOCK') &&
+              form.action_id === 'COMMANDE_STOCK' && (
+                <div className="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-200 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-amber-200/60 pb-2">
+                    <ShoppingCart className="w-4 h-4 text-amber-700" />
+                    <span className="font-bold text-xs text-amber-950">
+                      Gouvernance Demande d'Achat & Approvisionnement (COMMANDE)
+                    </span>
+                  </div>
+
+                  {/* Grid: N° Commande & Demandeur */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10.5px] font-bold text-amber-900 uppercase tracking-wider block mb-1">
+                        N° Référence Demande
+                      </label>
+                      <input
+                        type="text"
+                        value={form.num_commande}
+                        onChange={(e) => setForm({ ...form, num_commande: e.target.value })}
+                        placeholder="ex: CMD-2026-001"
+                        className="w-full h-8 px-2.5 rounded-xl border border-amber-200 bg-white text-xs font-mono font-bold text-amber-950"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10.5px] font-bold text-amber-900 uppercase tracking-wider block mb-1">
+                        Demandeur / Responsable
+                      </label>
+                      <CustomSelect
+                        value={form.technicien}
+                        onChange={(val) => setForm({ ...form, technicien: val })}
+                        options={technicians.map((t) => ({
+                          value: t.nom,
+                          label: `${t.id_technician} - ${t.nom}`,
+                          badge: t.id_zone,
+                          sublabel: t.specialite,
+                        }))}
+                        placeholder="-- Sélectionner Demandeur --"
+                        onAddNew={onOpenAddTech}
+                        addNewLabel="Ajouter un nouveau Demandeur..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Fournisseur Suggéré */}
+                  <div>
+                    <label className="text-[10.5px] font-bold text-amber-900 uppercase tracking-wider block mb-1 flex items-center gap-1">
+                      <Factory className="w-3 h-3 text-amber-600" />
+                      <span>Fournisseur Suggéré (Optionnel)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={form.fournisseur}
+                      onChange={(e) => setForm({ ...form, fournisseur: e.target.value })}
+                      placeholder="Nom du fournisseur habituel"
+                      className="w-full h-8 px-2.5 rounded-xl border border-amber-200 bg-white text-xs font-medium text-slate-800"
+                    />
+                  </div>
+
+                  {/* Zone & Machine Destinataire */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="text-[10.5px] font-bold text-amber-900 uppercase tracking-wider block mb-1">
+                        Zone Destinataire (Optionnelle)
+                      </label>
+                      <CustomSelect
+                        value={form.id_zone}
+                        onChange={(val) => setForm({ ...form, id_zone: val })}
+                        options={[
+                          { value: '', label: '-- Stock Général --' },
+                          ...zones.map((z) => ({
+                            value: z.id_zone,
+                            label: `${z.libelle} (${z.id_zone})`,
+                          })),
+                        ]}
+                        placeholder="-- Stock Général --"
+                        onAddNew={onOpenAddZone}
+                        addNewLabel="Créer une nouvelle Zone..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10.5px] font-bold text-amber-900 uppercase tracking-wider block mb-1">
+                        Machine Destinataire (Optionnelle)
+                      </label>
+                      <CustomSelect
+                        value={form.id_machine_registered}
+                        onChange={(val) => setForm({ ...form, id_machine_registered: val })}
+                        options={[
+                          { value: '', label: '-- Non spécifiée --' },
+                          ...(availableMachines.length > 0 ? availableMachines : machines).map(
+                            (m) => ({
+                              value: m.id_machine_registered,
+                              label: `[${m.id_machine_registered}] ${m.designation}`,
+                              badge: m.id_zone_default,
+                            })
+                          ),
+                        ]}
+                        placeholder="-- Non spécifiée --"
+                        onAddNew={onOpenAddMachine}
+                        addNewLabel="Créer une nouvelle Machine..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
             {/* Commentaire / Motif */}
             <div>
@@ -2528,17 +2776,19 @@ export default function SortieRapideView({
                 isSortieInterne
                   ? 'bg-rose-600 hover:bg-rose-700'
                   : isSortieExterne
-                  ? 'bg-purple-600 hover:bg-purple-700'
-                  : isEntreeInterne
-                  ? 'bg-cyan-600 hover:bg-cyan-700'
-                  : isCommandeFlow
-                  ? 'bg-amber-600 hover:bg-amber-700'
-                  : 'bg-emerald-600 hover:bg-emerald-700'
+                    ? 'bg-purple-600 hover:bg-purple-700'
+                    : isEntreeInterne
+                      ? 'bg-cyan-600 hover:bg-cyan-700'
+                      : isCommandeFlow
+                        ? 'bg-amber-600 hover:bg-amber-700'
+                        : 'bg-emerald-600 hover:bg-emerald-700'
               }`}
             >
               <Check className="w-4 h-4" />
               <span>
-                Valider {form.type} ({mouvementItems.reduce((acc, i) => acc + (Number(i.quantite) || 0), 0)} pièce(s)) • {form.code_bon}
+                Valider {form.type} (
+                {mouvementItems.reduce((acc, i) => acc + (Number(i.quantite) || 0), 0)} pièce(s)) •{' '}
+                {form.code_bon}
               </span>
             </button>
           </form>
@@ -2552,12 +2802,18 @@ export default function SortieRapideView({
               <div>
                 <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
                   <SortieEntreeIcon className="w-4 h-4 shrink-0" strokeWidth={2.25} />
-                  <span>Historique des Mouvements ({filteredMouvements.length} / {mouvements.length})</span>
+                  <span>
+                    Historique des Mouvements ({filteredMouvements.length} / {mouvements.length})
+                  </span>
                 </h3>
-                <p className="text-[11px] text-slate-500">Traçabilité complète avec filtres déroulants, tri précis et modification directe</p>
+                <p className="text-[11px] text-slate-500">
+                  Traçabilité complète avec filtres déroulants, tri précis et modification directe
+                </p>
               </div>
 
-              {(tableFilterType !== 'ALL' || tableFilterAction !== 'ALL' || localTableSearchText) && (
+              {(tableFilterType !== 'ALL' ||
+                tableFilterAction !== 'ALL' ||
+                localTableSearchText) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -2584,8 +2840,12 @@ export default function SortieRapideView({
                 >
                   <option value="ALL">📦 Tous les types (5 Types de flux)</option>
                   <option value="Sortie Interne">🔴 Sortie Interne (Stock → Machine)</option>
-                  <option value="Entrée Interne">🔵 Entrée Interne (Machine → Stock / Retour)</option>
-                  <option value="Sortie Externe">🟣 Sortie Externe (Stock → Réparation Ext.)</option>
+                  <option value="Entrée Interne">
+                    🔵 Entrée Interne (Machine → Stock / Retour)
+                  </option>
+                  <option value="Sortie Externe">
+                    🟣 Sortie Externe (Stock → Réparation Ext.)
+                  </option>
                   <option value="Entrée Externe">🟢 Entrée Externe (Achat / Réappro)</option>
                   <option value="COMMANDE">🟡 COMMANDE (En attente de livraison)</option>
                   <option value="Sortie">🔻 Toutes les Sorties</option>
@@ -2651,7 +2911,9 @@ export default function SortieRapideView({
                     <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                     <span className="truncate">Tri: {tableSortField}</span>
                   </div>
-                  <ChevronDown className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${showTableSortMenu ? 'rotate-180' : ''}`} />
+                  <ChevronDown
+                    className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${showTableSortMenu ? 'rotate-180' : ''}`}
+                  />
                 </button>
 
                 {showTableSortMenu && (
@@ -2685,9 +2947,12 @@ export default function SortieRapideView({
                           }`}
                         >
                           <span className="truncate">{col.label}</span>
-                          {tableSortField === col.key && (
-                            tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
-                          )}
+                          {tableSortField === col.key &&
+                            (tableSortOrder === 'asc' ? (
+                              <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+                            ) : (
+                              <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                            ))}
                         </button>
                       ))}
                     </div>
@@ -2697,7 +2962,9 @@ export default function SortieRapideView({
                         type="button"
                         onClick={() => setTableSortOrder('asc')}
                         className={`flex-1 px-2 py-1 rounded-lg border text-[11px] font-semibold flex items-center justify-center gap-1 transition cursor-pointer ${
-                          tableSortOrder === 'asc' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-600 border-slate-200'
+                          tableSortOrder === 'asc'
+                            ? 'bg-slate-900 text-white border-slate-900'
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
                         }`}
                       >
                         <ArrowUpAZ className="w-3 h-3" />
@@ -2707,7 +2974,9 @@ export default function SortieRapideView({
                         type="button"
                         onClick={() => setTableSortOrder('desc')}
                         className={`flex-1 px-2 py-1 rounded-lg border text-[11px] font-semibold flex items-center justify-center gap-1 transition cursor-pointer ${
-                          tableSortOrder === 'desc' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-600 border-slate-200'
+                          tableSortOrder === 'desc'
+                            ? 'bg-slate-900 text-white border-slate-900'
+                            : 'bg-slate-50 text-slate-600 border-slate-200'
                         }`}
                       >
                         <ArrowDownAZ className="w-3 h-3" />
@@ -2737,7 +3006,15 @@ export default function SortieRapideView({
                     >
                       <div className="flex items-center gap-1">
                         <span>Bon # / Date</span>
-                        {tableSortField === 'date' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                        {tableSortField === 'date' ? (
+                          tableSortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
+                        )}
                       </div>
                     </th>
 
@@ -2748,7 +3025,15 @@ export default function SortieRapideView({
                     >
                       <div className="flex items-center gap-1">
                         <span>N° OT / Commande</span>
-                        {tableSortField === 'num_commande' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-purple-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-purple-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                        {tableSortField === 'num_commande' ? (
+                          tableSortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3 text-purple-600 shrink-0" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3 text-purple-600 shrink-0" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
+                        )}
                       </div>
                     </th>
 
@@ -2759,7 +3044,15 @@ export default function SortieRapideView({
                     >
                       <div className="flex items-center gap-1">
                         <span>Type (5 Flux)</span>
-                        {tableSortField === 'type' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                        {tableSortField === 'type' ? (
+                          tableSortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
+                        )}
                       </div>
                     </th>
 
@@ -2770,7 +3063,15 @@ export default function SortieRapideView({
                     >
                       <div className="flex items-center gap-1">
                         <span>Action ID</span>
-                        {tableSortField === 'action_id' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                        {tableSortField === 'action_id' ? (
+                          tableSortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
+                        )}
                       </div>
                     </th>
 
@@ -2781,7 +3082,15 @@ export default function SortieRapideView({
                     >
                       <div className="flex items-center gap-1">
                         <span>Réf & Article</span>
-                        {tableSortField === 'ref' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                        {tableSortField === 'ref' ? (
+                          tableSortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
+                        )}
                       </div>
                     </th>
 
@@ -2792,7 +3101,15 @@ export default function SortieRapideView({
                     >
                       <div className="flex items-center justify-end gap-1">
                         <span>Qté</span>
-                        {tableSortField === 'quantite' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                        {tableSortField === 'quantite' ? (
+                          tableSortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
+                        )}
                       </div>
                     </th>
 
@@ -2805,7 +3122,15 @@ export default function SortieRapideView({
                     >
                       <div className="flex items-center gap-1">
                         <span>Utilisateur / Intervenant</span>
-                        {tableSortField === 'technicien' ? (tableSortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />) : <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />}
+                        {tableSortField === 'technicien' ? (
+                          tableSortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
+                        )}
                       </div>
                     </th>
 
@@ -2818,38 +3143,81 @@ export default function SortieRapideView({
                     // Smooth Lazy Loading Skeletons for High Performance
                     [...Array(Math.min(pageSize || 5, 6))].map((_, sIdx) => (
                       <tr key={`loading-row-${sIdx}`} className="animate-pulse bg-white">
-                        <td className="py-3 px-3 text-center"><div className="h-3 w-5 bg-slate-200 rounded mx-auto" /></td>
-                        <td className="py-3 px-3"><div className="h-3.5 w-20 bg-slate-200 rounded mb-1" /><div className="h-2.5 w-14 bg-slate-100 rounded" /></td>
-                        <td className="py-3 px-3"><div className="h-5 w-16 bg-slate-200 rounded-md" /></td>
-                        <td className="py-3 px-2"><div className="h-5 w-14 bg-slate-200 rounded-full" /></td>
-                        <td className="py-3 px-3"><div className="h-5 w-20 bg-slate-200 rounded-md" /></td>
-                        <td className="py-3 px-3"><div className="h-3.5 w-24 bg-slate-200 rounded mb-1" /><div className="h-2.5 w-32 bg-slate-100 rounded" /></td>
-                        <td className="py-3 px-2 text-right"><div className="h-4 w-8 bg-slate-200 rounded ml-auto" /></td>
-                        <td className="py-3 px-3"><div className="h-3.5 w-24 bg-slate-200 rounded" /></td>
-                        <td className="py-3 px-3"><div className="h-3.5 w-24 bg-slate-200 rounded" /></td>
-                        <td className="py-3 px-3"><div className="h-3 w-28 bg-slate-100 rounded" /></td>
-                        <td className="py-3 px-2 text-center"><div className="h-4 w-4 bg-slate-200 rounded mx-auto" /></td>
+                        <td className="py-3 px-3 text-center">
+                          <div className="h-3 w-5 bg-slate-200 rounded mx-auto" />
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="h-3.5 w-20 bg-slate-200 rounded mb-1" />
+                          <div className="h-2.5 w-14 bg-slate-100 rounded" />
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="h-5 w-16 bg-slate-200 rounded-md" />
+                        </td>
+                        <td className="py-3 px-2">
+                          <div className="h-5 w-14 bg-slate-200 rounded-full" />
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="h-5 w-20 bg-slate-200 rounded-md" />
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="h-3.5 w-24 bg-slate-200 rounded mb-1" />
+                          <div className="h-2.5 w-32 bg-slate-100 rounded" />
+                        </td>
+                        <td className="py-3 px-2 text-right">
+                          <div className="h-4 w-8 bg-slate-200 rounded ml-auto" />
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="h-3.5 w-24 bg-slate-200 rounded" />
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="h-3.5 w-24 bg-slate-200 rounded" />
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="h-3 w-28 bg-slate-100 rounded" />
+                        </td>
+                        <td className="py-3 px-2 text-center">
+                          <div className="h-4 w-4 bg-slate-200 rounded mx-auto" />
+                        </td>
                       </tr>
                     ))
                   ) : displayedMouvements.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="py-10 text-center text-xs text-slate-400 font-medium">
+                      <td
+                        colSpan={11}
+                        className="py-10 text-center text-xs text-slate-400 font-medium"
+                      >
                         Aucun mouvement correspondant aux critères.
                       </td>
                     </tr>
                   ) : (
                     displayedMouvements.map((m, idx) => {
                       const art = stockItems.find((s) => s.ref === m.ref);
-                      const techObj = technicians.find((t) => t.nom === m.technicien || t.id_technician === m.id_technician);
-                      const opObj = operations.find((o) => o.nom === m.operation || o.id_operation === m.id_operation);
-                      const isChef = String(m.operation).toUpperCase().includes('CHEF') ||
-                        operations.some((op) => (op.nom === m.operation || op.id_operation === m.operation) && (op.type_profil === 'CHEF' || String(op.id_operation).startsWith('CHEF')));
+                      const techObj = technicians.find(
+                        (t) => t.nom === m.technicien || t.id_technician === m.id_technician
+                      );
+                      const opObj = operations.find(
+                        (o) => o.nom === m.operation || o.id_operation === m.id_operation
+                      );
+                      const isChef =
+                        String(m.operation).toUpperCase().includes('CHEF') ||
+                        operations.some(
+                          (op) =>
+                            (op.nom === m.operation || op.id_operation === m.operation) &&
+                            (op.type_profil === 'CHEF' ||
+                              String(op.id_operation).startsWith('CHEF'))
+                        );
                       const realIndex = startIndex + idx;
 
-                      const isOutflow = m.type === 'Sortie Interne' || m.type === 'Sortie Externe' || m.type === 'Sortie';
+                      const isOutflow =
+                        m.type === 'Sortie Interne' ||
+                        m.type === 'Sortie Externe' ||
+                        m.type === 'Sortie';
 
                       return (
-                        <tr key={m.id || `mvt-${realIndex}`} className="even:bg-slate-50/80 odd:bg-white hover:bg-indigo-50/50 border-b border-slate-200/70 transition-colors">
+                        <tr
+                          key={m.id || `mvt-${realIndex}`}
+                          className="even:bg-slate-50/80 odd:bg-white hover:bg-indigo-50/50 border-b border-slate-200/70 transition-colors"
+                        >
                           {/* Row N° */}
                           <td className="py-2.5 px-3 text-center font-mono text-[11px] font-bold text-slate-400 bg-slate-100/40 border-r border-slate-200/80 shrink-0">
                             {realIndex + 1}
@@ -2870,7 +3238,8 @@ export default function SortieRapideView({
 
                           {/* N° OT / Commande */}
                           <td className="py-2.5 px-3 whitespace-nowrap">
-                            {m.num_commande === 'INCONNU' || (!m.num_commande && (m.tags && m.tags.includes('#INCONNU'))) ? (
+                            {m.num_commande === 'INCONNU' ||
+                            (!m.num_commande && m.tags && m.tags.includes('#INCONNU')) ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[10px] font-extrabold">
                                 <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
                                 <span>INCONNU</span>
@@ -2891,15 +3260,22 @@ export default function SortieRapideView({
                           <td className="py-2.5 px-2 whitespace-nowrap">
                             <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                m.type === 'Sortie Interne' || (m.type === 'Sortie' && m.action_id !== 'REPARATION_EXTERNE' && m.action_id !== 'SOUS_TRAITANCE')
+                                m.type === 'Sortie Interne' ||
+                                (m.type === 'Sortie' &&
+                                  m.action_id !== 'REPARATION_EXTERNE' &&
+                                  m.action_id !== 'SOUS_TRAITANCE')
                                   ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                  : m.type === 'Entrée Interne' || (m.type === 'Entrée' && m.action_id === 'RETOUR')
-                                  ? 'bg-cyan-50 text-cyan-700 border border-cyan-200'
-                                  : m.type === 'Sortie Externe' || m.action_id === 'REPARATION_EXTERNE' || m.action_id === 'SOUS_TRAITANCE'
-                                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                                  : m.type === 'Entrée Externe' || (m.type === 'Entrée' && m.action_id === 'REAPPRO')
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-amber-100 text-amber-950 border border-amber-300 font-extrabold animate-pulse'
+                                  : m.type === 'Entrée Interne' ||
+                                      (m.type === 'Entrée' && m.action_id === 'RETOUR')
+                                    ? 'bg-cyan-50 text-cyan-700 border border-cyan-200'
+                                    : m.type === 'Sortie Externe' ||
+                                        m.action_id === 'REPARATION_EXTERNE' ||
+                                        m.action_id === 'SOUS_TRAITANCE'
+                                      ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                      : m.type === 'Entrée Externe' ||
+                                          (m.type === 'Entrée' && m.action_id === 'REAPPRO')
+                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                        : 'bg-amber-100 text-amber-950 border border-amber-300 font-extrabold animate-pulse'
                               }`}
                             >
                               {m.type}
@@ -2908,25 +3284,29 @@ export default function SortieRapideView({
 
                           {/* Action ID */}
                           <td className="py-2.5 px-3 whitespace-nowrap">
-                            <span className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold ${
-                              m.action_id === 'CORRECTIVE'
-                                ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                                : m.action_id === 'PREVENTIVE'
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                : m.action_id === 'AMELIORATIVE'
-                                ? 'bg-purple-50 text-purple-800 border border-purple-200'
-                                : m.action_id === 'USAGE'
-                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                                : m.action_id === 'REAPPRO'
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                : m.action_id === 'RETOUR'
-                                ? 'bg-cyan-50 text-cyan-800 border border-cyan-200'
-                                : m.action_id === 'REPARATION_EXTERNE' || m.action_id === 'SOUS_TRAITANCE'
-                                ? 'bg-indigo-50 text-indigo-800 border border-indigo-200'
-                                : m.action_id === 'COMMANDE_STOCK' || m.type === 'COMMANDE'
-                                ? 'bg-amber-100 text-amber-950 border border-amber-300'
-                                : 'bg-slate-100 text-slate-700 border border-slate-200'
-                            }`}>
+                            <span
+                              className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold ${
+                                m.action_id === 'CORRECTIVE'
+                                  ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                  : m.action_id === 'PREVENTIVE'
+                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                    : m.action_id === 'AMELIORATIVE'
+                                      ? 'bg-purple-50 text-purple-800 border border-purple-200'
+                                      : m.action_id === 'USAGE'
+                                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                        : m.action_id === 'REAPPRO'
+                                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                          : m.action_id === 'RETOUR'
+                                            ? 'bg-cyan-50 text-cyan-800 border border-cyan-200'
+                                            : m.action_id === 'REPARATION_EXTERNE' ||
+                                                m.action_id === 'SOUS_TRAITANCE'
+                                              ? 'bg-indigo-50 text-indigo-800 border border-indigo-200'
+                                              : m.action_id === 'COMMANDE_STOCK' ||
+                                                  m.type === 'COMMANDE'
+                                                ? 'bg-amber-100 text-amber-950 border border-amber-300'
+                                                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                              }`}
+                            >
                               {m.action_id || (isOutflow ? 'CORRECTIVE' : 'REAPPRO')}
                             </span>
                           </td>
@@ -2952,7 +3332,11 @@ export default function SortieRapideView({
                               <div>
                                 <div className="font-mono font-semibold text-emerald-800 flex items-center gap-1">
                                   <Warehouse className="w-3 h-3 text-emerald-600 shrink-0" />
-                                  <span>{m.emplacement_reception || art?.emplacement || 'Magasin Central'}</span>
+                                  <span>
+                                    {m.emplacement_reception ||
+                                      art?.emplacement ||
+                                      'Magasin Central'}
+                                  </span>
                                 </div>
                                 {m.fournisseur && (
                                   <div className="text-[10px] text-slate-500 truncate max-w-[120px]">
@@ -3000,7 +3384,9 @@ export default function SortieRapideView({
                                     <Crown className="w-2.5 h-2.5 text-amber-600 shrink-0" />
                                     <span className="truncate max-w-[110px]">{m.operation}</span>
                                     {(m.id_operation || opObj?.id_operation) && (
-                                      <span className="font-mono text-[9px] font-bold text-amber-700">({m.id_operation || opObj?.id_operation})</span>
+                                      <span className="font-mono text-[9px] font-bold text-amber-700">
+                                        ({m.id_operation || opObj?.id_operation})
+                                      </span>
                                     )}
                                   </span>
                                 ) : (
@@ -3008,7 +3394,9 @@ export default function SortieRapideView({
                                     <UserCheck className="w-2.5 h-2.5 text-slate-400 shrink-0" />
                                     <span className="truncate max-w-[110px]">{m.operation}</span>
                                     {(m.id_operation || opObj?.id_operation) && (
-                                      <span className="font-mono text-[9px] font-bold text-slate-500">({m.id_operation || opObj?.id_operation})</span>
+                                      <span className="font-mono text-[9px] font-bold text-slate-500">
+                                        ({m.id_operation || opObj?.id_operation})
+                                      </span>
                                     )}
                                   </span>
                                 )}
@@ -3045,7 +3433,7 @@ export default function SortieRapideView({
                                     operation: m.operation || '',
                                     fournisseur: m.fournisseur || '',
                                     emplacement_reception: m.emplacement_reception || '',
-                                    commentaire: m.commentaire || ''
+                                    commentaire: m.commentaire || '',
                                   });
                                 }}
                                 className="p-1.5 text-slate-400 hover:text-indigo-600 transition rounded-md hover:bg-indigo-50 cursor-pointer"
@@ -3099,9 +3487,12 @@ export default function SortieRapideView({
                 </div>
 
                 <div className="text-slate-500 text-[11.5px]">
-                  Affichage de <b className="text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</b> à{' '}
-                  <b className="text-slate-900">{Math.min(startIndex + displayedMouvements.length, totalItems)}</b> sur{' '}
-                  <b className="text-slate-900">{totalItems}</b> mouvements
+                  Affichage de{' '}
+                  <b className="text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</b> à{' '}
+                  <b className="text-slate-900">
+                    {Math.min(startIndex + displayedMouvements.length, totalItems)}
+                  </b>{' '}
+                  sur <b className="text-slate-900">{totalItems}</b> mouvements
                 </div>
               </div>
 
@@ -3180,15 +3571,17 @@ export default function SortieRapideView({
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Flux Net Période
                 </div>
-                <div className={`font-mono text-xs font-bold mt-0.5 ${
-                  tableKPIs.totalEntreesQty - tableKPIs.totalSortiesQty >= 0 ? 'text-emerald-700' : 'text-amber-700'
-                }`}>
+                <div
+                  className={`font-mono text-xs font-bold mt-0.5 ${
+                    tableKPIs.totalEntreesQty - tableKPIs.totalSortiesQty >= 0
+                      ? 'text-emerald-700'
+                      : 'text-amber-700'
+                  }`}
+                >
                   {tableKPIs.totalEntreesQty - tableKPIs.totalSortiesQty >= 0 ? '+' : ''}
                   {tableKPIs.totalEntreesQty - tableKPIs.totalSortiesQty} unités
                 </div>
-                <div className="text-[10px] text-slate-400 font-medium">
-                  = Entrées - Sorties
-                </div>
+                <div className="text-[10px] text-slate-400 font-medium">= Entrées - Sorties</div>
               </div>
               <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
                 =
@@ -3227,8 +3620,12 @@ export default function SortieRapideView({
                   <Search className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-slate-900">Recherche & Sélection d'Article</h3>
-                  <p className="text-xs text-slate-500">Recherche instantanée par Référence, Désignation, Type ou Emplacement</p>
+                  <h3 className="font-bold text-sm text-slate-900">
+                    Recherche & Sélection d'Article
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Recherche instantanée par Référence, Désignation, Type ou Emplacement
+                  </p>
                 </div>
               </div>
               <button
@@ -3278,7 +3675,9 @@ export default function SortieRapideView({
 
               {/* Type Filter Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px]">
-                <span className="text-slate-400 font-bold text-[10px] uppercase shrink-0">Filtrer par Type :</span>
+                <span className="text-slate-400 font-bold text-[10px] uppercase shrink-0">
+                  Filtrer par Type :
+                </span>
                 <button
                   type="button"
                   onClick={() => setFilterType('ALL')}
@@ -3316,7 +3715,9 @@ export default function SortieRapideView({
               {filteredArticles.length === 0 ? (
                 <div className="py-12 text-center text-slate-400 space-y-2">
                   <Package className="w-8 h-8 mx-auto text-slate-300" />
-                  <p className="text-xs font-medium">Aucun article ne correspond à "{searchQuery}"</p>
+                  <p className="text-xs font-medium">
+                    Aucun article ne correspond à "{searchQuery}"
+                  </p>
                   <button
                     type="button"
                     onClick={onOpenAddArticle}
@@ -3356,15 +3757,25 @@ export default function SortieRapideView({
                           {highlightMatch(art.designation, searchQuery)}
                         </div>
                         <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                          <span>Emplacement : <b className="font-mono text-slate-600">{highlightMatch(art.emplacement || 'R1-B01', searchQuery)}</b></span>
+                          <span>
+                            Emplacement :{' '}
+                            <b className="font-mono text-slate-600">
+                              {highlightMatch(art.emplacement || 'R1-B01', searchQuery)}
+                            </b>
+                          </span>
                           <span>•</span>
-                          <span>Seuil Alerte : <b className="font-mono text-slate-600">{art.seuil || 5}</b></span>
+                          <span>
+                            Seuil Alerte :{' '}
+                            <b className="font-mono text-slate-600">{art.seuil || 5}</b>
+                          </span>
                         </div>
                       </div>
 
                       <div className="text-right shrink-0">
                         <div className="text-[10px] text-slate-400">Stock Actuel</div>
-                        <div className={`font-mono font-bold text-sm ${art.stockActuel <= 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                        <div
+                          className={`font-mono font-bold text-sm ${art.stockActuel <= 0 ? 'text-rose-600' : 'text-emerald-700'}`}
+                        >
                           {art.stockActuel}
                         </div>
                         <button
@@ -3429,7 +3840,7 @@ export default function SortieRapideView({
                   onUpdateMouvement({
                     ...editingMovement,
                     ...editFormData,
-                    quantite: Number(editFormData.quantite) || 1
+                    quantite: Number(editFormData.quantite) || 1,
                   });
                   setEditingMovement(null);
                 }
@@ -3455,7 +3866,9 @@ export default function SortieRapideView({
                   <input
                     type="text"
                     value={editFormData.num_commande}
-                    onChange={(e) => setEditFormData({ ...editFormData, num_commande: e.target.value })}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, num_commande: e.target.value })
+                    }
                     placeholder="Ex: CMD-2026-089"
                     className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white font-mono text-slate-800"
                   />
@@ -3464,9 +3877,7 @@ export default function SortieRapideView({
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Date
-                  </label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
                   <input
                     type="date"
                     value={editFormData.date}
@@ -3493,7 +3904,9 @@ export default function SortieRapideView({
                   </label>
                   <select
                     value={editFormData.action_id}
-                    onChange={(e) => setEditFormData({ ...editFormData, action_id: e.target.value })}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, action_id: e.target.value })
+                    }
                     className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-800"
                   >
                     <option value="CORRECTIVE">Corrective</option>
@@ -3528,7 +3941,9 @@ export default function SortieRapideView({
                     type="number"
                     min="1"
                     value={editFormData.quantite}
-                    onChange={(e) => setEditFormData({ ...editFormData, quantite: Number(e.target.value) || 1 })}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, quantite: Number(e.target.value) || 1 })
+                    }
                     className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white font-mono font-bold text-slate-800"
                     required
                   />
@@ -3544,7 +3959,9 @@ export default function SortieRapideView({
                     <input
                       type="text"
                       value={editFormData.fournisseur}
-                      onChange={(e) => setEditFormData({ ...editFormData, fournisseur: e.target.value })}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, fournisseur: e.target.value })
+                      }
                       placeholder="Nom du fournisseur"
                       className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800"
                     />
@@ -3556,7 +3973,9 @@ export default function SortieRapideView({
                     <input
                       type="text"
                       value={editFormData.emplacement_reception}
-                      onChange={(e) => setEditFormData({ ...editFormData, emplacement_reception: e.target.value })}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, emplacement_reception: e.target.value })
+                      }
                       placeholder="Ex: R1-B04"
                       className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800 font-mono"
                     />
@@ -3565,13 +3984,13 @@ export default function SortieRapideView({
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Zone
-                    </label>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Zone</label>
                     <input
                       type="text"
                       value={editFormData.id_zone}
-                      onChange={(e) => setEditFormData({ ...editFormData, id_zone: e.target.value })}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, id_zone: e.target.value })
+                      }
                       placeholder="Ex: ZONE-01"
                       className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800 font-mono"
                     />
@@ -3583,7 +4002,9 @@ export default function SortieRapideView({
                     <input
                       type="text"
                       value={editFormData.id_machine_registered}
-                      onChange={(e) => setEditFormData({ ...editFormData, id_machine_registered: e.target.value })}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, id_machine_registered: e.target.value })
+                      }
                       placeholder="Ex: MCH-001"
                       className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800 font-mono"
                     />
@@ -3599,7 +4020,9 @@ export default function SortieRapideView({
                   <input
                     type="text"
                     value={editFormData.technicien}
-                    onChange={(e) => setEditFormData({ ...editFormData, technicien: e.target.value })}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, technicien: e.target.value })
+                    }
                     className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800"
                   />
                 </div>
@@ -3610,7 +4033,9 @@ export default function SortieRapideView({
                   <input
                     type="text"
                     value={editFormData.operation}
-                    onChange={(e) => setEditFormData({ ...editFormData, operation: e.target.value })}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, operation: e.target.value })
+                    }
                     className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800"
                   />
                 </div>
@@ -3623,7 +4048,9 @@ export default function SortieRapideView({
                 <textarea
                   rows="2"
                   value={editFormData.commentaire}
-                  onChange={(e) => setEditFormData({ ...editFormData, commentaire: e.target.value })}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, commentaire: e.target.value })
+                  }
                   placeholder="Détails supplémentaires sur le mouvement..."
                   className="w-full p-2 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs"
                 />
@@ -3660,7 +4087,9 @@ export default function SortieRapideView({
               </div>
               <div>
                 <h3 className="font-bold text-sm text-slate-900">Supprimer le mouvement</h3>
-                <p className="text-xs text-slate-500">Cette opération recalculera automatiquement le stock.</p>
+                <p className="text-xs text-slate-500">
+                  Cette opération recalculera automatiquement le stock.
+                </p>
               </div>
             </div>
 
@@ -3675,7 +4104,9 @@ export default function SortieRapideView({
               </div>
               <div className="flex justify-between text-slate-700">
                 <span>Type & Quantité :</span>
-                <span className={`font-bold ${deletingMovement.type === 'Sortie' ? 'text-rose-600' : 'text-emerald-700'}`}>
+                <span
+                  className={`font-bold ${deletingMovement.type === 'Sortie' ? 'text-rose-600' : 'text-emerald-700'}`}
+                >
                   {deletingMovement.type} ({deletingMovement.quantite})
                 </span>
               </div>

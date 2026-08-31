@@ -4,10 +4,14 @@ import CustomSelect from './CustomSelect';
 
 function generateMachineCode(selectedTemplateId, existingMachines = []) {
   if (!selectedTemplateId) return 'MCH-01';
-  
+
   // Clean prefix from selected template ID (e.g. DET -> DET, TPL-RCF100 -> RCF100)
-  const prefix = selectedTemplateId.replace(/^TPL-?/i, '').toUpperCase().replace(/[^A-Z0-9]/g, '') || 'MCH';
-  
+  const prefix =
+    selectedTemplateId
+      .replace(/^TPL-?/i, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '') || 'MCH';
+
   let maxIndex = 0;
   existingMachines.forEach((m) => {
     const code = String(m.id_machine_registered || '').toUpperCase();
@@ -37,7 +41,7 @@ export default function AddMachineModal({
   onOpenAddFamilyModal,
   onOpenAddTemplateModal,
   onOpenAddZoneModal,
-  onOpenAddTechModal
+  onOpenAddTechModal,
 }) {
   const [form, setForm] = useState({
     id_machine_registered: '',
@@ -46,13 +50,15 @@ export default function AddMachineModal({
     id_templates: templates[0]?.id_templates || '',
     id_zone_default: zones[0]?.id_zone || '',
     technician: technicians[0]?.id_technician || '',
-    status: 'En Service'
+    status: 'En Service',
   });
 
   useEffect(() => {
     if (isOpen) {
       const initialFam = families[0]?.id_family || '';
-      const relTemplates = initialFam ? templates.filter((t) => t.id_family === initialFam) : templates;
+      const relTemplates = initialFam
+        ? templates.filter((t) => t.id_family === initialFam)
+        : templates;
       const initialTpl = relTemplates[0]?.id_templates || templates[0]?.id_templates || '';
       const autoCode = generateMachineCode(initialTpl, machines);
 
@@ -63,7 +69,7 @@ export default function AddMachineModal({
         id_templates: initialTpl,
         id_zone_default: zones[0]?.id_zone || '',
         technician: technicians[0]?.id_technician || '',
-        status: 'En Service'
+        status: 'En Service',
       });
     }
   }, [isOpen]);
@@ -83,7 +89,7 @@ export default function AddMachineModal({
       ...prev,
       id_family: newFam,
       id_templates: newTpl,
-      id_machine_registered: autoCode
+      id_machine_registered: autoCode,
     }));
   };
 
@@ -92,7 +98,7 @@ export default function AddMachineModal({
     setForm((prev) => ({
       ...prev,
       id_templates: newTpl,
-      id_machine_registered: autoCode
+      id_machine_registered: autoCode,
     }));
   };
 
@@ -104,10 +110,10 @@ export default function AddMachineModal({
       id_machine_registered: form.id_machine_registered.trim().toUpperCase(),
       designation: form.designation.trim(),
       id_family: form.id_family,
-      id_templates: form.id_templates || (availableTemplates[0]?.id_templates || ''),
+      id_templates: form.id_templates || availableTemplates[0]?.id_templates || '',
       id_zone_default: form.id_zone_default,
       technician: form.technician,
-      status: form.status
+      status: form.status,
     });
 
     onClose();
@@ -123,7 +129,9 @@ export default function AddMachineModal({
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900">Nouvelle Machine Registered</h3>
-              <p className="text-xs text-slate-500">Ajout d'un équipement au catalogue global (Twin Stock)</p>
+              <p className="text-xs text-slate-500">
+                Ajout d'un équipement au catalogue global (Twin Stock)
+              </p>
             </div>
           </div>
           <button
@@ -186,7 +194,7 @@ export default function AddMachineModal({
                 onChange={(val) => handleFamilyChange(val)}
                 options={families.map((f) => ({
                   value: f.id_family,
-                  label: `${f.libelle} (${f.id_family})`
+                  label: `${f.libelle} (${f.id_family})`,
                 }))}
                 placeholder="-- Choisir Famille --"
               />
@@ -210,10 +218,12 @@ export default function AddMachineModal({
               <CustomSelect
                 value={form.id_templates}
                 onChange={(val) => handleTemplateChange(val)}
-                options={(availableTemplates.length > 0 ? availableTemplates : templates).map((t) => ({
-                  value: t.id_templates,
-                  label: `${t.libelle} (${t.id_templates})`
-                }))}
+                options={(availableTemplates.length > 0 ? availableTemplates : templates).map(
+                  (t) => ({
+                    value: t.id_templates,
+                    label: `${t.libelle} (${t.id_templates})`,
+                  })
+                )}
                 placeholder="-- Choisir Modèle --"
               />
             </div>
@@ -240,7 +250,7 @@ export default function AddMachineModal({
                 onChange={(val) => setForm({ ...form, id_zone_default: val })}
                 options={zones.map((z) => ({
                   value: z.id_zone,
-                  label: `${z.libelle} (${z.id_zone})`
+                  label: `${z.libelle} (${z.id_zone})`,
                 }))}
                 placeholder="-- Choisir Zone --"
               />
@@ -266,7 +276,7 @@ export default function AddMachineModal({
                 onChange={(val) => setForm({ ...form, technician: val })}
                 options={technicians.map((t) => ({
                   value: t.id_technician,
-                  label: `${t.id_technician} - ${t.nom} (${t.id_zone})`
+                  label: `${t.id_technician} - ${t.nom} (${t.id_zone})`,
                 }))}
                 placeholder="-- Choisir Technicien --"
               />
@@ -281,9 +291,24 @@ export default function AddMachineModal({
               value={form.status}
               onChange={(val) => setForm({ ...form, status: val })}
               options={[
-                { value: 'En Service', label: 'En Service', badge: 'Actif', badgeColor: 'bg-emerald-100 text-emerald-800' },
-                { value: 'En Maintenance', label: 'En Maintenance', badge: 'Entretien', badgeColor: 'bg-amber-100 text-amber-800' },
-                { value: 'Hors Service', label: 'Hors Service', badge: 'Arrêt', badgeColor: 'bg-rose-100 text-rose-800' }
+                {
+                  value: 'En Service',
+                  label: 'En Service',
+                  badge: 'Actif',
+                  badgeColor: 'bg-emerald-100 text-emerald-800',
+                },
+                {
+                  value: 'En Maintenance',
+                  label: 'En Maintenance',
+                  badge: 'Entretien',
+                  badgeColor: 'bg-amber-100 text-amber-800',
+                },
+                {
+                  value: 'Hors Service',
+                  label: 'Hors Service',
+                  badge: 'Arrêt',
+                  badgeColor: 'bg-rose-100 text-rose-800',
+                },
               ]}
             />
           </div>

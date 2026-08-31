@@ -9,7 +9,7 @@ export default function Header({
   handleExportExcel,
   linkedFileName,
   onDirectLink,
-  onDirectSave
+  onDirectSave,
 }) {
   const getTabTitle = () => {
     switch (currentTab) {
@@ -20,10 +20,10 @@ export default function Header({
       case 'stock':
         return 'Stock Actuel • Colonnes Excel exactes';
       case 'types':
-        return 'Types d\'Articles • Nomenclature Parent';
+        return "Types d'Articles • Nomenclature Parent";
       case 'designations':
       case 'diagnostics':
-        return 'Désignations d\'Articles • Catalogue (Templates)';
+        return "Désignations d'Articles • Catalogue (Templates)";
       case 'machines':
         return 'Machines Registered • Twin Principal';
       case 'families':
@@ -35,11 +35,11 @@ export default function Header({
       case 'technicians':
         return 'Techniciens • Équipe de Maintenance';
       case 'operations':
-        return 'Opérations & Chefs d\'Équipe • Répertoire & Rôles';
+        return "Opérations & Chefs d'Équipe • Répertoire & Rôles";
       case 'nexus':
         return 'Nexus Matrix • Matrice Relationnelle';
       case 'guide':
-        return 'Guide d\'Utilisation • Règles & Formules';
+        return "Guide d'Utilisation • Règles & Formules";
       case 'settings':
         return 'Paramètres • Configuration Système';
       default:
@@ -52,78 +52,78 @@ export default function Header({
       case 'settings':
         return {
           source: '/mnt/data/gmao_light_data.json • Paramètres',
-          desc: 'Configuration générale, préférences d\'interface et état du stockage'
+          desc: "Configuration générale, préférences d'interface et état du stockage",
         };
       case 'dashboard':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Dashboard',
-          desc: 'Indicateurs consolidés, alertes de réapprovisionnement et flux récents'
+          desc: 'Indicateurs consolidés, alertes de réapprovisionnement et flux récents',
         };
       case 'sortie':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Mouvements',
-          desc: 'Flux central gouverné par Action_ID avec impact direct sur Stock Actuel'
+          desc: 'Flux central gouverné par Action_ID avec impact direct sur Stock Actuel',
         };
       case 'stock':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Stock_Actuel',
-          desc: 'Tableau central des articles avec calcul temps réel des stocks et alertes'
+          desc: 'Tableau central des articles avec calcul temps réel des stocks et alertes',
         };
       case 'types':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Types',
-          desc: 'Nomenclature Parent • Liens dynamiques vers Désignations et Articles'
+          desc: 'Nomenclature Parent • Liens dynamiques vers Désignations et Articles',
         };
       case 'designations':
       case 'diagnostics':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Diagnostic',
-          desc: 'Catalogue des modèles d\'articles • Lié au Type parent et aux Articles'
+          desc: "Catalogue des modèles d'articles • Lié au Type parent et aux Articles",
         };
       case 'machines':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Machines_Registered',
-          desc: 'Twin central • Intégration Famille, Template, Zone et Technicien'
+          desc: 'Twin central • Intégration Famille, Template, Zone et Technicien',
         };
       case 'families':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Families',
-          desc: 'Groupes technologiques majeurs • Transitions vers Templates et Machines'
+          desc: 'Groupes technologiques majeurs • Transitions vers Templates et Machines',
         };
       case 'templates':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Templates',
-          desc: 'Modèles d\'équipements • Filtrage croisé Famille + Modèle vers Parc'
+          desc: "Modèles d'équipements • Filtrage croisé Famille + Modèle vers Parc",
         };
       case 'zones':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Zones',
-          desc: 'Cartographie usine • Compteurs interactifs vers Techs, Ops et Machines'
+          desc: 'Cartographie usine • Compteurs interactifs vers Techs, Ops et Machines',
         };
       case 'technicians':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Techniciens',
-          desc: 'Génération automatique Auto-ID TECH-xx • Affectation par zone et interventions'
+          desc: 'Génération automatique Auto-ID TECH-xx • Affectation par zone et interventions',
         };
       case 'operations':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Operations',
-          desc: 'Double Auto-ID : OP-xx (Opérateurs) & CHEF-xx (Chefs d\'Équipe) • Traçabilité par zone'
+          desc: "Double Auto-ID : OP-xx (Opérateurs) & CHEF-xx (Chefs d'Équipe) • Traçabilité par zone",
         };
       case 'nexus':
         return {
           source: '/mnt/data/gmao_light_data.json • Matrice Relationnelle',
-          desc: 'Schéma d\'intégrité référentielle et cartographie des 3 piliers GMAO Light'
+          desc: "Schéma d'intégrité référentielle et cartographie des 3 piliers GMAO Light",
         };
       case 'guide':
         return {
           source: '/mnt/data/gmao_light_data.json • Manuel & Formules',
-          desc: 'Workflow ordonnancé, règles d\'intégrité et syntaxe des formules'
+          desc: "Workflow ordonnancé, règles d'intégrité et syntaxe des formules",
         };
       default:
         return {
           source: '/mnt/data/gmao_light_data.json • Hub GMAO Light',
-          desc: 'Architecture relationnelle avec intégrité référentielle'
+          desc: 'Architecture relationnelle avec intégrité référentielle',
         };
     }
   };

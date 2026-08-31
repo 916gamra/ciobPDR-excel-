@@ -1,6 +1,24 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import AnimatedPage from './AnimatedPage';
-import {       MapPin, Plus, Search, ArrowRight, Users, Wrench, Cpu, Trash2, Edit2, AlertTriangle , ChevronLeft , ChevronRight , SlidersHorizontal , ArrowUpDown , ChevronDown , ArrowDown, ArrowUp } from 'lucide-react';
+import {
+  MapPin,
+  Plus,
+  Search,
+  ArrowRight,
+  Users,
+  Wrench,
+  Cpu,
+  Trash2,
+  Edit2,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  SlidersHorizontal,
+  ArrowUpDown,
+  ChevronDown,
+  ArrowDown,
+  ArrowUp,
+} from 'lucide-react';
 
 export default function ZonesView({
   zones,
@@ -12,7 +30,7 @@ export default function ZonesView({
   onDeleteZone,
   onNavigateToTechsByZone,
   onNavigateToOpsByZone,
-  onNavigateToMachinesByZone
+  onNavigateToMachinesByZone,
 }) {
   const [localSearch, setLocalSearch] = useState('');
   const [search, setSearch] = useState('');
@@ -35,7 +53,6 @@ export default function ZonesView({
     return z.id_zone.toLowerCase().includes(q) || z.libelle.toLowerCase().includes(q);
   });
 
-  
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState('id_zone');
@@ -75,7 +92,8 @@ export default function ZonesView({
   const totalPages = pageSize === 0 ? 1 : Math.ceil(totalItems / pageSize);
   const effectivePageSize = pageSize === 0 ? totalItems : pageSize;
   const startIndex = (currentPage - 1) * effectivePageSize;
-  const displayedData = pageSize === 0 ? sortedData : sortedData.slice(startIndex, startIndex + effectivePageSize);
+  const displayedData =
+    pageSize === 0 ? sortedData : sortedData.slice(startIndex, startIndex + effectivePageSize);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -88,7 +106,9 @@ export default function ZonesView({
 
   const renderSortIcon = (field) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition shrink-0" />;
+      return (
+        <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition shrink-0" />
+      );
     }
     return sortOrder === 'asc' ? (
       <ArrowUp className="w-3 h-3 text-cyan-700 shrink-0 font-bold" />
@@ -115,7 +135,9 @@ export default function ZonesView({
             <span>Zones & Ateliers de Production</span>
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Point de départ du workflow. Cliquez sur <b className="text-blue-600">Nb Techs</b>, <b className="text-indigo-600">Nb Ops</b> ou <b className="text-emerald-600">Nb Machines</b> pour naviguer vers les listes filtrées.
+            Point de départ du workflow. Cliquez sur <b className="text-blue-600">Nb Techs</b>,{' '}
+            <b className="text-indigo-600">Nb Ops</b> ou{' '}
+            <b className="text-emerald-600">Nb Machines</b> pour naviguer vers les listes filtrées.
           </p>
         </div>
 
@@ -132,7 +154,9 @@ export default function ZonesView({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule D (Techniciens)</div>
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+              Formule D (Techniciens)
+            </div>
             <div className="font-mono text-xs text-blue-700 font-semibold mt-0.5">
               =COUNTIF(Techniciens!D:D, [@id_zone])
             </div>
@@ -144,7 +168,9 @@ export default function ZonesView({
 
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule E (Opérations)</div>
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+              Formule E (Opérations)
+            </div>
             <div className="font-mono text-xs text-indigo-700 font-semibold mt-0.5">
               =COUNTIF(Operations!D:D, [@id_zone])
             </div>
@@ -156,7 +182,9 @@ export default function ZonesView({
 
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule F (Machines)</div>
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+              Formule F (Machines)
+            </div>
             <div className="font-mono text-xs text-emerald-700 font-semibold mt-0.5">
               =COUNTIF(Machines!F:F, [@id_zone])
             </div>
@@ -172,12 +200,15 @@ export default function ZonesView({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="w-4 h-4 text-cyan-600" />
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Filtres & Tri de Données</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              Filtres & Tri de Données
+            </span>
           </div>
           {/* Displaying the filtered count */}
           <div className="text-xs font-semibold text-slate-500">
             <span className="bg-cyan-50 text-cyan-700 px-2.5 py-1 rounded-lg font-bold border border-cyan-100">
-              {filtered.length} zone{filtered.length > 1 ? 's' : ''} trouvée{filtered.length > 1 ? 's' : ''}
+              {filtered.length} zone{filtered.length > 1 ? 's' : ''} trouvée
+              {filtered.length > 1 ? 's' : ''}
             </span>
           </div>
         </div>
@@ -209,13 +240,20 @@ export default function ZonesView({
               onClick={() => setShowSortMenu(!showSortMenu)}
               className={`w-full h-10 px-3 rounded-xl border text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                 showSortMenu || sortField !== 'id_zone' || sortOrder !== 'asc'
-                  ? 'bg-cyan-50 text-cyan-800 border-cyan-300 ring-1 ring-cyan-200 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
+                  ? 'bg-cyan-50 text-cyan-800 border-cyan-300 ring-1 ring-cyan-200 shadow-2xs'
+                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+              }`}
             >
               <div className="flex items-center gap-2">
                 <ArrowUpDown className="w-3.5 h-3.5 text-cyan-600" />
-                <span>Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> ({sortOrder === 'asc' ? 'A→Z' : 'Z→A'})</span>
+                <span>
+                  Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> (
+                  {sortOrder === 'asc' ? 'A→Z' : 'Z→A'})
+                </span>
               </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSortMenu ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSortMenu ? 'rotate-180' : ''}`}
+              />
             </button>
 
             {showSortMenu && (
@@ -227,7 +265,6 @@ export default function ZonesView({
                   </span>
                 </div>
                 <div className="grid grid-cols-1 gap-1 text-xs">
-                  
                   <button
                     onClick={() => {
                       if (sortField === 'id_zone') {
@@ -244,11 +281,14 @@ export default function ZonesView({
                     }`}
                   >
                     <span>Code Zone (ID)</span>
-                    {sortField === 'id_zone' && (
-                      sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
-                    )}
+                    {sortField === 'id_zone' &&
+                      (sortOrder === 'asc' ? (
+                        <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" />
+                      ) : (
+                        <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                      ))}
                   </button>
-                  
+
                   <button
                     onClick={() => {
                       if (sortField === 'libelle') {
@@ -265,11 +305,13 @@ export default function ZonesView({
                     }`}
                   >
                     <span>Libellé / Description</span>
-                    {sortField === 'libelle' && (
-                      sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
-                    )}
+                    {sortField === 'libelle' &&
+                      (sortOrder === 'asc' ? (
+                        <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" />
+                      ) : (
+                        <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                      ))}
                   </button>
-
                 </div>
               </div>
             )}
@@ -296,19 +338,24 @@ export default function ZonesView({
                 N°
               </th>
               <th className="py-2.5 px-4">
-                <span>CODE ZONE</span> <span className="text-slate-400 font-normal text-[10px]">(B)</span>
+                <span>CODE ZONE</span>{' '}
+                <span className="text-slate-400 font-normal text-[10px]">(B)</span>
               </th>
               <th className="py-2.5 px-4">
-                <span>LIBELLÉ SECTEUR / ATELIER</span> <span className="text-slate-400 font-normal text-[10px]">(C) primary</span>
+                <span>LIBELLÉ SECTEUR / ATELIER</span>{' '}
+                <span className="text-slate-400 font-normal text-[10px]">(C) primary</span>
               </th>
               <th className="py-2.5 px-4">
-                <span>TECHNICIENS AFFECTÉS</span> <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+                <span>TECHNICIENS AFFECTÉS</span>{' '}
+                <span className="text-slate-400 font-normal text-[10px]">(D)</span>
               </th>
               <th className="py-2.5 px-4">
-                <span>OPÉRATIONS DÉFINIES</span> <span className="text-slate-400 font-normal text-[10px]">(E)</span>
+                <span>OPÉRATIONS DÉFINIES</span>{' '}
+                <span className="text-slate-400 font-normal text-[10px]">(E)</span>
               </th>
               <th className="py-2.5 px-4">
-                <span>MACHINES INSTALLÉES</span> <span className="text-slate-400 font-normal text-[10px]">(F)</span>
+                <span>MACHINES INSTALLÉES</span>{' '}
+                <span className="text-slate-400 font-normal text-[10px]">(F)</span>
               </th>
             </tr>
           </thead>
@@ -319,7 +366,10 @@ export default function ZonesView({
               const mCount = machines.filter((m) => m.id_zone_default === z.id_zone).length;
 
               return (
-                <tr key={z.id_zone} className="even:bg-slate-50/80 odd:bg-white hover:bg-slate-100/70 border-b border-slate-200/70 transition-colors">
+                <tr
+                  key={z.id_zone}
+                  className="even:bg-slate-50/80 odd:bg-white hover:bg-slate-100/70 border-b border-slate-200/70 transition-colors"
+                >
                   {/* Row N° Column */}
                   <td className="py-3 px-3 text-center font-mono text-[11px] font-bold text-slate-400 bg-slate-100/40 border-r border-slate-200/80 shrink-0">
                     {idx + 1}
@@ -373,7 +423,7 @@ export default function ZonesView({
       </div>
 
       {/* Add Modal */}
-      
+
       {/* Pagination Footer */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 mt-4">
         <div className="flex items-center gap-3">
@@ -382,7 +432,10 @@ export default function ZonesView({
             {[100, 200, 500, 0].map((size) => (
               <button
                 key={size}
-                onClick={() => { setPageSize(size); setCurrentPage(1); }}
+                onClick={() => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
                 className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
                   pageSize === size
                     ? 'bg-white text-cyan-800 shadow-xs border border-slate-200/50'
@@ -397,12 +450,14 @@ export default function ZonesView({
 
         <div className="flex items-center gap-4">
           <div className="text-xs font-semibold text-slate-500">
-            Affichage <b className="text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</b> à <b className="text-slate-900">{Math.min(startIndex + effectivePageSize, totalItems)}</b> sur <b className="text-slate-900">{totalItems}</b>
+            Affichage <b className="text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</b> à{' '}
+            <b className="text-slate-900">{Math.min(startIndex + effectivePageSize, totalItems)}</b>{' '}
+            sur <b className="text-slate-900">{totalItems}</b>
           </div>
           {pageSize !== 0 && totalPages > 1 && (
             <div className="flex items-center gap-1.5">
               <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold transition"
               >
@@ -413,7 +468,7 @@ export default function ZonesView({
                 {currentPage} / {totalPages}
               </span>
               <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold transition"
               >
@@ -429,10 +484,14 @@ export default function ZonesView({
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200">
             <h3 className="font-bold text-base text-slate-900 mb-1">+ Nouvelle Zone / Atelier</h3>
-            <p className="text-xs text-slate-500 mb-4">Créez une zone géographique ou un secteur d'usine.</p>
+            <p className="text-xs text-slate-500 mb-4">
+              Créez une zone géographique ou un secteur d'usine.
+            </p>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Code Zone (ex: ZONE-FIN)</label>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Code Zone (ex: ZONE-FIN)
+                </label>
                 <input
                   type="text"
                   placeholder="ZONE-FIN"
@@ -443,7 +502,9 @@ export default function ZonesView({
                 />
               </div>
               <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Libellé Secteur / Atelier</label>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Libellé Secteur / Atelier
+                </label>
                 <input
                   type="text"
                   placeholder="Atelier Finition & Peinture..."
@@ -472,19 +533,52 @@ export default function ZonesView({
           </div>
         </div>
       )}
-    
+
       {toEdit && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200">
             <h3 className="font-bold text-base text-slate-900 mb-1">Modifier Zone</h3>
-            <form onSubmit={(e) => { e.preventDefault(); onUpdateZone(toEdit.id_zone, toEdit); setToEdit(null); }} className="space-y-3">
-              <div><label className="text-[11px] font-bold text-slate-500">ID Zone</label>
-              <input type="text" value={toEdit.id_zone} disabled className="mt-1 w-full h-10 px-3 rounded-xl bg-slate-100 text-slate-500 text-xs font-mono" /></div>
-              <div><label className="text-[11px] font-bold text-slate-500">Libellé</label>
-              <input type="text" value={toEdit.libelle} onChange={(e) => setToEdit({ ...toEdit, libelle: e.target.value })} required className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs" /></div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                onUpdateZone(toEdit.id_zone, toEdit);
+                setToEdit(null);
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="text-[11px] font-bold text-slate-500">ID Zone</label>
+                <input
+                  type="text"
+                  value={toEdit.id_zone}
+                  disabled
+                  className="mt-1 w-full h-10 px-3 rounded-xl bg-slate-100 text-slate-500 text-xs font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-slate-500">Libellé</label>
+                <input
+                  type="text"
+                  value={toEdit.libelle}
+                  onChange={(e) => setToEdit({ ...toEdit, libelle: e.target.value })}
+                  required
+                  className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs"
+                />
+              </div>
               <div className="flex gap-2 pt-3">
-                <button type="button" onClick={() => setToEdit(null)} className="flex-1 h-10 rounded-xl bg-slate-100 text-xs font-medium">Annuler</button>
-                <button type="submit" className="flex-1 h-10 rounded-xl bg-blue-600 text-white text-xs font-semibold">Enregistrer</button>
+                <button
+                  type="button"
+                  onClick={() => setToEdit(null)}
+                  className="flex-1 h-10 rounded-xl bg-slate-100 text-xs font-medium"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 h-10 rounded-xl bg-blue-600 text-white text-xs font-semibold"
+                >
+                  Enregistrer
+                </button>
               </div>
             </form>
           </div>
@@ -493,11 +587,31 @@ export default function ZonesView({
       {toDelete && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden p-5 space-y-4">
-            <div className="flex flex-col items-center text-center"><AlertTriangle className="w-8 h-8 text-rose-600 mb-2" />
-            <h3 className="font-bold text-lg text-slate-900">Supprimer la zone ?</h3></div>
-            <p className="text-sm text-center text-slate-600">Confirmez-vous la suppression de <b>{toDelete.libelle}</b> ? Les liaisons avec cette zone pourraient être rompues.</p>
-            <div className="flex gap-2"><button onClick={() => setToDelete(null)} className="flex-1 h-10 rounded-xl bg-slate-100 text-slate-700 text-xs font-medium">Annuler</button>
-            <button onClick={() => { onDeleteZone(toDelete.id_zone); setToDelete(null); }} className="flex-1 h-10 rounded-xl bg-rose-600 text-white text-xs font-semibold">Supprimer</button></div>
+            <div className="flex flex-col items-center text-center">
+              <AlertTriangle className="w-8 h-8 text-rose-600 mb-2" />
+              <h3 className="font-bold text-lg text-slate-900">Supprimer la zone ?</h3>
+            </div>
+            <p className="text-sm text-center text-slate-600">
+              Confirmez-vous la suppression de <b>{toDelete.libelle}</b> ? Les liaisons avec cette
+              zone pourraient être rompues.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setToDelete(null)}
+                className="flex-1 h-10 rounded-xl bg-slate-100 text-slate-700 text-xs font-medium"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteZone(toDelete.id_zone);
+                  setToDelete(null);
+                }}
+                className="flex-1 h-10 rounded-xl bg-rose-600 text-white text-xs font-semibold"
+              >
+                Supprimer
+              </button>
+            </div>
           </div>
         </div>
       )}

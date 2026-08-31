@@ -10,7 +10,9 @@ export default function DiagnosticView(props) {
       setDesigTypeFilter={props.setDesigTypeFilter || props.setDiagTypeFilter}
       onAddDesignation={props.onAddDesignation || props.onAddDiagnostic}
       onOpenAddTypeModal={props.onOpenAddTypeModal}
-      onNavigateToStockFilteredByRef={props.onNavigateToStockFilteredByRef || props.onNavigateToStockFilteredByDiag}
+      onNavigateToStockFilteredByRef={
+        props.onNavigateToStockFilteredByRef || props.onNavigateToStockFilteredByDiag
+      }
     />
   );
 }

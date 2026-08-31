@@ -3,7 +3,7 @@ import { ChevronDown, Check, Search, X, Plus } from 'lucide-react';
 
 /**
  * CustomSelect - Reusable styled dropdown component for CIOB GMAO Light
- * 
+ *
  * Supports:
  * - Flat options: [{ value, label, sublabel, icon, badge, badgeColor, disabled }]
  * - Grouped options: [{ group: 'Group Name', options: [...] }] or options with `group` property
@@ -30,12 +30,12 @@ export default function CustomSelect({
   align = 'left', // 'left' | 'right'
   onAddNew = null, // Function to trigger when clicking "+ Ajouter / Créer"
   addNewLabel = '+ Nouveau / Ajouter', // Label for the create button
-  addNewIcon: AddNewIcon = Plus
+  addNewIcon: AddNewIcon = Plus,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  
+
   const containerRef = useRef(null);
   const triggerRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -44,7 +44,7 @@ export default function CustomSelect({
   // Normalize options into a uniform flat list with group metadata
   const normalizedOptions = useMemo(() => {
     const result = [];
-    
+
     // Check if options is an array of groups: [{ group: 'Title', options: [...] }]
     if (options.length > 0 && options[0]?.group && Array.isArray(options[0]?.options)) {
       options.forEach((grp) => {
@@ -53,14 +53,30 @@ export default function CustomSelect({
             result.push({
               ...opt,
               group: grp.group,
-              value: opt.value !== undefined ? opt.value : (opt.id || opt.id_zone || opt.id_type || opt.id_machine_registered || opt.id_technician || opt.id_operation || opt.nom || opt.ref || opt.libelle),
-              label: opt.label || opt.designation || opt.nom || opt.libelle || (opt.ref ? `[${opt.ref}] ${opt.designation || ''}` : String(opt.value || ''))
+              value:
+                opt.value !== undefined
+                  ? opt.value
+                  : opt.id ||
+                    opt.id_zone ||
+                    opt.id_type ||
+                    opt.id_machine_registered ||
+                    opt.id_technician ||
+                    opt.id_operation ||
+                    opt.nom ||
+                    opt.ref ||
+                    opt.libelle,
+              label:
+                opt.label ||
+                opt.designation ||
+                opt.nom ||
+                opt.libelle ||
+                (opt.ref ? `[${opt.ref}] ${opt.designation || ''}` : String(opt.value || '')),
             });
           } else {
             result.push({
               value: opt,
               label: String(opt),
-              group: grp.group
+              group: grp.group,
             });
           }
         });
@@ -73,13 +89,29 @@ export default function CustomSelect({
       if (typeof opt === 'object' && opt !== null) {
         result.push({
           ...opt,
-          value: opt.value !== undefined ? opt.value : (opt.id || opt.id_zone || opt.id_type || opt.id_machine_registered || opt.id_technician || opt.id_operation || opt.nom || opt.ref || opt.libelle),
-          label: opt.label || opt.designation || opt.nom || opt.libelle || (opt.ref ? `[${opt.ref}] ${opt.designation || ''}` : String(opt.value || ''))
+          value:
+            opt.value !== undefined
+              ? opt.value
+              : opt.id ||
+                opt.id_zone ||
+                opt.id_type ||
+                opt.id_machine_registered ||
+                opt.id_technician ||
+                opt.id_operation ||
+                opt.nom ||
+                opt.ref ||
+                opt.libelle,
+          label:
+            opt.label ||
+            opt.designation ||
+            opt.nom ||
+            opt.libelle ||
+            (opt.ref ? `[${opt.ref}] ${opt.designation || ''}` : String(opt.value || '')),
         });
       } else {
         result.push({
           value: opt,
-          label: String(opt)
+          label: String(opt),
         });
       }
     });
@@ -88,17 +120,26 @@ export default function CustomSelect({
   }, [options]);
 
   // Determine if search should be enabled
-  const shouldEnableSearch = searchable !== undefined ? searchable : (normalizedOptions.length > 5 || Boolean(onAddNew));
+  const shouldEnableSearch =
+    searchable !== undefined ? searchable : normalizedOptions.length > 5 || Boolean(onAddNew);
 
   // Filter options by search query
   const filteredOptions = useMemo(() => {
     if (!searchQuery.trim()) return normalizedOptions;
     const q = searchQuery.toLowerCase().trim();
     return normalizedOptions.filter((opt) => {
-      const matchLabel = String(opt.label || '').toLowerCase().includes(q);
-      const matchValue = String(opt.value || '').toLowerCase().includes(q);
-      const matchSublabel = String(opt.sublabel || '').toLowerCase().includes(q);
-      const matchGroup = String(opt.group || '').toLowerCase().includes(q);
+      const matchLabel = String(opt.label || '')
+        .toLowerCase()
+        .includes(q);
+      const matchValue = String(opt.value || '')
+        .toLowerCase()
+        .includes(q);
+      const matchSublabel = String(opt.sublabel || '')
+        .toLowerCase()
+        .includes(q);
+      const matchGroup = String(opt.group || '')
+        .toLowerCase()
+        .includes(q);
       return matchLabel || matchValue || matchSublabel || matchGroup;
     });
   }, [normalizedOptions, searchQuery]);
@@ -157,15 +198,11 @@ export default function CustomSelect({
         break;
       case 'ArrowDown':
         e.preventDefault();
-        setHighlightedIndex((prev) => 
-          prev < filteredOptions.length - 1 ? prev + 1 : 0
-        );
+        setHighlightedIndex((prev) => (prev < filteredOptions.length - 1 ? prev + 1 : 0));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setHighlightedIndex((prev) => 
-          prev > 0 ? prev - 1 : filteredOptions.length - 1
-        );
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : filteredOptions.length - 1));
         break;
       case 'Enter':
         e.preventDefault();
@@ -214,14 +251,7 @@ export default function CustomSelect({
       id={id}
     >
       {/* Hidden native input for form compatibility */}
-      {name && (
-        <input
-          type="hidden"
-          name={name}
-          value={value ?? ''}
-          required={required}
-        />
-      )}
+      {name && <input type="hidden" name={name} value={value ?? ''} required={required} />}
 
       {/* Trigger Button */}
       <button
@@ -237,21 +267,15 @@ export default function CustomSelect({
           disabled
             ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
             : isOpen
-            ? 'bg-white border-indigo-400 ring-2 ring-indigo-500/10 shadow-xs text-slate-900'
-            : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200 hover:border-slate-300 text-slate-800'
+              ? 'bg-white border-indigo-400 ring-2 ring-indigo-500/10 shadow-xs text-slate-900'
+              : 'bg-slate-50 hover:bg-slate-100/80 border-slate-200 hover:border-slate-300 text-slate-800'
         }`}
       >
         <div className="flex items-center gap-2 truncate text-left flex-1 min-w-0">
-          {PrefixIcon && (
-            <PrefixIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          )}
-          {selectedOption?.icon && (
-            <span className="shrink-0">{selectedOption.icon}</span>
-          )}
+          {PrefixIcon && <PrefixIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+          {selectedOption?.icon && <span className="shrink-0">{selectedOption.icon}</span>}
           {selectedOption ? (
-            <span className="truncate text-slate-900 font-semibold">
-              {selectedOption.label}
-            </span>
+            <span className="truncate text-slate-900 font-semibold">{selectedOption.label}</span>
           ) : (
             <span className="text-slate-400 truncate">{placeholder}</span>
           )}
@@ -328,11 +352,7 @@ export default function CustomSelect({
           </div>
 
           {/* Options List */}
-          <div
-            ref={listRef}
-            className="max-h-56 overflow-y-auto p-1 space-y-0.5"
-            role="listbox"
-          >
+          <div ref={listRef} className="max-h-56 overflow-y-auto p-1 space-y-0.5" role="listbox">
             {filteredOptions.length === 0 ? (
               <div className="py-4 px-3 text-center text-xs text-slate-400">
                 <div>Aucun résultat trouvé pour "{searchQuery}"</div>
@@ -371,8 +391,8 @@ export default function CustomSelect({
                           opt.disabled
                             ? 'opacity-40 cursor-not-allowed text-slate-400'
                             : isSelected
-                            ? 'bg-indigo-50 text-indigo-950 font-bold'
-                            : 'hover:bg-slate-100/80 text-slate-700 font-medium'
+                              ? 'bg-indigo-50 text-indigo-950 font-bold'
+                              : 'hover:bg-slate-100/80 text-slate-700 font-medium'
                         }`}
                         role="option"
                         aria-selected={isSelected}
@@ -399,9 +419,7 @@ export default function CustomSelect({
                               {opt.badge}
                             </span>
                           )}
-                          {isSelected && (
-                            <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                          )}
+                          {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
                         </div>
                       </button>
                     );
@@ -415,4 +433,3 @@ export default function CustomSelect({
     </div>
   );
 }
-

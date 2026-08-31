@@ -7,7 +7,7 @@ export default function AddArticleModal({
   onClose,
   types,
   onAddArticle,
-  onOpenAddTypeModal
+  onOpenAddTypeModal,
 }) {
   const [form, setForm] = useState({
     ref: '',
@@ -15,7 +15,7 @@ export default function AddArticleModal({
     id_type: types[0]?.id_type || '',
     stockInitial: 0,
     seuil: 5,
-    emplacement: 'R1-B01'
+    emplacement: 'R1-B01',
   });
 
   if (!isOpen) return null;
@@ -31,7 +31,7 @@ export default function AddArticleModal({
       id_type: form.id_type,
       stockInitial: Number(form.stockInitial) || 0,
       seuil: Number(form.seuil) || 0,
-      emplacement: form.emplacement.trim() || 'ATELIER'
+      emplacement: form.emplacement.trim() || 'ATELIER',
     });
 
     onClose();
@@ -110,7 +110,7 @@ export default function AddArticleModal({
                 onChange={(val) => setForm({ ...form, id_type: val })}
                 options={types.map((t) => ({
                   value: t.id_type,
-                  label: `${t.libelle} (${t.id_type})`
+                  label: `${t.libelle} (${t.id_type})`,
                 }))}
                 placeholder="-- Sélectionner un Type --"
               />

@@ -18,7 +18,7 @@ import {
   ClipboardList,
   Wrench,
   ArrowDown,
-  ArrowUp
+  ArrowUp,
 } from 'lucide-react';
 
 export default function UtilisateursView({
@@ -32,7 +32,7 @@ export default function UtilisateursView({
   onAddOperation,
   onUpdateOperation,
   onDeleteOperation,
-  onOpenAddZoneModal
+  onOpenAddZoneModal,
 }) {
   const [localSearch, setLocalSearch] = useState('');
   const [search, setSearch] = useState('');
@@ -104,13 +104,13 @@ export default function UtilisateursView({
     type: 'TECHNICIEN', // TECHNICIEN, OPERATEUR, CHEF
     nom: '',
     id_zone: zones[0]?.id_zone || '',
-    specialite: '' // used for Technicien
+    specialite: '', // used for Technicien
   });
 
   // Calculate combined users list
   const combinedUsers = useMemo(() => {
     const list = [];
-    
+
     // Add technicians
     technicians.forEach((t) => {
       list.push({
@@ -118,7 +118,7 @@ export default function UtilisateursView({
         nom: t.nom,
         id_zone: t.id_zone,
         type: 'TECHNICIEN',
-        specialite: t.specialite || 'Spécialité Maintenance'
+        specialite: t.specialite || 'Spécialité Maintenance',
       });
     });
 
@@ -129,7 +129,10 @@ export default function UtilisateursView({
         nom: o.nom,
         id_zone: o.id_zone,
         type: o.type_profil === 'CHEF' ? 'CHEF' : 'OPERATEUR',
-        specialite: o.type_profil === 'CHEF' ? 'Superviseur / Responsable d\'Atelier' : 'Opérateur Ligne de Production'
+        specialite:
+          o.type_profil === 'CHEF'
+            ? "Superviseur / Responsable d'Atelier"
+            : 'Opérateur Ligne de Production',
       });
     });
 
@@ -177,7 +180,8 @@ export default function UtilisateursView({
   const totalPages = pageSize === 0 ? 1 : Math.ceil(totalItems / pageSize);
   const effectivePageSize = pageSize === 0 ? totalItems : pageSize;
   const startIndex = (currentPage - 1) * effectivePageSize;
-  const displayedData = pageSize === 0 ? sortedData : sortedData.slice(startIndex, startIndex + effectivePageSize);
+  const displayedData =
+    pageSize === 0 ? sortedData : sortedData.slice(startIndex, startIndex + effectivePageSize);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -201,14 +205,14 @@ export default function UtilisateursView({
           id_technician: userToEdit.id,
           nom: form.nom,
           id_zone: form.id_zone,
-          specialite: form.specialite
+          specialite: form.specialite,
         });
       } else {
         onUpdateOperation(userToEdit.id, {
           id_operation: userToEdit.id,
           nom: form.nom,
           id_zone: form.id_zone,
-          type_profil: form.type === 'CHEF' ? 'CHEF' : 'OPERATEUR'
+          type_profil: form.type === 'CHEF' ? 'CHEF' : 'OPERATEUR',
         });
       }
       setUserToEdit(null);
@@ -220,14 +224,14 @@ export default function UtilisateursView({
           id_technician: nextId,
           nom: form.nom,
           id_zone: form.id_zone,
-          specialite: form.specialite || 'Spécialité Maintenance'
+          specialite: form.specialite || 'Spécialité Maintenance',
         });
       } else {
         onAddOperation({
           id_operation: nextId,
           nom: form.nom,
           id_zone: form.id_zone,
-          type_profil: form.type === 'CHEF' ? 'CHEF' : 'OPERATEUR'
+          type_profil: form.type === 'CHEF' ? 'CHEF' : 'OPERATEUR',
         });
       }
       setShowAddModal(false);
@@ -238,7 +242,7 @@ export default function UtilisateursView({
       type: 'TECHNICIEN',
       nom: '',
       id_zone: zones[0]?.id_zone || '',
-      specialite: ''
+      specialite: '',
     });
   };
 
@@ -256,7 +260,9 @@ export default function UtilisateursView({
 
   const renderSortIcon = (field) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition shrink-0" />;
+      return (
+        <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition shrink-0" />
+      );
     }
     return sortOrder === 'asc' ? (
       <ArrowUp className="w-3 h-3 text-indigo-700 shrink-0 font-bold" />
@@ -276,7 +282,8 @@ export default function UtilisateursView({
               Registre des Utilisateurs & Membres
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Gérez les techniciens de maintenance, les opérateurs de ligne et les chefs d'équipe dans un répertoire unifié.
+              Gérez les techniciens de maintenance, les opérateurs de ligne et les chefs d'équipe
+              dans un répertoire unifié.
             </p>
           </div>
 
@@ -286,7 +293,7 @@ export default function UtilisateursView({
                 type: 'TECHNICIEN',
                 nom: '',
                 id_zone: zones[0]?.id_zone || '',
-                specialite: ''
+                specialite: '',
               });
               setUserToEdit(null);
               setShowAddModal(true);
@@ -303,8 +310,12 @@ export default function UtilisateursView({
           {/* Card 1: Total Membres */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Membres</span>
-              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">{combinedUsers.length}</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                Total Membres
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">
+                {combinedUsers.length}
+              </span>
               <span className="text-[10px] text-slate-400 mt-0.5 block">Membres enregistrés</span>
             </div>
             <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
@@ -315,8 +326,12 @@ export default function UtilisateursView({
           {/* Card 2: Techniciens */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Techniciens (TECH)</span>
-              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">{technicians.length}</span>
+              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">
+                Techniciens (TECH)
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">
+                {technicians.length}
+              </span>
               <span className="text-[10px] text-blue-500 mt-0.5 block">Maintenance & SAV</span>
             </div>
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -327,8 +342,12 @@ export default function UtilisateursView({
           {/* Card 3: Opérateurs */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">Opérateurs (OP)</span>
-              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">{operations.filter(o => o.type_profil === 'OPERATEUR').length}</span>
+              <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">
+                Opérateurs (OP)
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">
+                {operations.filter((o) => o.type_profil === 'OPERATEUR').length}
+              </span>
               <span className="text-[10px] text-indigo-500 mt-0.5 block">Ligne de Production</span>
             </div>
             <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
@@ -339,8 +358,12 @@ export default function UtilisateursView({
           {/* Card 4: Chefs d'équipe */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Chefs d'équipe (CHEF)</span>
-              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">{operations.filter(o => o.type_profil === 'CHEF').length}</span>
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">
+                Chefs d'équipe (CHEF)
+              </span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">
+                {operations.filter((o) => o.type_profil === 'CHEF').length}
+              </span>
               <span className="text-[10px] text-emerald-500 mt-0.5 block">Superviseurs Ligne</span>
             </div>
             <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
@@ -354,12 +377,15 @@ export default function UtilisateursView({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Filtres & Tri de Données</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                Filtres & Tri de Données
+              </span>
             </div>
             {/* Displaying the filtered count */}
             <div className="text-xs font-semibold text-slate-500">
               <span className="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg font-bold border border-indigo-100">
-                {filtered.length} membre{filtered.length > 1 ? 's' : ''} trouvé{filtered.length > 1 ? 's' : ''}
+                {filtered.length} membre{filtered.length > 1 ? 's' : ''} trouvé
+                {filtered.length > 1 ? 's' : ''}
               </span>
             </div>
           </div>
@@ -390,7 +416,7 @@ export default function UtilisateursView({
                   { value: 'ALL', label: 'Tous les Profils (D)' },
                   { value: 'TECHNICIEN', label: '[D] Technicien' },
                   { value: 'OPERATEUR', label: '[D] Opérateur' },
-                  { value: 'CHEF', label: '[D] Chef d\'équipe / Responsable' }
+                  { value: 'CHEF', label: "[D] Chef d'équipe / Responsable" },
                 ]}
                 value={profileFilter}
                 onChange={setProfileFilter}
@@ -403,7 +429,10 @@ export default function UtilisateursView({
                 label="Zone d'Affectation (Col E)"
                 options={[
                   { value: 'ALL', label: 'Toutes les Zones (E)' },
-                  ...zones.map(z => ({ value: z.id_zone, label: `[E] ${z.libelle} (${z.id_zone})` }))
+                  ...zones.map((z) => ({
+                    value: z.id_zone,
+                    label: `[E] ${z.libelle} (${z.id_zone})`,
+                  })),
                 ]}
                 value={zoneFilter}
                 onChange={setZoneFilter}
@@ -419,13 +448,20 @@ export default function UtilisateursView({
                 onClick={() => setShowSortMenu(!showSortMenu)}
                 className={`w-full h-10 px-3 rounded-xl border text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                   showSortMenu || sortField !== 'nom' || sortOrder !== 'asc'
-                    ? 'bg-indigo-50 text-indigo-800 border-indigo-300 ring-1 ring-indigo-200 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
+                    ? 'bg-indigo-50 text-indigo-800 border-indigo-300 ring-1 ring-indigo-200 shadow-2xs'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
               >
                 <div className="flex items-center gap-2">
                   <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> ({sortOrder === 'asc' ? 'A→Z' : 'Z→A'})</span>
+                  <span>
+                    Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> (
+                    {sortOrder === 'asc' ? 'A→Z' : 'Z→A'})
+                  </span>
                 </div>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSortMenu ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSortMenu ? 'rotate-180' : ''}`}
+                />
               </button>
 
               {showSortMenu && (
@@ -437,7 +473,6 @@ export default function UtilisateursView({
                     </span>
                   </div>
                   <div className="grid grid-cols-1 gap-1 text-xs">
-                    
                     <button
                       onClick={() => {
                         if (sortField === 'id') {
@@ -454,11 +489,14 @@ export default function UtilisateursView({
                       }`}
                     >
                       <span>Identifiant (B)</span>
-                      {sortField === 'id' && (
-                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
-                      )}
+                      {sortField === 'id' &&
+                        (sortOrder === 'asc' ? (
+                          <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+                        ) : (
+                          <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                        ))}
                     </button>
-                    
+
                     <button
                       onClick={() => {
                         if (sortField === 'nom') {
@@ -475,11 +513,14 @@ export default function UtilisateursView({
                       }`}
                     >
                       <span>Nom Complet (C)</span>
-                      {sortField === 'nom' && (
-                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
-                      )}
+                      {sortField === 'nom' &&
+                        (sortOrder === 'asc' ? (
+                          <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+                        ) : (
+                          <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                        ))}
                     </button>
-                    
+
                     <button
                       onClick={() => {
                         if (sortField === 'type') {
@@ -496,9 +537,12 @@ export default function UtilisateursView({
                       }`}
                     >
                       <span>Profil & Rôle (D)</span>
-                      {sortField === 'type' && (
-                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
-                      )}
+                      {sortField === 'type' &&
+                        (sortOrder === 'asc' ? (
+                          <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+                        ) : (
+                          <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                        ))}
                     </button>
 
                     <button
@@ -517,11 +561,13 @@ export default function UtilisateursView({
                       }`}
                     >
                       <span>Zone d'Affectation (E)</span>
-                      {sortField === 'id_zone' && (
-                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
-                      )}
+                      {sortField === 'id_zone' &&
+                        (sortOrder === 'asc' ? (
+                          <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+                        ) : (
+                          <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                        ))}
                     </button>
-
                   </div>
                 </div>
               )}
@@ -554,7 +600,8 @@ export default function UtilisateursView({
                     title="Cliquer pour trier par Identifiant"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>IDENTIFIANT</span> <span className="text-slate-400 font-normal text-[10px] font-mono">(B)</span>
+                      <span>IDENTIFIANT</span>{' '}
+                      <span className="text-slate-400 font-normal text-[10px] font-mono">(B)</span>
                       {renderSortIcon('id')}
                     </div>
                   </th>
@@ -564,7 +611,8 @@ export default function UtilisateursView({
                     title="Cliquer pour trier par Nom Complet"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>NOM COMPLET</span> <span className="text-slate-400 font-normal text-[10px] font-mono">(C)</span>
+                      <span>NOM COMPLET</span>{' '}
+                      <span className="text-slate-400 font-normal text-[10px] font-mono">(C)</span>
                       {renderSortIcon('nom')}
                     </div>
                   </th>
@@ -574,7 +622,8 @@ export default function UtilisateursView({
                     title="Cliquer pour trier par Profil"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>PROFIL & RÔLE</span> <span className="text-slate-400 font-normal text-[10px] font-mono">(D)</span>
+                      <span>PROFIL & RÔLE</span>{' '}
+                      <span className="text-slate-400 font-normal text-[10px] font-mono">(D)</span>
                       {renderSortIcon('type')}
                     </div>
                   </th>
@@ -584,12 +633,14 @@ export default function UtilisateursView({
                     title="Cliquer pour trier par Zone d'Affectation"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>ZONE D'AFFECTATION</span> <span className="text-slate-400 font-normal text-[10px] font-mono">(E)</span>
+                      <span>ZONE D'AFFECTATION</span>{' '}
+                      <span className="text-slate-400 font-normal text-[10px] font-mono">(E)</span>
                       {renderSortIcon('id_zone')}
                     </div>
                   </th>
                   <th className="py-2.5 px-4 text-slate-500 font-bold">
-                    <span>SPÉCIALITÉ / DESCRIPTION</span> <span className="text-slate-400 font-normal text-[10px] font-mono">(F)</span>
+                    <span>SPÉCIALITÉ / DESCRIPTION</span>{' '}
+                    <span className="text-slate-400 font-normal text-[10px] font-mono">(F)</span>
                   </th>
                   <th className="py-2.5 px-4 text-right pr-4 text-slate-500 font-bold">ACTIONS</th>
                 </tr>
@@ -603,7 +654,7 @@ export default function UtilisateursView({
                   </tr>
                 ) : (
                   displayedData.map((user, idx) => {
-                    const zoneObj = zones.find(z => z.id_zone === user.id_zone);
+                    const zoneObj = zones.find((z) => z.id_zone === user.id_zone);
                     let badgeColor = 'bg-blue-50 text-blue-800 border-blue-200';
                     let profileName = 'Technicien';
                     if (user.type === 'OPERATEUR') {
@@ -611,11 +662,14 @@ export default function UtilisateursView({
                       profileName = 'Opérateur Ligne';
                     } else if (user.type === 'CHEF') {
                       badgeColor = 'bg-emerald-50 text-emerald-800 border-emerald-200';
-                      profileName = 'Chef d\'Équipe';
+                      profileName = "Chef d'Équipe";
                     }
 
                     return (
-                      <tr key={user.id} className="even:bg-slate-50/80 odd:bg-white hover:bg-slate-100/70 border-b border-slate-200/70 transition-colors">
+                      <tr
+                        key={user.id}
+                        className="even:bg-slate-50/80 odd:bg-white hover:bg-slate-100/70 border-b border-slate-200/70 transition-colors"
+                      >
                         {/* Row N° Column */}
                         <td className="py-3 px-3 text-center font-mono text-[11px] font-bold text-slate-400 bg-slate-100/40 border-r border-slate-200/80 shrink-0">
                           {idx + 1 + startIndex}
@@ -629,17 +683,24 @@ export default function UtilisateursView({
                           {user.nom}
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`text-[11px] font-bold border px-2.5 py-0.5 rounded-full ${badgeColor}`}>
+                          <span
+                            className={`text-[11px] font-bold border px-2.5 py-0.5 rounded-full ${badgeColor}`}
+                          >
                             {profileName}
                           </span>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-1.5">
                             <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span className="font-medium text-slate-700">{zoneObj ? zoneObj.libelle : user.id_zone}</span>
+                            <span className="font-medium text-slate-700">
+                              {zoneObj ? zoneObj.libelle : user.id_zone}
+                            </span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-slate-500 italic max-w-xs truncate" title={user.specialite}>
+                        <td
+                          className="py-3 px-4 text-slate-500 italic max-w-xs truncate"
+                          title={user.specialite}
+                        >
                           {user.specialite}
                         </td>
                         <td className="py-3 px-4 text-right pr-4">
@@ -651,7 +712,12 @@ export default function UtilisateursView({
                                   type: user.type,
                                   nom: user.nom,
                                   id_zone: user.id_zone,
-                                  specialite: user.specialite === 'Spécialité Maintenance' || user.specialite.includes('Opérateur') || user.specialite.includes('Superviseur') ? '' : user.specialite
+                                  specialite:
+                                    user.specialite === 'Spécialité Maintenance' ||
+                                    user.specialite.includes('Opérateur') ||
+                                    user.specialite.includes('Superviseur')
+                                      ? ''
+                                      : user.specialite,
                                 });
                                 setShowAddModal(true);
                               }}
@@ -704,7 +770,11 @@ export default function UtilisateursView({
 
           <div className="flex items-center gap-4">
             <div className="text-xs font-semibold text-slate-500">
-              Affichage <b className="text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</b> à <b className="text-slate-900">{Math.min(startIndex + displayedData.length, totalItems)}</b> sur <b className="text-slate-900">{totalItems}</b>
+              Affichage <b className="text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</b> à{' '}
+              <b className="text-slate-900">
+                {Math.min(startIndex + displayedData.length, totalItems)}
+              </b>{' '}
+              sur <b className="text-slate-900">{totalItems}</b>
             </div>
             {pageSize !== 0 && totalPages > 1 && (
               <div className="flex items-center gap-1.5">
@@ -739,7 +809,9 @@ export default function UtilisateursView({
               <div className="bg-slate-50 border-b border-slate-100 px-5 py-4 flex items-center justify-between">
                 <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
                   <Users className="w-4 h-4 text-indigo-600" />
-                  {userToEdit ? 'Modifier la Fiche Utilisateur' : 'Enregistrer un nouvel Utilisateur'}
+                  {userToEdit
+                    ? 'Modifier la Fiche Utilisateur'
+                    : 'Enregistrer un nouvel Utilisateur'}
                 </h3>
               </div>
 
@@ -753,7 +825,7 @@ export default function UtilisateursView({
                     {[
                       { key: 'TECHNICIEN', label: 'Technicien' },
                       { key: 'OPERATEUR', label: 'Opérateur' },
-                      { key: 'CHEF', label: 'Chef d\'équipe' }
+                      { key: 'CHEF', label: "Chef d'équipe" },
                     ].map((item) => (
                       <button
                         key={item.key}
@@ -856,7 +928,7 @@ export default function UtilisateursView({
                     type="submit"
                     className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition cursor-pointer shadow-xs"
                   >
-                    {userToEdit ? 'Sauvegarder' : 'Créer l\'utilisateur'}
+                    {userToEdit ? 'Sauvegarder' : "Créer l'utilisateur"}
                   </button>
                 </div>
               </form>
@@ -874,7 +946,8 @@ export default function UtilisateursView({
               <div className="text-center">
                 <h4 className="text-sm font-black text-slate-900">Supprimer l'Utilisateur ?</h4>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                  Confirmez-vous la suppression de <b>{userToDelete.nom}</b> ? Cette opération supprimera définitivement sa fiche.
+                  Confirmez-vous la suppression de <b>{userToDelete.nom}</b> ? Cette opération
+                  supprimera définitivement sa fiche.
                 </p>
               </div>
               <div className="flex items-center gap-2">

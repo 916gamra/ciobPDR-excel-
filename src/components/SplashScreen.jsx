@@ -1,9 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { FileSpreadsheet, ShieldCheck, Database, ArrowRight, Table, CheckCircle2, RefreshCw } from 'lucide-react';
+import {
+  FileSpreadsheet,
+  ShieldCheck,
+  Database,
+  ArrowRight,
+  Table,
+  CheckCircle2,
+  RefreshCw,
+} from 'lucide-react';
 
 export default function SplashScreen({ onComplete }) {
   const [progress, setProgress] = useState(15);
-  const [statusText, setStatusText] = useState('Ouverture du classeur Excel GMAO_Light_Template_V2_Formules.xlsx...');
+  const [statusText, setStatusText] = useState(
+    'Ouverture du classeur Excel GMAO_Light_Template_V2_Formules.xlsx...'
+  );
   const [activeStepIndex, setActiveStepIndex] = useState(0);
 
   useEffect(() => {
@@ -11,7 +21,7 @@ export default function SplashScreen({ onComplete }) {
       { p: 25, text: 'Chargement des feuilles : Stock_Actuel, Mouvements, Machines...' },
       { p: 55, text: 'Exécution des formules Excel SUMIFS (Entrées, Sorties, Stock Actuel)...' },
       { p: 85, text: 'Calcul des alertes de stock (OK, ALERTE, RUPTURE)...' },
-      { p: 100, text: 'Feuille de calcul et données prêtes.' }
+      { p: 100, text: 'Feuille de calcul et données prêtes.' },
     ];
 
     let current = 0;
@@ -89,7 +99,9 @@ export default function SplashScreen({ onComplete }) {
                 <Table className="w-3.5 h-3.5 text-emerald-700" />
                 <span>Feuille : Stock_Actuel</span>
               </span>
-              <span className="text-[9.5px] text-emerald-700 font-sans font-semibold">Formules `=E+F-G`</span>
+              <span className="text-[9.5px] text-emerald-700 font-sans font-semibold">
+                Formules `=E+F-G`
+              </span>
             </div>
 
             <div className="divide-y divide-slate-200/60 p-1">
