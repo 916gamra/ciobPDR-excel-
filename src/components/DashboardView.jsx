@@ -17,7 +17,7 @@ import {
 export default function DashboardView({
   stockItems,
   machines,
-  mouvements,
+  mouvements = [],
   types,
   diagnostics,
   zones,
@@ -26,10 +26,19 @@ export default function DashboardView({
   onNavigateToStock,
   onNavigateToMachines,
   onNavigateToSortie,
-  onQuickSortie
+  onQuickSortie,
+  onUpdateMouvement
 }) {
   const alertAndRuptureItems = stockItems.filter(
     (s) => s.alerte === 'RUPTURE' || s.alerte === 'ALERTE'
+  );
+
+  // Filter pending orders (Commandes en attente)
+  const pendingOrders = mouvements.filter(
+    (m) =>
+      m.type === 'COMMANDE' ||
+      m.action_id === 'COMMANDE' ||
+      (Array.isArray(m.tags) && m.tags.includes('#COMMANDE_EN_ATTENTE'))
   );
 
   return (
@@ -159,6 +168,98 @@ export default function DashboardView({
             !
           </div>
         </div>
+      </div>
+
+      {/* Pending Orders Widget (Commandes en attente) */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-4 rounded-2xl border border-amber-200 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-xs">
+              📋
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-amber-950 flex items-center gap-2">
+                <span>Commandes & Approvisionnements en Attente</span>
+                <span className="px-2 py-0.5 bg-amber-200/80 text-amber-900 rounded-full text-xs font-mono font-extrabold">
+                  {pendingOrders.length}
+                </span>
+              </h3>
+              <p className="text-[11px] text-amber-800">
+                Demandes d'achat en cours — Cliquez sur "Valider Réception" pour basculer en Entrée Externe et créditer le Stock Actuel.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onNavigateToSortie}
+            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1 shrink-0 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Nouveau Mouvement / Commande</span>
+          </button>
+        </div>
+
+        {pendingOrders.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+            {pendingOrders.map((cmd) => {
+              const art = stockItems.find((s) => s.ref === cmd.ref);
+              return (
+                <div
+                  key={cmd.id}
+                  className="bg-white p-3.5 rounded-xl border border-amber-200/90 shadow-xs space-y-2.5 relative hover:border-amber-400 transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-extrabold text-xs text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                      {cmd.ref}
+                    </span>
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200/60">
+                      {cmd.code_bon || 'CMD'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <div className="font-semibold text-xs text-slate-900 truncate">
+                      {art ? art.designation : cmd.designation || 'Article sur commande'}
+                    </div>
+                    <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center justify-between">
+                      <span>Quantité : <b className="text-slate-900">{cmd.quantite} pcs</b></span>
+                      <span>{cmd.date}</span>
+                    </div>
+                  </div>
+
+                  {(cmd.technicien || cmd.id_zone || cmd.id_machine_registered) && (
+                    <div className="text-[10.5px] text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 font-mono space-y-0.5">
+                      {cmd.technicien && <div>Demandeur : <b>{cmd.technicien}</b></div>}
+                      {(cmd.id_zone || cmd.id_machine_registered) && (
+                        <div>Affectation : <b>{cmd.id_zone || ''} {cmd.id_machine_registered ? `(${cmd.id_machine_registered})` : ''}</b></div>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      if (onUpdateMouvement) {
+                        onUpdateMouvement(cmd.id, {
+                          type: 'Entrée Externe',
+                          action_id: 'REAPPRO',
+                          date: new Date().toISOString().split('T')[0],
+                          tags: ['#RECEPTION_VALIDE', '#ENTREE_EXTERNE']
+                        });
+                      }
+                    }}
+                    className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+                  >
+                    <span>📥 Valider Réception (Entrée Externe)</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-white/60 p-3 rounded-xl border border-amber-200/60 text-xs text-amber-800 text-center font-medium">
+            Aucune commande en attente. Pour initier une commande d'achat, créez un mouvement avec le type <b>"COMMANDE"</b>.
+          </div>
+        )}
       </div>
 
       {/* Main Watchlist & Recent Flux */}

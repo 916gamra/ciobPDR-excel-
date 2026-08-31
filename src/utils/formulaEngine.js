@@ -91,8 +91,9 @@ export function validateMovementWithContext(mvt, context) {
     errors.push('La quantité doit être un nombre strictement positif.');
   }
 
-  if (!mvt.type || !['Entrée', 'Sortie'].includes(mvt.type)) {
-    errors.push('Le type de mouvement doit être "Entrée" ou "Sortie".');
+  const validTypes = ['Entrée', 'Sortie', 'Sortie Interne', 'Entrée Interne', 'Sortie Externe', 'Entrée Externe', 'COMMANDE'];
+  if (!mvt.type || !validTypes.some(vt => mvt.type.toLowerCase().includes(vt.toLowerCase()))) {
+    errors.push('Le type de mouvement doit être "Sortie Interne", "Entrée Interne", "Sortie Externe", "Entrée Externe" ou "COMMANDE".');
   }
 
   if (!mvt.date || isNaN(Date.parse(mvt.date))) {
@@ -109,11 +110,12 @@ export function validateMovementWithContext(mvt, context) {
       errors.push(`La référence article "${mvt.ref}" n'existe pas dans le stock.`);
     }
 
-    // Check technician existence (if specified and not empty)
+    // Check technician/person existence (if specified and not empty)
     if (mvt.technicien && mvt.technicien.trim() !== '') {
       const techExists = technicians.some(t => String(t.nom).toLowerCase().trim() === String(mvt.technicien).toLowerCase().trim());
-      if (!techExists) {
-        errors.push(`Le technicien "${mvt.technicien}" n'est pas enregistré.`);
+      const opExists = operations.some(o => String(o.nom).toLowerCase().trim() === String(mvt.technicien).toLowerCase().trim());
+      if (!techExists && !opExists) {
+        errors.push(`Le technicien ou intervenant "${mvt.technicien}" n'est pas enregistré.`);
       }
     }
 
@@ -134,7 +136,7 @@ export function validateMovementWithContext(mvt, context) {
     }
 
     // Check stock availability for Sortie (withdrawing items)
-    if (mvt.type === 'Sortie' && article) {
+    if (String(mvt.type).toLowerCase().includes('sortie') && article) {
       // Calculate active stock for the article
       const currentStock = safeNum(article.stockActuel || article.stockInitial);
       if (qty > currentStock) {

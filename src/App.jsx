@@ -240,7 +240,7 @@ export default function App() {
       const t = String(m.type || m['Type (Entrée/Sortie)'] || '').toLowerCase();
       if (t.includes('entr')) {
         mvtSummary[r].entrees += q;
-      } else {
+      } else if (t.includes('sort')) {
         mvtSummary[r].sorties += q;
       }
     });
@@ -868,6 +868,7 @@ export default function App() {
               onNavigateToMachines={() => React.startTransition(() => setCurrentTab('machines'))}
               onNavigateToSortie={() => React.startTransition(() => setCurrentTab('sortie'))}
               onQuickSortie={handleQuickSortie}
+              onUpdateMouvement={handleUpdateMouvement}
             />
           )}
 

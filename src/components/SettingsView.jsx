@@ -219,10 +219,15 @@ export default function SettingsView({
       mouvements.forEach((m) => scanTexts([m.commentaire, m.demandeur, m.ref].join(' ')));
       rawStock.forEach((s) => scanTexts([s.emplacement, s.designation, s.ref].join(' ')));
 
+      return Object.entries(candidates)
+        .map(([code, count]) => ({ code, count }))
+        .sort((a, b) => b.count - a.count);
+
     } else if (auditTarget === 'zones') {
       const registeredZones = new Set([
         ...zones.map(z => String(z.id_zone || '').toLowerCase().trim()),
-        ...zones.map(z => String(z.libelle || '').toLowerCase().trim())
+        ...zones.map(z => String(z.libelle || '').toLowerCase().trim()),
+        ...zones.map(z => String(z.nom || '').toLowerCase().trim())
       ]);
 
       mouvements.forEach(m => {
@@ -234,34 +239,69 @@ export default function SettingsView({
         if (code && !registeredZones.has(code.toLowerCase())) candidates[code] = (candidates[code] || 0) + 1;
       });
 
+      return Object.entries(candidates)
+        .map(([code, count]) => ({ code, count }))
+        .sort((a, b) => b.count - a.count);
+
     } else if (auditTarget === 'utilisateurs') {
       const registeredNames = new Set([
         ...technicians.map(t => String(t.nom || '').toLowerCase().trim()),
         ...operations.map(o => String(o.nom || '').toLowerCase().trim())
       ]);
 
+      const userMap = {};
+
+      const addCandidate = (rawName, sourceField) => {
+        if (!rawName) return;
+        const name = rawName.trim();
+        if (!name) return;
+        if (registeredNames.has(name.toLowerCase())) return;
+        if (/^(OP-|CHEF-|TECH-)/i.test(name)) return;
+
+        if (!userMap[name]) {
+          userMap[name] = { count: 0, techCount: 0, opCount: 0, demandeurCount: 0, sources: new Set() };
+        }
+        userMap[name].count += 1;
+        userMap[name].sources.add(sourceField);
+        if (sourceField === 'Technicien') userMap[name].techCount += 1;
+        if (sourceField === 'Opération/Chef') userMap[name].opCount += 1;
+        if (sourceField === 'Demandeur') userMap[name].demandeurCount += 1;
+      };
+
       mouvements.forEach(m => {
-        const techName = String(m.technicien || '').trim();
-        if (techName && techName !== 'Rachid' && !registeredNames.has(techName.toLowerCase())) {
-          candidates[techName] = (candidates[techName] || 0) + 1;
-        }
-        const opName = String(m.operation || '').trim();
-        if (opName && !registeredNames.has(opName.toLowerCase()) && !/^(OP-|CHEF-)/i.test(opName)) {
-          candidates[opName] = (candidates[opName] || 0) + 1;
-        }
+        if (m.technicien) addCandidate(m.technicien, 'Technicien');
+        if (m.operation) addCandidate(m.operation, 'Opération/Chef');
+        if (m.demandeur) addCandidate(m.demandeur, 'Demandeur');
       });
 
       machines.forEach(m => {
-         const code = String(m.technician || '').trim();
-         if (code && !registeredNames.has(code.toLowerCase())) {
-           candidates[code] = (candidates[code] || 0) + 1;
-         }
+        if (m.technician) addCandidate(m.technician, 'Parc Machine');
       });
+
+      return Object.entries(userMap)
+        .map(([name, meta]) => {
+          let inferredRole = 'TECHNICIEN';
+          if (/\bchef\b/i.test(name) || /\bsuperviseur\b/i.test(name)) {
+            inferredRole = 'CHEF';
+          } else if (/\bop/i.test(name) || /\bopér/i.test(name) || meta.opCount > meta.techCount) {
+            inferredRole = 'OPERATEUR';
+          } else {
+            inferredRole = 'TECHNICIEN';
+          }
+
+          const sourceList = Array.from(meta.sources).join(', ');
+
+          return {
+            code: name,
+            count: meta.count,
+            inferredRole,
+            sourceList
+          };
+        })
+        .sort((a, b) => b.count - a.count);
     }
 
-    return Object.entries(candidates)
-      .map(([code, count]) => ({ code, count }))
-      .sort((a, b) => b.count - a.count);
+    return [];
   }, [auditTarget, mouvements, rawStock, machines, zones, technicians, operations]);
 
   const handleSaveAdminConfig = () => {
@@ -539,8 +579,85 @@ export default function SettingsView({
       }));
       setMachines((prev) => [...prev, ...newMachines]);
       showToast(`${newMachines.length} machines enregistrées avec succès.`, 'success');
+    } else if (auditTarget === 'utilisateurs') {
+      let regTech = 0;
+      let regChef = 0;
+      let regOp = 0;
+
+      let nextTechs = [...technicians];
+      let nextOps = [...operations];
+
+      discoveredItems.forEach((item) => {
+        const name = item.code;
+        const role = item.inferredRole || 'TECHNICIEN';
+
+        if (role === 'TECHNICIEN') {
+          const nums = nextTechs
+            .map((t) => {
+              const m = String(t.id_technician || '').match(/TECH-(\d+)/i);
+              return m ? parseInt(m[1], 10) : 0;
+            })
+            .filter((n) => !isNaN(n));
+          const max = nums.length > 0 ? Math.max(...nums) : 0;
+          const nextId = `TECH-${String(max + 1).padStart(2, '0')}`;
+
+          nextTechs.push({
+            id_technician: nextId,
+            nom: name,
+            specialite: 'GMAO & Maintenance',
+            contact: '',
+            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`
+          });
+          regTech++;
+        } else if (role === 'CHEF') {
+          const nums = nextOps
+            .filter((o) => o.type_profil === 'CHEF' || String(o.id_operation).startsWith('CHEF'))
+            .map((o) => {
+              const m = String(o.id_operation || '').match(/CHEF-(\d+)/i);
+              return m ? parseInt(m[1], 10) : 0;
+            })
+            .filter((n) => !isNaN(n));
+          const max = nums.length > 0 ? Math.max(...nums) : 0;
+          const nextId = `CHEF-${String(max + 1).padStart(2, '0')}`;
+
+          nextOps.push({
+            id_operation: nextId,
+            nom: name,
+            id_zone: zones[0]?.id_zone || 'ZONE-DET',
+            type_profil: 'CHEF',
+            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`
+          });
+          regChef++;
+        } else {
+          const nums = nextOps
+            .filter((o) => o.type_profil === 'OPERATEUR' || !String(o.id_operation).startsWith('CHEF'))
+            .map((o) => {
+              const m = String(o.id_operation || '').match(/OP-(\d+)/i);
+              return m ? parseInt(m[1], 10) : 0;
+            })
+            .filter((n) => !isNaN(n));
+          const max = nums.length > 0 ? Math.max(...nums) : 0;
+          const nextId = `OP-${String(max + 1).padStart(2, '0')}`;
+
+          nextOps.push({
+            id_operation: nextId,
+            nom: name,
+            id_zone: zones[0]?.id_zone || 'ZONE-DET',
+            type_profil: 'OPERATEUR',
+            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name)}`
+          });
+          regOp++;
+        }
+      });
+
+      setTechnicians(nextTechs);
+      setOperations(nextOps);
+      showToast(
+        `${discoveredItems.length} utilisateur(s) enregistrés automatiquement (${regTech} Techs, ${regChef} Chefs, ${regOp} Opérateurs) avec identifiants séquentiels uniques.`,
+        'success'
+      );
     } else {
-      showToast("Veuillez enregistrer les éléments manuellement un par un pour garantir l'exactitude des informations.", "info");
+      showToast("Veuillez enregistrer les zones manuellement pour attribuer leurs libellés.", "info");
     }
   };
 
@@ -588,6 +705,7 @@ export default function SettingsView({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2 w-full">
           {[
             { id: 'overview', label: 'Supervision', sub: 'Supervision Stockage', icon: HardDrive, color: 'text-cyan-600', activeBg: 'bg-cyan-50/70', activeBorder: 'border-cyan-500', activeText: 'text-cyan-950', activeIconBg: 'bg-cyan-100/80' },
+            { id: 'mvt-logic', label: 'Logique Mouvements', sub: 'Intern/Extern & Commande', icon: RotateCcw, color: 'text-blue-600', activeBg: 'bg-blue-50/70', activeBorder: 'border-blue-500', activeText: 'text-blue-950', activeIconBg: 'bg-blue-100/80' },
             { id: 'injection', label: 'Injection', sub: "Centre d'injection", icon: Sliders, color: 'text-emerald-600', activeBg: 'bg-emerald-50/70', activeBorder: 'border-emerald-500', activeText: 'text-emerald-950', activeIconBg: 'bg-emerald-100/80' },
             { id: 'directory', label: 'Reseau & Excel', sub: 'Twin Dossier Reseau', icon: FileSpreadsheet, color: 'text-indigo-600', activeBg: 'bg-indigo-50/70', activeBorder: 'border-indigo-500', activeText: 'text-indigo-950', activeIconBg: 'bg-indigo-100/80' },
             { id: 'matching', label: `Appairage (${discoveredItems.length})`, sub: 'Audit & Synchro', icon: ShieldAlert, color: 'text-amber-500', activeBg: 'bg-amber-50/70', activeBorder: 'border-amber-500', activeText: 'text-amber-950', activeIconBg: 'bg-amber-100/80' },
@@ -693,6 +811,113 @@ export default function SettingsView({
             </div>
           </div>
         }
+
+        {/* PANEL: LOGIQUE MOUVEMENTS (INTERN / EXTERN / COMMANDE) */}
+        {activeTab === 'mvt-logic' && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-100 pb-4">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <RotateCcw className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>Logique des Mouvements de Stock (Usine Real-World Engine)</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
+                Cartographie des flux d'usine : distinction nette entre flux Interne, Hors-site (Externe), et Commandes d'Achat en attente avec système intelligent de tags #INCONNU.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Card 1: Sortie Interne */}
+              <div className="p-4 rounded-2xl border border-rose-200 bg-rose-50/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-xs text-rose-900 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-600" />
+                    1. Sortie Interne
+                  </span>
+                  <span className="text-[10px] font-mono font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded">Stock ➔ Atelier</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Consommation directe de pièces pour la maintenance corrective, préventive ou amélioration d'une machine.
+                </p>
+                <div className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-rose-200/80 space-y-1">
+                  <div><b>Traçabilité :</b> N° Bon + Tech + Zone + Machine</div>
+                  <div><b>Impact Stock :</b> Déduction immédiate (<span className="text-rose-600 font-bold">-Qte</span>)</div>
+                </div>
+              </div>
+
+              {/* Card 2: Entrée Interne */}
+              <div className="p-4 rounded-2xl border border-cyan-200 bg-cyan-50/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-xs text-cyan-900 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-cyan-600" />
+                    2. Entrée Interne (Retour)
+                  </span>
+                  <span className="text-[10px] font-mono font-bold bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded">Atelier ➔ Stock</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Restitution de pièces non utilisées ou trouvées sur le terrain. Si aucun Bon n'est fourni, le système applique le Tag <b>#INCONNU</b>.
+                </p>
+                <div className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-cyan-200/80 space-y-1">
+                  <div><b>Règle Bon Vide :</b> Génère N° Bon <b className="text-amber-700">INCONNU</b></div>
+                  <div><b>Impact Stock :</b> Ajout immédiat (<span className="text-emerald-600 font-bold">+Qte</span>)</div>
+                </div>
+              </div>
+
+              {/* Card 3: Sortie Externe */}
+              <div className="p-4 rounded-2xl border border-purple-200 bg-purple-50/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-xs text-purple-900 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-600" />
+                    3. Sortie Externe
+                  </span>
+                  <span className="text-[10px] font-mono font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Stock ➔ Réparation/Prêt</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Envoi d'un sous-ensemble (Moteur, Pompe) en réparation chez un sous-traitant extérieur ou prêt entre usines.
+                </p>
+                <div className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-purple-200/80 space-y-1">
+                  <div><b>Champs :</b> N° Bon Externe + Presta/Fournisseur</div>
+                  <div><b>Impact Stock :</b> Déduction (<span className="text-rose-600 font-bold">-Qte</span>)</div>
+                </div>
+              </div>
+
+              {/* Card 4: Entrée Externe */}
+              <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-xs text-emerald-900 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                    4. Entrée Externe (Achat)
+                  </span>
+                  <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">Fournisseur ➔ Stock</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Réception de réapprovisionnement sous-traitant / fournisseur ou retour de pièce réparée de l'extérieur.
+                </p>
+                <div className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-emerald-200/80 space-y-1">
+                  <div><b>Champs :</b> Fournisseur + Emplacement Réception</div>
+                  <div><b>Impact Stock :</b> Crédit immédiat (<span className="text-emerald-600 font-bold">+Qte</span>)</div>
+                </div>
+              </div>
+
+              {/* Card 5: Commande */}
+              <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/40 space-y-2.5 md:col-span-2 lg:col-span-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-xs text-amber-900 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-600" />
+                    5. Demande / Commande en Attente
+                  </span>
+                  <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">En Attente ➔ Dashboard</span>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Demande de réapprovisionnement initiée par un technicien ou chef d'équipe. La demande apparaît sur le Dashboard principal dans la section <b>Commandes en Attente</b> sans modifier le Stock Actuel jusqu'à la confirmation de réception.
+                </p>
+                <div className="text-[11px] font-mono text-slate-700 bg-white p-2.5 rounded-xl border border-amber-200/80 flex flex-col sm:flex-row justify-between gap-2">
+                  <div><b>Tag Automatique :</b> <span className="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded font-bold">#COMMANDE_EN_ATTENTE</span></div>
+                  <div><b>Validation :</b> Clic sur "Valider Réception" ➔ Converti en <b>Entrée Externe</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* PANEL 2: INJECTION HUB */}
         {activeTab === 'injection' &&
@@ -925,7 +1150,7 @@ export default function SettingsView({
                   </select>
                   <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
                 </div>
-                {auditTarget === 'machines' && discoveredItems.length > 0 && (
+                {(auditTarget === 'machines' || auditTarget === 'utilisateurs') && discoveredItems.length > 0 && (
                   <button
                     onClick={handleRegisterDiscovered}
                     className="w-full lg:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
@@ -951,7 +1176,7 @@ export default function SettingsView({
                   <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold">Écart de base détecté :</span> Certains éléments de type "{getAuditLabel()}" apparaissent dans vos mouvements mais ne figurent pas dans la liste officielle.
-                    {auditTarget === 'machines' ? " Cliquer sur le bouton d'enregistrement automatique ou enregistrez manuellement chaque élément." : " Cliquez sur Enregistrer à côté d'un élément pour ouvrir la fiche d'inscription manuelle et générer son identifiant séquentiel unique."}
+                    {auditTarget === 'machines' || auditTarget === 'utilisateurs' ? " Cliquez sur 'Enregistrer les " + getAuditLabel() + "' pour une inscription automatique ou enregistrez manuellement chaque élément." : " Cliquez sur Enregistrer à côté d'un élément pour ouvrir la fiche d'inscription manuelle et générer son identifiant séquentiel unique."}
                   </div>
                 </div>
 
@@ -960,65 +1185,86 @@ export default function SettingsView({
                     <table className="min-w-[650px] w-full text-left text-xs whitespace-nowrap">
                       <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
                         <tr>
-                          <th className="p-3">Élément non enregistré détecté</th>
-                          <th className="p-3">Occurrences</th>
-                          <th className="p-3">Action recommandée</th>
+                          <th className="p-3">Élément / Utilisateur détecté</th>
+                          <th className="p-3">Occurrences & Sources</th>
+                          <th className="p-3">Action / ID proposé</th>
                           <th className="p-3 text-right">Action manuelle</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium">
-                        {discoveredItems.map((dm) => (
-                          <tr key={dm.code} className="hover:bg-slate-50 transition text-slate-700">
-                            <td className="p-3">
-                              <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
-                                {dm.code}
-                              </span>
-                            </td>
-                            <td className="p-3 text-slate-600 font-mono">
-                              {dm.count} apparition{dm.count > 1 ? 's' : ''}
-                            </td>
-                            <td className="p-3">
-                              <span className="text-[10px] bg-cyan-50 text-cyan-800 px-2 py-0.5 rounded-full border border-cyan-200">
-                                Créer la fiche ({getAuditLabel()})
-                              </span>
-                            </td>
-                            <td className="p-3 text-right">
-                              <button
-                                onClick={() => {
-                                  if (auditTarget === 'machines') {
-                                    setMachines((prev) => [
-                                      ...prev,
-                                      {
-                                        id_machine_registered: dm.code,
-                                        designation: `Machine Auto-Detectee ${dm.code}`,
-                                        id_family: families[0]?.id_family || 'FAM-EMB',
-                                        id_templates: templates[0]?.id_templates || 'TPL-RCF100',
-                                        id_zone_default: zones[0]?.id_zone || 'ZONE-DET',
-                                        technician: technicians[0]?.nom || 'Technicien',
-                                        status: 'En service'
-                                      }
-                                    ]);
-                                    showToast(`Machine "${dm.code}" ajoutée avec succès.`, 'success');
-                                  } else if (auditTarget === 'zones') {
-                                    setAuditZoneForm({ libelle: dm.code });
-                                    setShowAuditZoneModal(true);
-                                  } else if (auditTarget === 'utilisateurs') {
-                                    setAuditUserForm({
-                                      type: 'TECHNICIEN',
-                                      nom: dm.code,
-                                      id_zone: zones[0]?.id_zone || '',
-                                      specialite: ''
-                                    });
-                                    setShowAuditUserModal(true);
-                                  }
-                                }}
-                                className="px-3 py-1 text-[11px] font-extrabold text-cyan-700 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition cursor-pointer"
-                              >
-                                Enregistrer
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {discoveredItems.map((dm) => {
+                          const proposedId = auditTarget === 'utilisateurs' ? getNextUserId(dm.inferredRole || 'TECHNICIEN') : null;
+                          return (
+                            <tr key={dm.code} className="hover:bg-slate-50 transition text-slate-700">
+                              <td className="p-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                                    {dm.code}
+                                  </span>
+                                  {auditTarget === 'utilisateurs' && (
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                                      dm.inferredRole === 'CHEF' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                                      dm.inferredRole === 'OPERATEUR' ? 'bg-indigo-50 text-indigo-800 border-indigo-200' :
+                                      'bg-cyan-50 text-cyan-800 border-cyan-200'
+                                    }`}>
+                                      {dm.inferredRole}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 text-slate-600 font-mono">
+                                <div className="font-bold text-slate-800">{dm.count} apparition{dm.count > 1 ? 's' : ''}</div>
+                                {dm.sourceList && <div className="text-[10px] text-slate-400 font-sans">{dm.sourceList}</div>}
+                              </td>
+                              <td className="p-3">
+                                {auditTarget === 'utilisateurs' ? (
+                                  <span className="text-[11px] font-mono font-bold bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200">
+                                    ➔ {proposedId}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] bg-cyan-50 text-cyan-800 px-2 py-0.5 rounded-full border border-cyan-200">
+                                    Créer la fiche ({getAuditLabel()})
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-right">
+                                <button
+                                  onClick={() => {
+                                    if (auditTarget === 'machines') {
+                                      setMachines((prev) => [
+                                        ...prev,
+                                        {
+                                          id_machine_registered: dm.code,
+                                          designation: `Machine Auto-Detectee ${dm.code}`,
+                                          id_family: families[0]?.id_family || 'FAM-EMB',
+                                          id_templates: templates[0]?.id_templates || 'TPL-RCF100',
+                                          id_zone_default: zones[0]?.id_zone || 'ZONE-DET',
+                                          technician: technicians[0]?.nom || 'Technicien',
+                                          status: 'En service'
+                                        }
+                                      ]);
+                                      showToast(`Machine "${dm.code}" ajoutée avec succès.`, 'success');
+                                    } else if (auditTarget === 'zones') {
+                                      setAuditZoneForm({ libelle: dm.code });
+                                      setShowAuditZoneModal(true);
+                                    } else if (auditTarget === 'utilisateurs') {
+                                      setAuditUserForm({
+                                        type: dm.inferredRole || 'TECHNICIEN',
+                                        nom: dm.code,
+                                        id_zone: zones[0]?.id_zone || '',
+                                        specialite: dm.inferredRole === 'TECHNICIEN' ? 'GMAO & Maintenance' : ''
+                                      });
+                                      setShowAuditUserModal(true);
+                                    }
+                                  }}
+                                  className="px-3 py-1 text-[11px] font-extrabold text-cyan-700 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition cursor-pointer"
+                                >
+                                  Enregistrer
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1092,62 +1338,86 @@ export default function SettingsView({
               <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <h3 className="text-sm font-bold text-slate-900">
-                      Fiche d'enregistrement d'utilisateur
-                    </h3>
-                    <button onClick={() => setShowAuditUserModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-cyan-50 border border-cyan-200 text-cyan-700 flex items-center justify-center font-bold">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">
+                          Fiche d'enregistrement d'utilisateur
+                        </h3>
+                        <p className="text-[11px] text-slate-500">
+                          Audit GMAO & Sécurisation des Identifiants
+                        </p>
+                      </div>
+                    </div>
+                    <button onClick={() => setShowAuditUserModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer">×</button>
                   </div>
+
+                  {/* ID & Security Notice Badge */}
+                  <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-600">ID Sécurisé généré :</span>
+                      <span className="font-mono font-extrabold text-xs bg-slate-900 text-white px-2.5 py-0.5 rounded-md">
+                        {getNextUserId(auditUserForm.type)}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-tight">
+                      🔒 L'ID est unique et séquentiel. Il garantit la traçabilité intégrale des mouvements d'ateliers même si le nom est corrigé ultérieurement.
+                    </p>
+                  </div>
+
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
                         Profil / Type d'utilisateur
                       </label>
                       <select
                         value={auditUserForm.type}
                         onChange={(e) => setAuditUserForm(prev => ({ ...prev, type: e.target.value }))}
-                        className="w-full text-xs font-medium border border-slate-300 rounded-lg p-2 bg-white"
+                        className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2 bg-white text-slate-800"
                       >
-                        <option value="TECHNICIEN">Technicien</option>
+                        <option value="TECHNICIEN">Technicien (Maintenance / GMAO)</option>
                         <option value="OPERATEUR">Opérateur (Production)</option>
                         <option value="CHEF">Chef d'équipe / Superviseur</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
                         Nom complet
                       </label>
                       <input
                         type="text"
                         value={auditUserForm.nom}
                         onChange={(e) => setAuditUserForm(prev => ({ ...prev, nom: e.target.value }))}
-                        className="w-full text-xs font-medium border border-slate-300 rounded-lg p-2"
+                        className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2 text-slate-800"
                         placeholder="Nom de l'utilisateur"
                       />
                     </div>
 
                     {auditUserForm.type === 'TECHNICIEN' ? (
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
                           Spécialité
                         </label>
                         <input
                           type="text"
                           value={auditUserForm.specialite}
                           onChange={(e) => setAuditUserForm(prev => ({ ...prev, specialite: e.target.value }))}
-                          className="w-full text-xs font-medium border border-slate-300 rounded-lg p-2"
+                          className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2 text-slate-800"
                           placeholder="Spécialité du technicien (ex: Mécanique, Électricité)"
                         />
                       </div>
                     ) : (
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
                           Zone d'affectation
                         </label>
                         <select
                           value={auditUserForm.id_zone}
                           onChange={(e) => setAuditUserForm(prev => ({ ...prev, id_zone: e.target.value }))}
-                          className="w-full text-xs font-medium border border-slate-300 rounded-lg p-2 bg-white"
+                          className="w-full text-xs font-semibold border border-slate-300 rounded-lg p-2 bg-white text-slate-800"
                         >
                           <option value="">Sélectionner une zone</option>
                           {zones.map(z => (
@@ -1162,7 +1432,7 @@ export default function SettingsView({
                     <button
                       type="button"
                       onClick={() => setShowAuditUserModal(false)}
-                      className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-800 font-bold"
+                      className="px-3.5 py-1.5 text-xs text-slate-600 hover:text-slate-800 font-semibold cursor-pointer"
                     >
                       Annuler
                     </button>
@@ -1182,7 +1452,8 @@ export default function SettingsView({
                             id_technician: id,
                             nom: auditUserForm.nom.trim(),
                             specialite: auditUserForm.specialite.trim() || 'Générale',
-                            contact: ''
+                            contact: '',
+                            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(auditUserForm.nom.trim())}`
                           };
                           setTechnicians(prev => [...prev, newTech]);
                         } else {
@@ -1190,7 +1461,8 @@ export default function SettingsView({
                             id_operation: id,
                             nom: auditUserForm.nom.trim(),
                             id_zone: auditUserForm.id_zone || zones[0]?.id_zone || 'ZONE-DET',
-                            type_profil: type
+                            type_profil: type,
+                            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(auditUserForm.nom.trim())}`
                           };
                           setOperations(prev => [...prev, newOp]);
                         }
@@ -1198,7 +1470,7 @@ export default function SettingsView({
                         showToast(`Utilisateur "${auditUserForm.nom.trim()}" enregistré avec l'ID ${id}.`, 'success');
                         setShowAuditUserModal(false);
                       }}
-                      className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs rounded-lg shadow-sm transition"
+                      className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs rounded-lg shadow-xs transition cursor-pointer"
                     >
                       Enregistrer
                     </button>
