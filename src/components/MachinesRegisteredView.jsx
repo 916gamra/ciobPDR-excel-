@@ -42,6 +42,22 @@ export default function MachinesRegisteredView({
   const [toEdit, setToEdit] = useState(null);
   const [toDelete, setToDelete] = useState(null);
 
+  // Debounce state for high-performance machine searching
+  const [localSearch, setLocalSearch] = useState(mchSearch);
+
+  // Sync from parent
+  useEffect(() => {
+    setLocalSearch(mchSearch);
+  }, [mchSearch]);
+
+  // Propagate to parent with 200ms debounce
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setMchSearch(localSearch);
+    }, 200);
+    return () => clearTimeout(handler);
+  }, [localSearch, setMchSearch]);
+
   // Cascading templates based on selected family
   const availableTemplates = mchFamilyFilter === 'ALL'
     ? templates
@@ -195,18 +211,50 @@ export default function MachinesRegisteredView({
       </div>
 
       {/* Filter Bar with Cascading Selects */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-cyan-600" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Filtres & Tri de Données</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-xs font-semibold text-slate-500">
+              <span className="bg-cyan-50 text-cyan-800 px-2.5 py-1 rounded-lg font-bold border border-cyan-100">
+                {filteredMachines.length} machine{filteredMachines.length > 1 ? 's' : ''} trouvée{filteredMachines.length > 1 ? 's' : ''} / {machines.length} total
+              </span>
+            </div>
+            {(mchFamilyFilter !== 'ALL' || mchTemplateFilter !== 'ALL' || mchZoneFilter !== 'ALL' || localSearch) && (
+              <button
+                onClick={() => {
+                  setMchFamilyFilter('ALL');
+                  setMchTemplateFilter('ALL');
+                  setMchZoneFilter('ALL');
+                  setLocalSearch('');
+                }}
+                className="text-xs text-slate-500 hover:text-slate-900 underline font-medium cursor-pointer"
+              >
+                Réinitialiser filtres
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           {/* Search */}
-          <div className="relative flex-1 min-w-[180px] max-w-xs">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Rechercher (Code, désignation, zone)..."
-              value={mchSearch}
-              onChange={(e) => setMchSearch(e.target.value)}
-              className="w-full h-9 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none"
-            />
+          <div className="w-full">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              Recherche
+            </label>
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Rechercher (Code, désignation, zone)..."
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
+                className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              />
+            </div>
           </div>
 
         <div className="relative" ref={sortMenuRef}>

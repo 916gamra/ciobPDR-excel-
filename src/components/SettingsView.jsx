@@ -51,6 +51,7 @@ import {
   INITIAL_OPERATIONS
 } from '../data/seedData';
 import initialData from '../initialData.json';
+import { storageService } from '../utils/storageService';
 
 export default function SettingsView({
   rawStock = [],
@@ -269,18 +270,17 @@ export default function SettingsView({
       return;
     }
     
-    const encrypted = btoa(`CIOB_GMAO_SECURE_SALT:${tempPin.trim()}`);
-    localStorage.setItem('gmao_admin_pin', encrypted);
+    const hashed = storageService.hashPin(tempPin.trim());
+    localStorage.setItem('gmao_admin_pin', hashed);
     localStorage.setItem('gmao_admin_role', tempRole.trim());
     localStorage.setItem('gmao_admin_open_mode', tempOpenMode ? 'true' : 'false');
 
     // Also update existing session if logged in
-    const session = localStorage.getItem('gmao_user_session');
+    const session = storageService.getItem('gmao_user_session');
     if (session) {
       try {
-        const parsed = JSON.parse(session);
-        parsed.role = tempRole.trim();
-        localStorage.setItem('gmao_user_session', JSON.stringify(parsed));
+        session.role = tempRole.trim();
+        storageService.setItem('gmao_user_session', session);
       } catch (e) {}
     }
 
@@ -492,6 +492,8 @@ export default function SettingsView({
     } else if (group === 'mouvements') {
       const mappedMvts = (initialData.Mouvement || []).map((m, idx) => ({
         id: m.id || idx + 1,
+        code_bon: m.code_bon || m['Code_Bon'] || m['Code Bon'] || m['N° Bon'] || `Bon-${String(idx + 1).padStart(3, '0')}`,
+        num_commande: m.num_commande || m['N° Commande'] || m['Num_Commande'] || m['N° Demande'] || m['Code Demande'] || m.num_demande || '',
         date: m.date || '2026-07-16',
         ref: m.ref || m['Reference'] || '',
         quantite: Number(m.quantite) || 1,
@@ -1458,31 +1460,31 @@ export default function SettingsView({
                   </p>
                 </div>
 
-                {/* Live Cryptographic Engine visualization */}
+                 {/* Live Cryptographic Engine visualization */}
                 <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 font-mono text-[11px] space-y-2 max-w-full overflow-hidden">
                   <div className="flex items-center justify-between text-slate-300 border-b border-slate-800 pb-1.5 font-bold">
                     <span className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       MOTEUR DE CHIFFREMENT GMAO
                     </span>
-                    <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400">AES-BASE64</span>
+                    <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-emerald-400">BCRYPT + AES</span>
                   </div>
                   <div className="grid grid-cols-3 gap-1">
                     <span className="text-slate-500">Algorithme:</span>
-                    <span className="col-span-2 text-slate-300">Base64 + Salt pseudo-SHA</span>
+                    <span className="col-span-2 text-slate-300">BCrypt (10 Rounds) + AES-256</span>
                   </div>
                   <div className="grid grid-cols-3 gap-1">
-                    <span className="text-slate-500">Grain de Sel:</span>
-                    <span className="col-span-2 text-indigo-400 select-all truncate">CIOB_GMAO_SECURE_SALT</span>
+                    <span className="text-slate-500">Sel Local:</span>
+                    <span className="col-span-2 text-indigo-400 select-all truncate">CIOB_GMAO_CLIENT_PERSISTENCE_SALT_KEY</span>
                   </div>
                   <div className="grid grid-cols-3 gap-1">
                     <span className="text-slate-500">Texte Clair:</span>
                     <span className="col-span-2 text-amber-400">"{tempPin || 'vide'}"</span>
                   </div>
                   <div className="grid grid-cols-3 gap-1 pt-1.5 border-t border-slate-800/80">
-                    <span className="text-slate-500 font-bold">Résultat chiffré:</span>
+                    <span className="text-slate-500 font-bold">Hash BCrypt:</span>
                     <span className="col-span-2 text-emerald-400 font-bold break-all select-all text-[10.5px]">
-                      {tempPin ? btoa(`CIOB_GMAO_SECURE_SALT:${tempPin}`) : 'Attente saisie...'}
+                      {tempPin ? storageService.hashPin(tempPin) : 'Attente saisie...'}
                     </span>
                   </div>
                 </div>

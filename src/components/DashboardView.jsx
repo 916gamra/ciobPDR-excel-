@@ -114,42 +114,50 @@ export default function DashboardView({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule Entrées (F)</div>
-            <div className="text-[11px] font-mono font-semibold text-blue-700 mt-0.5">
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule Entrées (F)</div>
+            <div className="font-mono text-xs text-blue-700 font-semibold mt-0.5">
               =SUMIFS(Qté, Ref, [@Ref], "Entrée")
             </div>
           </div>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700">Calcul F</span>
+          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">
+            +
+          </div>
         </div>
 
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule Sorties (G)</div>
-            <div className="text-[11px] font-mono font-semibold text-rose-700 mt-0.5">
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule Sorties (G)</div>
+            <div className="font-mono text-xs text-rose-700 font-semibold mt-0.5">
               =SUMIFS(Qté, Ref, [@Ref], "Sortie")
             </div>
           </div>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700">Calcul G</span>
+          <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-xs">
+            -
+          </div>
         </div>
 
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule Actuel (H)</div>
-            <div className="text-[11px] font-mono font-bold text-emerald-700 mt-0.5">
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule Actuel (H)</div>
+            <div className="font-mono text-xs text-emerald-700 font-bold mt-0.5">
               =[@[Initial]] + [@Entrees] - [@Sorties]
             </div>
           </div>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">Calcul H</span>
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">
+            =
+          </div>
         </div>
 
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule Alerte (J)</div>
-            <div className="text-[11px] font-mono font-semibold text-amber-700 mt-0.5">
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule Alerte (J)</div>
+            <div className="font-mono text-xs text-amber-700 font-semibold mt-0.5">
               =IF(H&lt;=0, "RUPTURE", IF(H&lt;=I, "ALERTE", "OK"))
             </div>
           </div>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700">Calcul J</span>
+          <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs">
+            !
+          </div>
         </div>
       </div>
 
@@ -277,8 +285,8 @@ export default function DashboardView({
                     <div className="text-[11px] text-slate-500 truncate max-w-[170px]">
                       {art ? art.designation : m.designation || 'Article'}
                     </div>
-                    <div className="text-[10px] text-slate-400">
-                      {m.date} • {m.technicien || 'Tech'} • {m.id_machine_registered || 'Atelier'}
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      {m.code_bon || 'Bon'} • {m.date} • {m.technicien || 'Tech'}{m.num_commande ? ` • ${m.num_commande}` : ''}
                     </div>
                   </div>
                   <div className="text-right font-mono font-bold text-sm">

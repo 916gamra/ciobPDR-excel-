@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown, Check, Search, X } from 'lucide-react';
+import { ChevronDown, Check, Search, X, Plus } from 'lucide-react';
 
 /**
  * CustomSelect - Reusable styled dropdown component for CIOB GMAO Light
@@ -8,7 +8,8 @@ import { ChevronDown, Check, Search, X } from 'lucide-react';
  * - Flat options: [{ value, label, sublabel, icon, badge, badgeColor, disabled }]
  * - Grouped options: [{ group: 'Group Name', options: [...] }] or options with `group` property
  * - Primitives: ['Option 1', 'Option 2']
- * - Optional inline search filtering
+ * - Optional inline search filtering (always sticky on top)
+ * - Optional sticky "+ Nouveau / Créer" button on top under search
  * - Click-outside & Keyboard navigation (Escape, Enter, Arrows)
  * - Custom trigger and dropdown styling
  */
@@ -18,7 +19,7 @@ export default function CustomSelect({
   options = [],
   placeholder = 'Sélectionner...',
   disabled = false,
-  searchable = undefined, // auto-enabled if options.length > 7 or true
+  searchable = undefined, // auto-enabled if options.length > 5 or true
   className = '',
   dropdownClassName = '',
   id,
@@ -26,7 +27,10 @@ export default function CustomSelect({
   required = false,
   prefixIcon: PrefixIcon = null,
   compact = false,
-  align = 'left' // 'left' | 'right'
+  align = 'left', // 'left' | 'right'
+  onAddNew = null, // Function to trigger when clicking "+ Ajouter / Créer"
+  addNewLabel = '+ Nouveau / Ajouter', // Label for the create button
+  addNewIcon: AddNewIcon = Plus
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,7 +88,7 @@ export default function CustomSelect({
   }, [options]);
 
   // Determine if search should be enabled
-  const shouldEnableSearch = searchable !== undefined ? searchable : normalizedOptions.length > 7;
+  const shouldEnableSearch = searchable !== undefined ? searchable : (normalizedOptions.length > 5 || Boolean(onAddNew));
 
   // Filter options by search query
   const filteredOptions = useMemo(() => {
@@ -272,13 +276,14 @@ export default function CustomSelect({
       {/* Dropdown Menu Popup */}
       {isOpen && (
         <div
-          className={`absolute z-[60] mt-1.5 w-full min-w-[200px] bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 ${
+          className={`absolute z-[70] mt-1.5 w-full min-w-[220px] bg-white rounded-xl border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 ${
             align === 'right' ? 'right-0' : 'left-0'
           } ${dropdownClassName}`}
         >
-          {/* Optional Search Filter Header */}
-          {shouldEnableSearch && (
-            <div className="p-2 border-b border-slate-100 bg-slate-50/70">
+          {/* Sticky Header: Search Bar & Sticky Add Button */}
+          <div className="p-2 border-b border-slate-100 bg-slate-50/90 space-y-1.5">
+            {/* Search Input Bar */}
+            {shouldEnableSearch && (
               <div className="relative flex items-center">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
                 <input
@@ -302,18 +307,49 @@ export default function CustomSelect({
                   </button>
                 )}
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Sticky "+ Nouveau / Ajouter" Button attached directly inside the dropdown */}
+            {onAddNew && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsOpen(false);
+                  onAddNew();
+                }}
+                className="w-full h-7 px-2.5 rounded-lg bg-indigo-50 hover:bg-indigo-100/90 border border-indigo-200 text-indigo-700 hover:text-indigo-900 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+              >
+                <AddNewIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{addNewLabel}</span>
+              </button>
+            )}
+          </div>
 
           {/* Options List */}
           <div
             ref={listRef}
-            className="max-h-60 overflow-y-auto p-1 space-y-0.5"
+            className="max-h-56 overflow-y-auto p-1 space-y-0.5"
             role="listbox"
           >
             {filteredOptions.length === 0 ? (
-              <div className="py-4 text-center text-xs text-slate-400">
-                Aucun résultat trouvé
+              <div className="py-4 px-3 text-center text-xs text-slate-400">
+                <div>Aucun résultat trouvé pour "{searchQuery}"</div>
+                {onAddNew && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsOpen(false);
+                      onAddNew();
+                    }}
+                    className="mt-2 text-xs font-bold text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
+                  >
+                    {addNewLabel}
+                  </button>
+                )}
               </div>
             ) : (
               groupedSections.map((section, sIdx) => (
@@ -379,3 +415,4 @@ export default function CustomSelect({
     </div>
   );
 }
+

@@ -2,18 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Key, ArrowRight, Check, Package, Store, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { storageService } from '../utils/storageService';
 
-// Base64 encryption/obfuscation helpers for offline security
-const encryptPin = (pin) => btoa(`CIOB_GMAO_SECURE_SALT:${pin}`);
-const decryptPin = (encrypted) => {
-  try {
-    const raw = atob(encrypted);
-    if (raw.startsWith('CIOB_GMAO_SECURE_SALT:')) {
-      return raw.replace('CIOB_GMAO_SECURE_SALT:', '');
-    }
-  } catch (e) {}
-  return encrypted;
-};
-
 export default function LoginScreen({ onLoginSuccess }) {
   // Load dynamic configuration from local storage
   const [managerRole, setManagerRole] = useState(() => {
@@ -23,12 +11,12 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [storedPin, setStoredPin] = useState(() => {
     const saved = localStorage.getItem('gmao_admin_pin');
     if (saved) {
-      return decryptPin(saved);
+      return saved;
     }
-    // Default PIN is '1234'
-    const defaultEnc = encryptPin('1234');
-    localStorage.setItem('gmao_admin_pin', defaultEnc);
-    return '1234';
+    // Default PIN is '1234' hashed
+    const defaultHash = storageService.hashPin('1234');
+    localStorage.setItem('gmao_admin_pin', defaultHash);
+    return defaultHash;
   });
 
   const [isOpenMode, setIsOpenMode] = useState(() => {
@@ -54,7 +42,7 @@ export default function LoginScreen({ onLoginSuccess }) {
       
       setManagerRole(role);
       if (pinSaved) {
-        setStoredPin(decryptPin(pinSaved));
+        setStoredPin(pinSaved);
       }
       setIsOpenMode(open);
     };
@@ -67,9 +55,9 @@ export default function LoginScreen({ onLoginSuccess }) {
     if (e) e.preventDefault();
     setErrorMsg(null);
 
-    // If Open Mode is false, we MUST validate the entered PIN code
+    // If Open Mode is false, we MUST validate the entered PIN code using storageService.verifyPin
     if (!isOpenMode) {
-      if (pinCode !== storedPin) {
+      if (!storageService.verifyPin(pinCode, storedPin)) {
         setErrorMsg("Code PIN d'accès incorrect. Veuillez réessayer.");
         return;
       }

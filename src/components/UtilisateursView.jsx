@@ -15,7 +15,10 @@ import {
   ArrowUpDown,
   ChevronDown,
   Sparkles,
-  ClipboardList
+  ClipboardList,
+  Wrench,
+  ArrowDown,
+  ArrowUp
 } from 'lucide-react';
 
 export default function UtilisateursView({
@@ -31,13 +34,35 @@ export default function UtilisateursView({
   onDeleteOperation,
   onOpenAddZoneModal
 }) {
+  const [localSearch, setLocalSearch] = useState('');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearch(localSearch);
+    }, 200);
+    return () => clearTimeout(handler);
+  }, [localSearch]);
+
   const [profileFilter, setProfileFilter] = useState('ALL'); // ALL, TECHNICIEN, OPERATEUR, CHEF
   const [zoneFilter, setZoneFilter] = useState('ALL');
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [userToEdit, setUserToEdit] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
+
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const sortMenuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target)) {
+        setShowSortMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Auto-calculation of next ID respecting order
   const getNextId = (type) => {
@@ -229,14 +254,25 @@ export default function UtilisateursView({
     setUserToDelete(null);
   };
 
+  const renderSortIcon = (field) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition shrink-0" />;
+    }
+    return sortOrder === 'asc' ? (
+      <ArrowUp className="w-3 h-3 text-indigo-700 shrink-0 font-bold" />
+    ) : (
+      <ArrowDown className="w-3 h-3 text-indigo-700 shrink-0 font-bold" />
+    );
+  };
+
   return (
     <AnimatedPage>
       <div className="space-y-6">
-        {/* Header section with Stats */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* Header section with Stats - Wrapped inside elegant card */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <Users className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
+              <Users className="w-5 h-5 text-indigo-600 shrink-0" />
               Registre des Utilisateurs & Membres
             </h2>
             <p className="text-xs text-slate-500 mt-1">
@@ -255,52 +291,106 @@ export default function UtilisateursView({
               setUserToEdit(null);
               setShowAddModal(true);
             }}
-            className="w-full lg:w-auto px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+            className="w-full md:w-auto px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4" />
             Ajouter un utilisateur
           </button>
         </div>
 
-        {/* Quick KPI stats bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Total Membres', val: combinedUsers.length, color: 'text-slate-800 bg-slate-50 border-slate-200' },
-            { label: 'Techniciens', val: technicians.length, color: 'text-blue-700 bg-blue-50/50 border-blue-100' },
-            { label: 'Opérateurs', val: operations.filter(o => o.type_profil === 'OPERATEUR').length, color: 'text-indigo-700 bg-indigo-50/50 border-indigo-100' },
-            { label: 'Chefs d\'équipe', val: operations.filter(o => o.type_profil === 'CHEF').length, color: 'text-emerald-700 bg-emerald-50/50 border-emerald-100' }
-          ].map((kpi, idx) => (
-            <div key={idx} className={`p-3 border rounded-xl flex flex-col justify-center ${kpi.color}`}>
-              <span className="text-[10px] font-bold uppercase tracking-wider opacity-75">{kpi.label}</span>
-              <span className="text-lg font-black mt-0.5">{kpi.val}</span>
+        {/* Quick KPI stats bar - Redesigned to be highly polished */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Total Membres */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Membres</span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">{combinedUsers.length}</span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Membres enregistrés</span>
             </div>
-          ))}
+            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Card 2: Techniciens */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block">Techniciens (TECH)</span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">{technicians.length}</span>
+              <span className="text-[10px] text-blue-500 mt-0.5 block">Maintenance & SAV</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <Wrench className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Card 3: Opérateurs */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block">Opérateurs (OP)</span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">{operations.filter(o => o.type_profil === 'OPERATEUR').length}</span>
+              <span className="text-[10px] text-indigo-500 mt-0.5 block">Ligne de Production</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <ClipboardList className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Card 4: Chefs d'équipe */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">Chefs d'équipe (CHEF)</span>
+              <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">{operations.filter(o => o.type_profil === 'CHEF').length}</span>
+              <span className="text-[10px] text-emerald-500 mt-0.5 block">Superviseurs Ligne</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+          </div>
         </div>
 
-        {/* Filter and search controls */}
+        {/* Filter and search controls - Fully responsive & styled */}
         <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs space-y-4">
-          <div className="flex flex-col md:flex-row items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Filtres & Tri de Données</span>
+            </div>
+            {/* Displaying the filtered count */}
+            <div className="text-xs font-semibold text-slate-500">
+              <span className="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg font-bold border border-indigo-100">
+                {filtered.length} membre{filtered.length > 1 ? 's' : ''} trouvé{filtered.length > 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             {/* Search */}
-            <div className="relative flex-1 w-full">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
-                type="text"
-                placeholder="Rechercher par nom, ID, zone..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-10 pl-9 pr-4 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
-              />
+            <div className="relative w-full">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Recherche libre
+              </label>
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <input
+                  type="text"
+                  placeholder="Rechercher par nom, ID, zone..."
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  className="w-full h-10 pl-9 pr-4 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
+                />
+              </div>
             </div>
 
             {/* Profile filter select */}
-            <div className="w-full md:w-56 shrink-0">
+            <div className="w-full">
               <CustomSelect
-                label="Profil"
+                label="Role / Profil (Col D)"
                 options={[
-                  { value: 'ALL', label: 'Tous les profils' },
-                  { value: 'TECHNICIEN', label: 'Technicien' },
-                  { value: 'OPERATEUR', label: 'Opérateur' },
-                  { value: 'CHEF', label: 'Chef d\'équipe' }
+                  { value: 'ALL', label: 'Tous les Profils (D)' },
+                  { value: 'TECHNICIEN', label: '[D] Technicien' },
+                  { value: 'OPERATEUR', label: '[D] Opérateur' },
+                  { value: 'CHEF', label: '[D] Chef d\'équipe / Responsable' }
                 ]}
                 value={profileFilter}
                 onChange={setProfileFilter}
@@ -308,63 +398,211 @@ export default function UtilisateursView({
             </div>
 
             {/* Zone Filter */}
-            <div className="w-full md:w-56 shrink-0">
+            <div className="w-full">
               <CustomSelect
-                label="Affectation Zone"
+                label="Zone d'Affectation (Col E)"
                 options={[
-                  { value: 'ALL', label: 'Toutes les zones' },
-                  ...zones.map(z => ({ value: z.id_zone, label: z.libelle }))
+                  { value: 'ALL', label: 'Toutes les Zones (E)' },
+                  ...zones.map(z => ({ value: z.id_zone, label: `[E] ${z.libelle} (${z.id_zone})` }))
                 ]}
                 value={zoneFilter}
                 onChange={setZoneFilter}
               />
             </div>
+
+            {/* Sort Dropdown (Tri) like in Templates */}
+            <div className="w-full relative" ref={sortMenuRef}>
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                Tri des enregistrements
+              </label>
+              <button
+                onClick={() => setShowSortMenu(!showSortMenu)}
+                className={`w-full h-10 px-3 rounded-xl border text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
+                  showSortMenu || sortField !== 'nom' || sortOrder !== 'asc'
+                    ? 'bg-indigo-50 text-indigo-800 border-indigo-300 ring-1 ring-indigo-200 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> ({sortOrder === 'asc' ? 'A→Z' : 'Z→A'})</span>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSortMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showSortMenu && (
+                <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 p-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="flex items-center gap-1.5 text-slate-700 font-semibold">
+                      <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
+                      Trier par
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-1 text-xs">
+                    
+                    <button
+                      onClick={() => {
+                        if (sortField === 'id') {
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortField('id');
+                          setSortOrder('asc');
+                        }
+                      }}
+                      className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                        sortField === 'id'
+                          ? 'bg-indigo-50 text-indigo-800'
+                          : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>Identifiant (B)</span>
+                      {sortField === 'id' && (
+                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                      )}
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        if (sortField === 'nom') {
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortField('nom');
+                          setSortOrder('asc');
+                        }
+                      }}
+                      className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                        sortField === 'nom'
+                          ? 'bg-indigo-50 text-indigo-800'
+                          : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>Nom Complet (C)</span>
+                      {sortField === 'nom' && (
+                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                      )}
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        if (sortField === 'type') {
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortField('type');
+                          setSortOrder('asc');
+                        }
+                      }}
+                      className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                        sortField === 'type'
+                          ? 'bg-indigo-50 text-indigo-800'
+                          : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>Profil & Rôle (D)</span>
+                      {sortField === 'type' && (
+                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (sortField === 'id_zone') {
+                          setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          setSortField('id_zone');
+                          setSortOrder('asc');
+                        }
+                      }}
+                      className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                        sortField === 'id_zone'
+                          ? 'bg-indigo-50 text-indigo-800'
+                          : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>Zone d'Affectation (E)</span>
+                      {sortField === 'id_zone' && (
+                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+                      )}
+                    </button>
+
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Unified Table */}
+        {/* Unified Table in Templates Style */}
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+          {/* Top Info Header Bar inside Card */}
+          <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+            <div className="font-bold text-slate-800 text-[13px]">
+              Répertoire des Membres • Ordre Excel Row 3 : B→F
+            </div>
+            <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
+              id_user (B) | nom (C) | type_profil (D) | id_zone (E) | specialite (F)
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
-            <table className="min-w-[800px] w-full text-left text-xs whitespace-nowrap">
-              <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+            <table className="min-w-[800px] w-full text-left text-xs whitespace-nowrap border-collapse">
+              <thead className="bg-slate-100 text-[10.5px] font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200">
                 <tr>
-                  <th className="p-3.5 pl-4 cursor-pointer select-none" onClick={() => handleSort('id')}>
+                  <th className="py-2.5 px-3 text-center w-12 text-slate-500 font-mono text-[10px] bg-slate-200/60 border-r border-slate-200 shrink-0">
+                    N°
+                  </th>
+                  <th
+                    onClick={() => handleSort('id')}
+                    className="py-2.5 px-4 cursor-pointer select-none hover:bg-slate-200/80 transition group text-left"
+                    title="Cliquer pour trier par Identifiant"
+                  >
                     <div className="flex items-center gap-1.5">
-                      Identifiant
-                      <ArrowUpDown className="w-3 h-3" />
+                      <span>IDENTIFIANT</span> <span className="text-slate-400 font-normal text-[10px] font-mono">(B)</span>
+                      {renderSortIcon('id')}
                     </div>
                   </th>
-                  <th className="p-3.5 cursor-pointer select-none" onClick={() => handleSort('nom')}>
+                  <th
+                    onClick={() => handleSort('nom')}
+                    className="py-2.5 px-4 cursor-pointer select-none hover:bg-slate-200/80 transition group text-left"
+                    title="Cliquer pour trier par Nom Complet"
+                  >
                     <div className="flex items-center gap-1.5">
-                      Nom Complet
-                      <ArrowUpDown className="w-3 h-3" />
+                      <span>NOM COMPLET</span> <span className="text-slate-400 font-normal text-[10px] font-mono">(C)</span>
+                      {renderSortIcon('nom')}
                     </div>
                   </th>
-                  <th className="p-3.5 cursor-pointer select-none" onClick={() => handleSort('type')}>
+                  <th
+                    onClick={() => handleSort('type')}
+                    className="py-2.5 px-4 cursor-pointer select-none hover:bg-slate-200/80 transition group text-left"
+                    title="Cliquer pour trier par Profil"
+                  >
                     <div className="flex items-center gap-1.5">
-                      Profil & Rôle
-                      <ArrowUpDown className="w-3 h-3" />
+                      <span>PROFIL & RÔLE</span> <span className="text-slate-400 font-normal text-[10px] font-mono">(D)</span>
+                      {renderSortIcon('type')}
                     </div>
                   </th>
-                  <th className="p-3.5 cursor-pointer select-none" onClick={() => handleSort('id_zone')}>
+                  <th
+                    onClick={() => handleSort('id_zone')}
+                    className="py-2.5 px-4 cursor-pointer select-none hover:bg-slate-200/80 transition group text-left"
+                    title="Cliquer pour trier par Zone d'Affectation"
+                  >
                     <div className="flex items-center gap-1.5">
-                      Zone d'Affectation
-                      <ArrowUpDown className="w-3 h-3" />
+                      <span>ZONE D'AFFECTATION</span> <span className="text-slate-400 font-normal text-[10px] font-mono">(E)</span>
+                      {renderSortIcon('id_zone')}
                     </div>
                   </th>
-                  <th className="p-3.5">Spécialité / Description</th>
-                  <th className="p-3.5 text-right pr-4">Actions</th>
+                  <th className="py-2.5 px-4 text-slate-500 font-bold">
+                    <span>SPÉCIALITÉ / DESCRIPTION</span> <span className="text-slate-400 font-normal text-[10px] font-mono">(F)</span>
+                  </th>
+                  <th className="py-2.5 px-4 text-right pr-4 text-slate-500 font-bold">ACTIONS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
+              <tbody className="divide-y divide-slate-200/80">
                 {displayedData.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="p-8 text-center text-slate-400">
+                    <td colSpan="7" className="p-8 text-center text-slate-400">
                       Aucun membre trouvé correspondant à vos critères de recherche.
                     </td>
                   </tr>
                 ) : (
-                  displayedData.map((user) => {
+                  displayedData.map((user, idx) => {
                     const zoneObj = zones.find(z => z.id_zone === user.id_zone);
                     let badgeColor = 'bg-blue-50 text-blue-800 border-blue-200';
                     let profileName = 'Technicien';
@@ -377,30 +615,34 @@ export default function UtilisateursView({
                     }
 
                     return (
-                      <tr key={user.id} className="hover:bg-slate-50 transition text-slate-700">
-                        <td className="p-3.5 pl-4">
-                          <span className="font-mono text-[11px] font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                      <tr key={user.id} className="even:bg-slate-50/80 odd:bg-white hover:bg-slate-100/70 border-b border-slate-200/70 transition-colors">
+                        {/* Row N° Column */}
+                        <td className="py-3 px-3 text-center font-mono text-[11px] font-bold text-slate-400 bg-slate-100/40 border-r border-slate-200/80 shrink-0">
+                          {idx + 1 + startIndex}
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
                             {user.id}
                           </span>
                         </td>
-                        <td className="p-3.5 font-bold text-slate-900">
+                        <td className="py-3 px-4 font-semibold text-slate-800 text-[13px]">
                           {user.nom}
                         </td>
-                        <td className="p-3.5">
-                          <span className={`text-[10px] border px-2 py-0.5 rounded-full ${badgeColor}`}>
+                        <td className="py-3 px-4">
+                          <span className={`text-[11px] font-bold border px-2.5 py-0.5 rounded-full ${badgeColor}`}>
                             {profileName}
                           </span>
                         </td>
-                        <td className="p-3.5">
+                        <td className="py-3 px-4">
                           <div className="flex items-center gap-1.5">
                             <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span>{zoneObj ? zoneObj.libelle : user.id_zone}</span>
+                            <span className="font-medium text-slate-700">{zoneObj ? zoneObj.libelle : user.id_zone}</span>
                           </div>
                         </td>
-                        <td className="p-3.5 text-slate-500 italic max-w-xs truncate" title={user.specialite}>
+                        <td className="py-3 px-4 text-slate-500 italic max-w-xs truncate" title={user.specialite}>
                           {user.specialite}
                         </td>
-                        <td className="p-3.5 text-right pr-4">
+                        <td className="py-3 px-4 text-right pr-4">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => {
@@ -413,14 +655,14 @@ export default function UtilisateursView({
                                 });
                                 setShowAddModal(true);
                               }}
-                              className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition"
                               title="Modifier l'utilisateur"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => setUserToDelete(user)}
-                              className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition"
                               title="Supprimer l'utilisateur"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -434,34 +676,60 @@ export default function UtilisateursView({
               </tbody>
             </table>
           </div>
+        </div>
 
-          {/* Pagination controls */}
-          {totalPages > 1 && (
-            <div className="bg-slate-50/50 px-4 py-3 border-t border-slate-100 flex items-center justify-between gap-4">
-              <div className="text-[11px] font-bold text-slate-500 font-mono">
-                Affichage de {startIndex + 1} à {Math.min(startIndex + effectivePageSize, totalItems)} sur {totalItems} membres
-              </div>
+        {/* Pagination Footer */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 mt-4">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-slate-600">Lignes par page :</span>
+            <div className="flex bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+              {[15, 50, 100, 0].map((size) => (
+                <button
+                  key={size}
+                  onClick={() => {
+                    setPageSize(size);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                    pageSize === size
+                      ? 'bg-white text-indigo-800 shadow-xs border border-slate-200/50'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                  }`}
+                >
+                  {size === 0 ? 'Tout' : size}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="text-xs font-semibold text-slate-500">
+              Affichage <b className="text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</b> à <b className="text-slate-900">{Math.min(startIndex + displayedData.length, totalItems)}</b> sur <b className="text-slate-900">{totalItems}</b>
+            </div>
+            {pageSize !== 0 && totalPages > 1 && (
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 transition cursor-pointer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold transition cursor-pointer"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Précédent
                 </button>
-                <span className="text-xs font-mono font-bold px-3 text-slate-700">
+                <span className="px-2 font-mono text-xs font-bold text-slate-600">
                   {currentPage} / {totalPages}
                 </span>
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 transition cursor-pointer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold transition cursor-pointer"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  Suivant
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Manual Add / Edit Modal */}
@@ -502,6 +770,19 @@ export default function UtilisateursView({
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Generated ID Field */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                    Identifiant Unique (ID)
+                  </label>
+                  <div className="w-full h-10 px-3 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-700 flex items-center shadow-2xs">
+                    {userToEdit ? userToEdit.id : getNextId(form.type)}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Généré automatiquement selon le profil choisi ({form.type}).
+                  </p>
                 </div>
 
                 {/* Name */}

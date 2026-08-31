@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import AnimatedPage from './AnimatedPage';
-import {       Boxes, Plus, Search, ArrowRight, Layers, Cpu, Trash2, Edit2, AlertTriangle , ChevronLeft , ChevronRight , SlidersHorizontal , ArrowUpDown , ChevronDown , ArrowDown } from 'lucide-react';
+import {       Boxes, Plus, Search, ArrowRight, Layers, Cpu, Trash2, Edit2, AlertTriangle , ChevronLeft , ChevronRight , SlidersHorizontal , ArrowUpDown , ChevronDown , ArrowDown, ArrowUp } from 'lucide-react';
 
 export default function FamilyView({
   families,
@@ -12,7 +12,16 @@ export default function FamilyView({
   onNavigateToTemplatesFiltered,
   onNavigateToMachinesByFamily
 }) {
+  const [localSearch, setLocalSearch] = useState('');
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setSearch(localSearch);
+    }, 200);
+    return () => clearTimeout(handler);
+  }, [localSearch]);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [form, setForm] = useState({ id_family: '', libelle: '' });
   const [toEdit, setToEdit] = useState(null);
@@ -118,123 +127,152 @@ export default function FamilyView({
       </div>
 
       {/* Excel Formula Guidance Cards */}
+      {/* Excel Formula Guidance Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule D (Nb Templates)</div>
-            <div className="text-[11px] font-mono font-semibold text-cyan-700 mt-0.5">
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule D (Nb Templates)</div>
+            <div className="font-mono text-xs text-cyan-700 font-semibold mt-0.5">
               =COUNTIF(Templates!C:C, [@id_family])
             </div>
           </div>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-cyan-50 text-cyan-700">Calcul D</span>
+          <div className="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center font-bold text-xs">
+            D
+          </div>
         </div>
 
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule E (Nb Machines Parc)</div>
-            <div className="text-[11px] font-mono font-semibold text-emerald-700 mt-0.5">
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Formule E (Nb Machines)</div>
+            <div className="font-mono text-xs text-emerald-700 font-semibold mt-0.5">
               =COUNTIF(Machines!D:D, [@id_family])
             </div>
           </div>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700">Calcul E</span>
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
+            E
+          </div>
         </div>
 
         <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
           <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Formule Machines En Service</div>
-            <div className="text-[11px] font-mono font-semibold text-blue-700 mt-0.5">
+            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">Machines En Service</div>
+            <div className="font-mono text-xs text-blue-700 font-semibold mt-0.5">
               =COUNTIFS(Machines!D:D, [@id_family], Machines!H:H, "En service")
             </div>
           </div>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700">COUNTIFS</span>
+          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold text-xs">
+            ok
+          </div>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Rechercher une famille (ID, libellé)..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-9 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none"
-          />
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-cyan-600" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Filtres & Tri de Données</span>
+          </div>
+          {/* Displaying the filtered count */}
+          <div className="text-xs font-semibold text-slate-500">
+            <span className="bg-cyan-50 text-cyan-700 px-2.5 py-1 rounded-lg font-bold border border-cyan-100">
+              {filtered.length} famille{filtered.length > 1 ? 's' : ''} trouvée{filtered.length > 1 ? 's' : ''}
+            </span>
+          </div>
         </div>
 
-        <div className="relative" ref={sortMenuRef}>
-          <button
-            onClick={() => setShowSortMenu(!showSortMenu)}
-            className={`h-9 px-3 rounded-xl border text-xs font-semibold transition flex items-center gap-2 cursor-pointer ${
-              showSortMenu || sortField !== 'id_family' || sortOrder !== 'asc'
-                ? 'bg-cyan-50 text-cyan-800 border-cyan-300 ring-1 ring-cyan-200 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
-          >
-            <ArrowUpDown className="w-3.5 h-3.5 text-cyan-600" />
-            <span className="hidden sm:inline">Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> ({sortOrder === 'asc' ? 'A→Z' : 'Z→A'})</span>
-            <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showSortMenu ? 'rotate-180' : ''}`} />
-          </button>
-
-          {showSortMenu && (
-            <div className="absolute left-0 md:right-0 md:left-auto mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 p-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                <span className="flex items-center gap-1.5 text-slate-700 font-semibold">
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-600" />
-                  Trier par
-                </span>
-              </div>
-              <div className="grid grid-cols-1 gap-1.5 text-xs">
-                
-                <button
-                  onClick={() => {
-                    if (sortField === 'id_family') {
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    } else {
-                      setSortField('id_family');
-                      setSortOrder('asc');
-                    }
-                  }}
-                  className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
-                    sortField === 'id_family'
-                      ? 'bg-cyan-50 text-cyan-800'
-                      : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <span>Code Famille</span>
-                  {sortField === 'id_family' && (
-                    sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => {
-                    if (sortField === 'designation') {
-                      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                    } else {
-                      setSortField('designation');
-                      setSortOrder('asc');
-                    }
-                  }}
-                  className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
-                    sortField === 'designation'
-                      ? 'bg-cyan-50 text-cyan-800'
-                      : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <span>Désignation</span>
-                  {sortField === 'designation' && (
-                    sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
-                  )}
-                </button>
-                
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+          {/* Search */}
+          <div className="relative w-full">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              Recherche
+            </label>
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Rechercher une famille (ID, libellé)..."
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
+                className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
+              />
             </div>
-          )}
-        </div>
+          </div>
 
+          {/* Sort Dropdown */}
+          <div className="w-full relative" ref={sortMenuRef}>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              Tri des enregistrements
+            </label>
+            <button
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              className={`w-full h-10 px-3 rounded-xl border text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
+                showSortMenu || sortField !== 'id_family' || sortOrder !== 'asc'
+                  ? 'bg-cyan-50 text-cyan-800 border-cyan-300 ring-1 ring-cyan-200 shadow-2xs' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}
+            >
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="w-3.5 h-3.5 text-cyan-600" />
+                <span>Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> ({sortOrder === 'asc' ? 'A→Z' : 'Z→A'})</span>
+              </div>
+              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showSortMenu ? 'rotate-180' : ''}`} />
+            </button>
 
-        <div className="text-xs text-slate-500 font-medium">
-          Total : <b className="text-slate-900">{families.length}</b> familles
+            {showSortMenu && (
+              <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 p-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5 text-slate-700 font-semibold">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-cyan-600" />
+                    Trier par
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-1 text-xs">
+                  
+                  <button
+                    onClick={() => {
+                      if (sortField === 'id_family') {
+                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortField('id_family');
+                        setSortOrder('asc');
+                      }
+                    }}
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                      sortField === 'id_family'
+                        ? 'bg-cyan-50 text-cyan-800'
+                        : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>Code Famille (ID)</span>
+                    {sortField === 'id_family' && (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      if (sortField === 'designation') {
+                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortField('designation');
+                        setSortOrder('asc');
+                      }
+                    }}
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
+                      sortField === 'designation'
+                        ? 'bg-cyan-50 text-cyan-800'
+                        : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>Désignation / Libellé</span>
+                    {sortField === 'designation' && (
+                      sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" /> : <ArrowDown className="w-3 h-3 text-cyan-600 shrink-0" />
+                    )}
+                  </button>
+
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

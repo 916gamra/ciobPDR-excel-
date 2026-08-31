@@ -66,6 +66,22 @@ export default function StockView({
 
   const sortMenuRef = React.useRef(null);
 
+  // Debounce state for high-performance stock searching
+  const [localSearch, setLocalSearch] = React.useState(stockSearch);
+
+  // Sync from parent in case a smart link modifies stockSearch externally
+  React.useEffect(() => {
+    setLocalSearch(stockSearch);
+  }, [stockSearch]);
+
+  // Debounce propagation of search input to setStockSearch
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setStockSearch(localSearch);
+    }, 200);
+    return () => clearTimeout(handler);
+  }, [localSearch, setStockSearch]);
+
   React.useEffect(() => {
     setCurrentPage(1);
   }, [stockSearch, stockTypeFilter, stockAlertOnly, sortField, sortOrder]);
@@ -217,27 +233,35 @@ export default function StockView({
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
           {/* Search */}
-          <div className="relative flex-1 min-w-[180px] max-w-xs">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Rechercher (Ref, désignation, emplacement)..."
-              value={stockSearch}
-              onChange={(e) => setStockSearch(e.target.value)}
-              className="w-full h-9 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-900 transition"
-            />
+          <div className="w-full">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              Recherche
+            </label>
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Rechercher (Ref, désignation, emplacement)..."
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
+                className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
           </div>
 
           {/* Type Filter */}
-          <div className="w-56">
+          <div className="w-full">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              Filtrer par Type (D)
+            </label>
             <CustomSelect
               value={stockTypeFilter}
               onChange={(val) => setStockTypeFilter(val)}
               options={[
-                { value: 'ALL', label: `Tous les Types (D) (${types.length})` },
+                { value: 'ALL', label: `Tous les Types (${types.length})` },
                 ...types.map((t) => {
                   const val = typeof t === 'string' ? t : (t.id_type || t.libelle);
                   const label = typeof t === 'string' ? t : (t.libelle || t.id_type);
@@ -252,32 +276,42 @@ export default function StockView({
           </div>
 
           {/* Alert Toggle */}
-          <button
-            onClick={() => setStockAlertOnly(!stockAlertOnly)}
-            className={`h-9 px-3 rounded-xl border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer ${
-              stockAlertOnly
-                ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
-                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            <AlertTriangle className="w-3.5 h-3.5" />
-            <span>Alertes / Ruptures ({stockKPIs.ruptures + stockKPIs.alertes})</span>
-          </button>
+          <div className="w-full">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              État du Stock
+            </label>
+            <button
+              onClick={() => setStockAlertOnly(!stockAlertOnly)}
+              className={`w-full h-10 px-3 rounded-xl border text-xs font-medium transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                stockAlertOnly
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-xs font-semibold'
+                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>Alertes / Ruptures ({stockKPIs.ruptures + stockKPIs.alertes})</span>
+            </button>
+          </div>
 
           {/* Sort By Dropdown Menu Button */}
-          <div className="relative" ref={sortMenuRef}>
+          <div className="w-full relative" ref={sortMenuRef}>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              Tri & Colonne
+            </label>
             <button
               onClick={() => setShowSortMenu(!showSortMenu)}
-              className={`h-9 px-3 rounded-xl border text-xs font-semibold transition flex items-center gap-2 cursor-pointer ${
+              className={`w-full h-10 px-3 rounded-xl border text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                 showSortMenu || sortField !== 'ref' || sortOrder !== 'asc'
-                  ? 'bg-cyan-50 text-cyan-800 border-cyan-300 ring-1 ring-cyan-200 shadow-2xs'
+                  ? 'bg-emerald-50 text-emerald-900 border-emerald-300 ring-1 ring-emerald-200 shadow-2xs'
                   : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
               }`}
               title="Options de tri par colonne"
             >
-              <ArrowUpDown className="w-3.5 h-3.5 text-cyan-600" />
-              <span>Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> ({sortOrder === 'asc' ? 'A→Z' : 'Z→A'})</span>
-              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${showSortMenu ? 'rotate-180' : ''}`} />
+              <div className="flex items-center gap-2 truncate">
+                <ArrowUpDown className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="truncate">Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> ({sortOrder === 'asc' ? 'A→Z' : 'Z→A'})</span>
+              </div>
+              <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform shrink-0 ${showSortMenu ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Sort Popover Menu */}
@@ -681,7 +715,7 @@ export default function StockView({
             <div className="text-slate-500">
               Affichage de <b className="text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</b> à{' '}
               <b className="text-slate-900">{Math.min(startIndex + displayedStock.length, totalItems)}</b> sur{' '}
-              <b className="text-slate-900">{totalItems}</b> articles (Total catalogue : {stockItems.length})
+              <b className="text-slate-900">{totalItems}</b> articles
             </div>
           </div>
 

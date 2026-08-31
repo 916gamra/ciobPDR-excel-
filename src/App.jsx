@@ -37,6 +37,8 @@ const SettingsView = lazy(() => import('./components/SettingsView'));
 
 const AddArticleModal = lazy(() => import('./components/AddArticleModal'));
 const AddMachineModal = lazy(() => import('./components/AddMachineModal'));
+const AddUserModal = lazy(() => import('./components/AddUserModal'));
+const AddZoneModal = lazy(() => import('./components/AddZoneModal'));
 
 import { storageService } from './utils/storageService';
 import { indexedDBService } from './utils/indexedDBService';
@@ -114,6 +116,8 @@ export default function App() {
     const rawList = saved ? saved : (initialData.Mouvement || []);
     return rawList.map((m, idx) => ({
       id: m.id || idx + 1,
+      code_bon: m.code_bon || m['Code_Bon'] || m['Code Bon'] || m['N° Bon'] || `Bon-${String(idx + 1).padStart(3, '0')}`,
+      num_commande: m.num_commande || m['N° Commande'] || m['Num_Commande'] || m['N° Demande'] || m['Code Demande'] || m.num_demande || '',
       date: m.date || (m.Date ? String(m.Date).split('T')[0] : '2026-07-16'),
       ref: m.ref || m['Référence'] || m['Reference'] || '',
       quantite: safeNum(m.quantite != null ? m.quantite : (m['Quantité'] != null ? m['Quantité'] : m['Quantite']), 1),
@@ -124,7 +128,10 @@ export default function App() {
       id_machine_registered: m.id_machine_registered || '',
       operation: m.operation || m.id_operation || '',
       commentaire: m.commentaire || m['Commentaire / Motif'] || '',
-      demandeur: m.demandeur || m.Demandeur || ''
+      demandeur: m.demandeur || m.Demandeur || '',
+      fournisseur: m.fournisseur || m.Fournisseur || '',
+      emplacement_reception: m.emplacement_reception || m['Emplacement'] || '',
+      usage_type: m.usage_type || ''
     }));
   });
 
@@ -278,6 +285,9 @@ export default function App() {
   // Modals state
   const [showAddArticleModal, setShowAddArticleModal] = useState(false);
   const [showAddMachineModal, setShowAddMachineModal] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [addUserModalType, setAddUserModalType] = useState('TECHNICIEN');
+  const [showAddZoneModal, setShowAddZoneModal] = useState(false);
 
   // Filtered Stock Items
   const filteredStock = useMemo(() => {
@@ -527,12 +537,22 @@ export default function App() {
     ]);
   };
 
-  const handleAddMouvement = (newMvt) => {
-    setMouvements((prev) => [newMvt, ...prev]);
+  const handleAddMouvement = (newMvtOrArray) => {
+    if (Array.isArray(newMvtOrArray)) {
+      setMouvements((prev) => [...newMvtOrArray, ...prev]);
+    } else {
+      setMouvements((prev) => [newMvtOrArray, ...prev]);
+    }
   };
 
   const handleDeleteMouvement = (mvtId) => {
     setMouvements((prev) => prev.filter((m) => m.id !== mvtId));
+  };
+
+  const handleUpdateMouvement = (mvtId, updatedMvt) => {
+    setMouvements((prev) =>
+      prev.map((m) => (m.id === mvtId ? { ...m, ...updatedMvt } : m))
+    );
   };
 
   const handleQuickSortie = (article) => {
@@ -991,10 +1011,23 @@ export default function App() {
               technicians={technicians}
               operations={operations}
               onAddMouvement={handleAddMouvement}
+              onUpdateMouvement={handleUpdateMouvement}
               onDeleteMouvement={handleDeleteMouvement}
               onOpenAddArticle={() => setShowAddArticleModal(true)}
               onOpenAddMachine={() => setShowAddMachineModal(true)}
-              onOpenAddZone={() => React.startTransition(() => setCurrentTab('zones'))}
+              onOpenAddZone={() => setShowAddZoneModal(true)}
+              onOpenAddTech={() => {
+                setAddUserModalType('TECHNICIEN');
+                setShowAddUserModal(true);
+              }}
+              onOpenAddChef={() => {
+                setAddUserModalType('CHEF');
+                setShowAddUserModal(true);
+              }}
+              onOpenAddOperator={() => {
+                setAddUserModalType('OPERATEUR');
+                setShowAddUserModal(true);
+              }}
             />
           )}
 
@@ -1068,8 +1101,8 @@ export default function App() {
           technicians={technicians}
           machines={machines}
           onAddMachine={handleAddMachine}
-              onUpdateMachine={handleUpdateMachine}
-              onDeleteMachine={handleDeleteMachine}
+          onUpdateMachine={handleUpdateMachine}
+          onDeleteMachine={handleDeleteMachine}
           onOpenAddFamilyModal={() => {
             setShowAddMachineModal(false);
             React.startTransition(() => setCurrentTab('families'));
@@ -1080,12 +1113,35 @@ export default function App() {
           }}
           onOpenAddZoneModal={() => {
             setShowAddMachineModal(false);
-            React.startTransition(() => setCurrentTab('zones'));
+            setShowAddZoneModal(true);
           }}
           onOpenAddTechModal={() => {
             setShowAddMachineModal(false);
-            React.startTransition(() => setCurrentTab('technicians'));
+            setAddUserModalType('TECHNICIEN');
+            setShowAddUserModal(true);
           }}
+        />
+
+        <AddUserModal
+          isOpen={showAddUserModal}
+          onClose={() => setShowAddUserModal(false)}
+          zones={zones}
+          technicians={technicians}
+          operations={operations}
+          initialType={addUserModalType}
+          onAddTechnician={handleAddTechnician}
+          onAddOperation={handleAddOperation}
+          onOpenAddZoneModal={() => {
+            setShowAddUserModal(false);
+            setShowAddZoneModal(true);
+          }}
+        />
+
+        <AddZoneModal
+          isOpen={showAddZoneModal}
+          onClose={() => setShowAddZoneModal(false)}
+          zones={zones}
+          onAddZone={handleAddZone}
         />
       </Suspense>
 
