@@ -50,7 +50,10 @@ export default function ZonesView({
   const filtered = zones.filter((z) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return z.id_zone.toLowerCase().includes(q) || z.libelle.toLowerCase().includes(q);
+    return (
+      String(z?.id_zone || '').toLowerCase().includes(q) ||
+      String(z?.libelle || '').toLowerCase().includes(q)
+    );
   });
 
   const [pageSize, setPageSize] = useState(100);

@@ -102,10 +102,10 @@ export default function LoginScreen({ onLoginSuccess }) {
 
   return (
     <div className="min-h-screen w-full bg-slate-100 text-slate-800 flex items-center justify-center p-4 sm:p-6 font-sans relative overflow-hidden select-none">
-      {/* Background Subtle Excel Grid Patterns & Glows */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#107c41_1px,transparent_1px)] [background-size:16px_16px]" />
-      <div className="absolute top-0 left-1/3 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/3 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Background Excel Grid Subtle Lines & Ambient Tones (Identical to Splash Screen) */}
+      <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[radial-gradient(#107c41_1px,transparent_1px)] [background-size:20px_20px]" />
+      <div className="absolute -top-32 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-xl overflow-hidden z-10 flex flex-col">
         {/* Top Header Banner - Light Theme with Emerald Excel Accent */}

@@ -146,10 +146,10 @@ export default function UtilisateursView({
     if (!search) return true;
     const q = search.toLowerCase();
     return (
-      u.id.toLowerCase().includes(q) ||
-      u.nom.toLowerCase().includes(q) ||
-      u.id_zone.toLowerCase().includes(q) ||
-      u.specialite.toLowerCase().includes(q)
+      String(u?.id || '').toLowerCase().includes(q) ||
+      String(u?.nom || '').toLowerCase().includes(q) ||
+      String(u?.id_zone || '').toLowerCase().includes(q) ||
+      String(u?.specialite || '').toLowerCase().includes(q)
     );
   });
 

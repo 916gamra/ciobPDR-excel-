@@ -47,7 +47,10 @@ export default function FamilyView({
   const filtered = families.filter((f) => {
     if (!search) return true;
     const q = search.toLowerCase();
-    return f.id_family.toLowerCase().includes(q) || f.libelle.toLowerCase().includes(q);
+    return (
+      String(f?.id_family || '').toLowerCase().includes(q) ||
+      String(f?.libelle || '').toLowerCase().includes(q)
+    );
   });
 
   const [pageSize, setPageSize] = useState(100);

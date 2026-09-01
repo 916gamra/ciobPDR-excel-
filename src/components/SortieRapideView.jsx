@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import AnimatedPage from './AnimatedPage';
 import CustomSelect from './CustomSelect';
 import SortieEntreeIcon from './SortieEntreeIcon';
@@ -11,8 +12,10 @@ import {
   Trash2,
   Edit2,
   AlertTriangle,
+  AlertCircle,
   CheckCircle2,
   Calendar,
+  CalendarRange,
   Layers,
   MapPin,
   Cpu,
@@ -36,6 +39,7 @@ import {
   Warehouse,
   ShieldCheck,
   Filter,
+  FilterX,
   ArrowUpDown,
   ArrowDownAZ,
   ArrowUpAZ,
@@ -50,6 +54,14 @@ import {
   ShoppingCart,
   Building2,
   HelpCircle,
+  Download,
+  FileSpreadsheet,
+  RefreshCw,
+  Eye,
+  MessageSquare,
+  Scale,
+  ArrowUpRight,
+  ArrowDownLeft,
 } from 'lucide-react';
 
 import { validateMovementWithContext } from '../utils/formulaEngine';
@@ -82,12 +94,13 @@ export default function SortieRapideView({
 
   // Auto-calculation of next sequential Bon code (e.g. Bon-001, Bon-002, ...)
   const getNextBonCode = (mvtList = []) => {
-    const nums = mvtList
+    const nums = (mvtList || [])
       .map((m) => {
-        const match = String(m.code_bon || '').match(/Bon-(\d+)/i);
+        const raw = String(m.code_bon || '');
+        const match = raw.match(/(\d+)/);
         return match ? parseInt(match[1], 10) : 0;
       })
-      .filter((n) => !isNaN(n));
+      .filter((n) => !isNaN(n) && n > 0);
     const max = nums.length > 0 ? Math.max(...nums) : 0;
     return `Bon-${String(max + 1).padStart(3, '0')}`;
   };
@@ -110,6 +123,7 @@ export default function SortieRapideView({
     emplacement_reception: stockItems[0]?.emplacement || 'Magasin Central - R1',
     motif_retour: 'Surplus intervention / Non utilisé',
     commentaire: '',
+    pendingCmdId: null,
   });
 
   // Keep code_bon up to date when movements collection updates
@@ -178,6 +192,7 @@ export default function SortieRapideView({
       emplacement_reception: targetArt?.emplacement || 'Magasin Central - R1',
       commentaire:
         `[Réception Commande ${cmd.num_commande || cmd.code_bon}] ${cmd.commentaire || ''}`.trim(),
+      pendingCmdId: cmd.id,
     }));
     setMouvementItems([{ ref: cmd.ref, quantite: cmd.quantite || 1, validated: true }]);
     setEditingIndex(null);
@@ -198,8 +213,11 @@ export default function SortieRapideView({
   const [filterType, setFilterType] = useState('ALL');
 
   // Filter for movements table
-  const [tableFilterType, setTableFilterType] = useState('ALL'); // 'ALL' | 'Sortie' | 'Entrée'
+  const [tableFilterType, setTableFilterType] = useState('ALL'); // 'ALL' | 'Sortie Interne' | 'Entrée Interne' | 'Sortie Externe' | 'Entrée Externe' | 'COMMANDE' | 'Sortie' | 'Entrée'
   const [tableFilterAction, setTableFilterAction] = useState('ALL');
+  const [tableDatePreset, setTableDatePreset] = useState('ALL'); // 'ALL' | 'TODAY' | '7DAYS' | '30DAYS' | 'CUSTOM'
+  const [tableDateFrom, setTableDateFrom] = useState('');
+  const [tableDateTo, setTableDateTo] = useState('');
 
   const [localTableSearchText, setLocalTableSearchText] = useState('');
   const [tableSearchText, setTableSearchText] = useState('');
@@ -212,14 +230,17 @@ export default function SortieRapideView({
     date: '',
     ref: '',
     quantite: 1,
-    type: 'Sortie',
+    type: 'Sortie Interne',
     action_id: 'CORRECTIVE',
     id_zone: '',
     id_machine_registered: '',
     technicien: '',
+    id_technician: '',
     operation: '',
+    id_operation: '',
     fournisseur: '',
     emplacement_reception: '',
+    motif_retour: '',
     commentaire: '',
   });
 
@@ -237,6 +258,20 @@ export default function SortieRapideView({
   const [tableSortOrder, setTableSortOrder] = useState('desc');
   const [showTableSortMenu, setShowTableSortMenu] = useState(false);
 
+  // Quick Action Qualifier Popover State
+  const [quickActionMvtId, setQuickActionMvtId] = useState(null);
+
+  // Close Quick Action Qualifier Popover on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (quickActionMvtId && !e.target.closest('.quick-action-popover-container')) {
+        setQuickActionMvtId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [quickActionMvtId]);
+
   // Pagination and Lazy Loading for Movements Table
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
@@ -250,7 +285,16 @@ export default function SortieRapideView({
       setIsTableLoading(false);
     }, 150);
     return () => clearTimeout(timer);
-  }, [tableFilterType, tableFilterAction, tableSearchText, tableSortField, tableSortOrder]);
+  }, [
+    tableFilterType,
+    tableFilterAction,
+    tableDatePreset,
+    tableDateFrom,
+    tableDateTo,
+    tableSearchText,
+    tableSortField,
+    tableSortOrder,
+  ]);
 
   const handleTableSort = (field) => {
     if (tableSortField === field) {
@@ -259,6 +303,19 @@ export default function SortieRapideView({
       setTableSortField(field);
       setTableSortOrder('asc');
     }
+  };
+
+  const renderSortIcon = (field) => {
+    if (tableSortField !== field) {
+      return (
+        <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-400 shrink-0 transition" />
+      );
+    }
+    return tableSortOrder === 'asc' ? (
+      <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
+    ) : (
+      <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
+    );
   };
 
   const selectedArticle = stockItems.find((s) => s.ref === form.ref);
@@ -654,11 +711,17 @@ export default function SortieRapideView({
 
     onAddMouvement(newMouvementsList);
 
+    // If this entry was fulfilling a pending order, delete the pending order record
+    if (form.pendingCmdId && onDeleteMouvement) {
+      onDeleteMouvement(form.pendingCmdId);
+    }
+
     // Reset form for next entry & auto-generate next bon code
     setForm((prev) => ({
       ...prev,
       num_commande: '',
       commentaire: '',
+      pendingCmdId: null,
       code_bon: getNextBonCode(mouvements),
     }));
     setMouvementItems([{ ref: stockItems[0]?.ref || '', quantite: 1, validated: false }]);
@@ -668,6 +731,7 @@ export default function SortieRapideView({
   // Filtered & Sorted movements for table
   const filteredMouvements = useMemo(() => {
     const list = mouvements.filter((m) => {
+      // Flow type filter
       if (tableFilterType !== 'ALL') {
         if (tableFilterType === 'Sortie Interne') {
           if (
@@ -694,52 +758,94 @@ export default function SortieRapideView({
         } else if (tableFilterType === 'COMMANDE') {
           if (m.type !== 'COMMANDE' && m.action_id !== 'COMMANDE_STOCK') return false;
         } else if (tableFilterType === 'Sortie') {
-          if (!m.type.includes('Sortie') && m.type !== 'Sortie') return false;
+          const t = String(m.type || '').toLowerCase();
+          if (!t.includes('sort')) return false;
         } else if (tableFilterType === 'Entrée') {
-          if (!m.type.includes('Entrée') && m.type !== 'Entrée') return false;
+          const t = String(m.type || '').toLowerCase();
+          if (!t.includes('entr')) return false;
         } else if (m.type !== tableFilterType) {
           return false;
         }
       }
-      if (tableFilterAction !== 'ALL' && m.action_id !== tableFilterAction) return false;
+
+      // Action ID filter
+      if (tableFilterAction !== 'ALL') {
+        if (tableFilterAction === 'INCONNU') {
+          if (
+            m.action_id !== 'INCONNU' &&
+            m.action_id !== 'MACHINE' &&
+            m.action_id !== 'machine' &&
+            Boolean(m.action_id)
+          ) {
+            return false;
+          }
+        } else if (m.action_id !== tableFilterAction) {
+          return false;
+        }
+      }
+
+      // Date Range Filter Presets & Custom Dates
+      if (tableDatePreset !== 'ALL') {
+        const mDateStr = String(m.date || '');
+        if (!mDateStr) return false;
+
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+
+        if (tableDatePreset === 'TODAY') {
+          if (mDateStr !== todayStr) return false;
+        } else if (tableDatePreset === '7DAYS') {
+          const d7 = new Date();
+          d7.setDate(d7.getDate() - 7);
+          const d7Str = d7.toISOString().split('T')[0];
+          if (mDateStr < d7Str) return false;
+        } else if (tableDatePreset === '30DAYS') {
+          const d30 = new Date();
+          d30.setDate(d30.getDate() - 30);
+          const d30Str = d30.toISOString().split('T')[0];
+          if (mDateStr < d30Str) return false;
+        } else if (tableDatePreset === 'CUSTOM') {
+          if (tableDateFrom && mDateStr < tableDateFrom) return false;
+          if (tableDateTo && mDateStr > tableDateTo) return false;
+        }
+      }
+
+      // Multi-Field Search Filter
       if (tableSearchText.trim()) {
         const q = tableSearchText.trim().toLowerCase();
-        const bonMatch = String(m.code_bon || '')
-          .toLowerCase()
-          .includes(q);
-        const cmdMatch = String(m.num_commande || '')
-          .toLowerCase()
-          .includes(q);
-        const refMatch = String(m.ref || '')
-          .toLowerCase()
-          .includes(q);
-        const techMatch = String(m.technicien || '')
-          .toLowerCase()
-          .includes(q);
-        const techIdMatch = String(m.id_technician || '')
-          .toLowerCase()
-          .includes(q);
-        const opMatch = String(m.operation || '')
-          .toLowerCase()
-          .includes(q);
-        const opIdMatch = String(m.id_operation || '')
-          .toLowerCase()
-          .includes(q);
-        const mchMatch = String(m.id_machine_registered || '')
-          .toLowerCase()
-          .includes(q);
-        const comMatch = String(m.commentaire || '')
-          .toLowerCase()
-          .includes(q);
+        const art = stockItems.find((s) => s.ref === m.ref);
+        const designation = (art?.designation || m.designation || '').toLowerCase();
+        const bonMatch = String(m.code_bon || '').toLowerCase().includes(q);
+        const cmdMatch = String(m.num_commande || '').toLowerCase().includes(q);
+        const refMatch = String(m.ref || '').toLowerCase().includes(q);
+        const desigMatch = designation.includes(q);
+        const techMatch = String(m.technicien || '').toLowerCase().includes(q);
+        const techIdMatch = String(m.id_technician || '').toLowerCase().includes(q);
+        const opMatch = String(m.operation || '').toLowerCase().includes(q);
+        const opIdMatch = String(m.id_operation || '').toLowerCase().includes(q);
+        const mchMatch = String(m.id_machine_registered || '').toLowerCase().includes(q);
+        const zoneMatch = String(m.id_zone || '').toLowerCase().includes(q);
+        const fournMatch = String(m.fournisseur || '').toLowerCase().includes(q);
+        const emplMatch = String(m.emplacement_reception || '').toLowerCase().includes(q);
+        const actionMatch = String(m.action_id || '').toLowerCase().includes(q);
+        const typeMatch = String(m.type || '').toLowerCase().includes(q);
+        const comMatch = String(m.commentaire || '').toLowerCase().includes(q);
+
         return (
           bonMatch ||
           cmdMatch ||
           refMatch ||
+          desigMatch ||
           techMatch ||
           techIdMatch ||
           opMatch ||
           opIdMatch ||
           mchMatch ||
+          zoneMatch ||
+          fournMatch ||
+          emplMatch ||
+          actionMatch ||
+          typeMatch ||
           comMatch
         );
       }
@@ -767,28 +873,39 @@ export default function SortieRapideView({
     });
   }, [
     mouvements,
+    stockItems,
     tableFilterType,
     tableFilterAction,
+    tableDatePreset,
+    tableDateFrom,
+    tableDateTo,
     tableSearchText,
     tableSortField,
     tableSortOrder,
   ]);
 
-  // Statistics for the filtered dataset
+  // Statistics for the filtered dataset accurately supporting all 5 flow types
   const tableKPIs = useMemo(() => {
     let totalSortiesQty = 0;
     let totalEntreesQty = 0;
     let countSorties = 0;
     let countEntrees = 0;
+    let countCommandes = 0;
+    let totalCommandesQty = 0;
 
     filteredMouvements.forEach((m) => {
       const q = Number(m.quantite || 0);
-      if (m.type === 'Sortie') {
+      const t = String(m.type || '').toLowerCase();
+
+      if (t.includes('sort') && !t.includes('entr')) {
         totalSortiesQty += q;
         countSorties++;
-      } else {
+      } else if (t.includes('entr')) {
         totalEntreesQty += q;
         countEntrees++;
+      } else if (t.includes('command') || m.action_id === 'COMMANDE_STOCK') {
+        countCommandes++;
+        totalCommandesQty += q;
       }
     });
 
@@ -797,9 +914,47 @@ export default function SortieRapideView({
       totalEntreesQty,
       countSorties,
       countEntrees,
+      countCommandes,
+      totalCommandesQty,
       totalCount: filteredMouvements.length,
     };
   }, [filteredMouvements]);
+
+  // Export filtered movements to Excel file (.xlsx)
+  const handleExportFilteredMovements = () => {
+    try {
+      const exportData = filteredMouvements.map((m, idx) => {
+        const art = stockItems.find((s) => s.ref === m.ref);
+        return {
+          'N°': idx + 1,
+          'N° Bon': m.code_bon || '',
+          'Date': m.date || '',
+          'N° OT / Commande': m.num_commande || '',
+          'Type de Flux': m.type || '',
+          'Action / Motif': m.action_id || '',
+          'Référence': m.ref || '',
+          'Désignation': art?.designation || m.designation || '',
+          'Quantité': m.quantite || 0,
+          'Machine': m.id_machine_registered || '',
+          'Zone': m.id_zone || '',
+          'Intervenant': m.technicien || '',
+          'ID Tech': m.id_technician || '',
+          'Opération / Demandeur': m.operation || '',
+          'Fournisseur': m.fournisseur || '',
+          'Emplacement Réception': m.emplacement_reception || '',
+          'Commentaire': m.commentaire || '',
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Historique_Mouvements');
+      const filename = `GMAO_Mouvements_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    } catch (err) {
+      console.error('Export Excel failed:', err);
+    }
+  };
 
   // Pagination slicing
   const totalItems = filteredMouvements.length;
@@ -2797,39 +2952,58 @@ export default function SortieRapideView({
         {/* Movements History Table (7 columns on wide screen) */}
         <div className="lg:col-span-7 space-y-3">
           {/* Table Header & Interactive Filter Bar */}
+          {/* Enhanced History Toolbar & Filter Controls */}
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
                 <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                  <SortieEntreeIcon className="w-4 h-4 shrink-0" strokeWidth={2.25} />
+                  <SortieEntreeIcon className="w-4 h-4 shrink-0 text-indigo-600" strokeWidth={2.25} />
                   <span>
                     Historique des Mouvements ({filteredMouvements.length} / {mouvements.length})
                   </span>
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Traçabilité complète avec filtres déroulants, tri précis et modification directe
+                  Traçabilité Excel Twin A→L • Filtres multi-critères, qualification des actions et export synchronisé
                 </p>
               </div>
 
-              {(tableFilterType !== 'ALL' ||
-                tableFilterAction !== 'ALL' ||
-                localTableSearchText) && (
+              <div className="flex items-center gap-2 self-end sm:self-auto">
                 <button
                   type="button"
-                  onClick={() => {
-                    setTableFilterType('ALL');
-                    setTableFilterAction('ALL');
-                    setLocalTableSearchText('');
-                  }}
-                  className="text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer self-end sm:self-auto"
+                  onClick={handleExportFilteredMovements}
+                  className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  title="Exporter les mouvements filtrés vers Excel (.xlsx)"
                 >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Réinitialiser les filtres</span>
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Exporter Excel</span>
                 </button>
-              )}
+
+                {(tableFilterType !== 'ALL' ||
+                  tableFilterAction !== 'ALL' ||
+                  tableDatePreset !== 'ALL' ||
+                  tableDateFrom ||
+                  tableDateTo ||
+                  localTableSearchText) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTableFilterType('ALL');
+                      setTableFilterAction('ALL');
+                      setTableDatePreset('ALL');
+                      setTableDateFrom('');
+                      setTableDateTo('');
+                      setLocalTableSearchText('');
+                    }}
+                    className="text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1.5 rounded-xl transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Réinitialiser</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Structured Controls Row */}
+            {/* Multi-Filters Grid Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 pt-2 border-t border-slate-100 items-center">
               {/* Type Filter Dropdown (3 cols) */}
               <div className="lg:col-span-3">
@@ -2838,18 +3012,14 @@ export default function SortieRapideView({
                   onChange={(e) => setTableFilterType(e.target.value)}
                   className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700 focus:bg-white focus:border-indigo-500 transition cursor-pointer"
                 >
-                  <option value="ALL">📦 Tous les types (5 Types de flux)</option>
-                  <option value="Sortie Interne">🔴 Sortie Interne (Stock → Machine)</option>
-                  <option value="Entrée Interne">
-                    🔵 Entrée Interne (Machine → Stock / Retour)
-                  </option>
-                  <option value="Sortie Externe">
-                    🟣 Sortie Externe (Stock → Réparation Ext.)
-                  </option>
-                  <option value="Entrée Externe">🟢 Entrée Externe (Achat / Réappro)</option>
-                  <option value="COMMANDE">🟡 COMMANDE (En attente de livraison)</option>
-                  <option value="Sortie">🔻 Toutes les Sorties</option>
-                  <option value="Entrée">🔺 Toutes les Entrées</option>
+                  <option value="ALL">[D] Tous les types (5 Flux)</option>
+                  <option value="Sortie Interne">Sortie Interne (Stock → Machine)</option>
+                  <option value="Entrée Interne">Entrée Interne (Machine → Stock / Retour)</option>
+                  <option value="Sortie Externe">Sortie Externe (Stock → Réparation Ext.)</option>
+                  <option value="Entrée Externe">Entrée Externe (Achat / Réappro)</option>
+                  <option value="COMMANDE">COMMANDE (En attente livraison)</option>
+                  <option value="Sortie">Toutes les Sorties</option>
+                  <option value="Entrée">Toutes les Entrées</option>
                 </select>
               </div>
 
@@ -2860,7 +3030,8 @@ export default function SortieRapideView({
                   onChange={(e) => setTableFilterAction(e.target.value)}
                   className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700 focus:bg-white focus:border-indigo-500 transition cursor-pointer"
                 >
-                  <option value="ALL">🎯 Toutes les actions</option>
+                  <option value="ALL">[E] Toutes les actions / motifs</option>
+                  <option value="INCONNU">INCONNU (À qualifier / Ancien "MACHINE")</option>
                   <option value="CORRECTIVE">Maintenance Corrective</option>
                   <option value="PREVENTIVE">Maintenance Préventive</option>
                   <option value="AMELIORATIVE">Amélioration</option>
@@ -2874,12 +3045,27 @@ export default function SortieRapideView({
                 </select>
               </div>
 
-              {/* Quick Search (4 cols) */}
-              <div className="lg:col-span-4 relative">
+              {/* Date Filter Preset (2 cols) */}
+              <div className="lg:col-span-2">
+                <select
+                  value={tableDatePreset}
+                  onChange={(e) => setTableDatePreset(e.target.value)}
+                  className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700 focus:bg-white focus:border-indigo-500 transition cursor-pointer"
+                >
+                  <option value="ALL">[B] Toutes les dates</option>
+                  <option value="TODAY">Aujourd'hui</option>
+                  <option value="7DAYS">7 derniers jours</option>
+                  <option value="30DAYS">30 derniers jours</option>
+                  <option value="CUSTOM">Période personnalisée...</option>
+                </select>
+              </div>
+
+              {/* Quick Multi-Field Search (3 cols) */}
+              <div className="lg:col-span-3 relative">
                 <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Rechercher par bon, commande, réf, intervenant..."
+                  placeholder="Recherche (bon, réf, tech, machine, zone...)"
                   value={localTableSearchText}
                   onChange={(e) => setLocalTableSearchText(e.target.value)}
                   className="w-full h-8 pl-8 pr-7 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:border-indigo-500 transition"
@@ -2888,28 +3074,28 @@ export default function SortieRapideView({
                   <button
                     type="button"
                     onClick={() => setLocalTableSearchText('')}
-                    className="absolute right-2 top-2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
 
-              {/* Sort By Dropdown (2 cols) */}
-              <div className="lg:col-span-2 relative">
+              {/* Sort By Dropdown (1 col) */}
+              <div className="lg:col-span-1 relative">
                 <button
                   type="button"
                   onClick={() => setShowTableSortMenu(!showTableSortMenu)}
-                  className={`w-full h-8 px-2.5 rounded-lg border text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
+                  className={`w-full h-8 px-2 rounded-lg border text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
                     showTableSortMenu || tableSortField !== 'date' || tableSortOrder !== 'desc'
                       ? 'bg-indigo-50 text-indigo-900 border-indigo-300 shadow-2xs'
                       : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
-                  title="Options de tri de l'historique"
+                  title="Trier l'historique"
                 >
-                  <div className="flex items-center gap-1.5 truncate">
+                  <div className="flex items-center gap-1 truncate">
                     <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                    <span className="truncate">Tri: {tableSortField}</span>
+                    <span className="truncate text-[11px]">Tri</span>
                   </div>
                   <ChevronDown
                     className={`w-3 h-3 text-slate-400 shrink-0 transition-transform ${showTableSortMenu ? 'rotate-180' : ''}`}
@@ -2927,12 +3113,16 @@ export default function SortieRapideView({
 
                     <div className="grid grid-cols-2 gap-1.5 text-xs">
                       {[
-                        { key: 'date', label: 'Date / Bon' },
-                        { key: 'type', label: 'Type' },
-                        { key: 'action_id', label: 'Action ID' },
-                        { key: 'ref', label: 'Réf Article' },
-                        { key: 'quantite', label: 'Quantité' },
-                        { key: 'technicien', label: 'Intervenant' },
+                        { key: 'date', label: 'Date / Bon (B)' },
+                        { key: 'num_commande', label: 'OT / CMD (C)' },
+                        { key: 'type', label: 'Type Flux (D)' },
+                        { key: 'action_id', label: 'Action ID (E)' },
+                        { key: 'ref', label: 'Réf Article (F)' },
+                        { key: 'quantite', label: 'Quantité (G)' },
+                        { key: 'id_machine_registered', label: 'Machine (H)' },
+                        { key: 'id_zone', label: 'Zone (I)' },
+                        { key: 'technicien', label: 'Intervenant (J)' },
+                        { key: 'operation', label: 'Demandeur (K)' },
                       ].map((col) => (
                         <button
                           key={col.key}
@@ -2987,160 +3177,237 @@ export default function SortieRapideView({
                 )}
               </div>
             </div>
+
+            {/* Custom Date Range Row (when CUSTOM is chosen) */}
+            {tableDatePreset === 'CUSTOM' && (
+              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100 bg-slate-50/50 p-2.5 rounded-xl text-xs">
+                <div className="flex items-center gap-1.5 text-slate-600 font-semibold">
+                  <CalendarRange className="w-4 h-4 text-indigo-600" />
+                  <span>Période personnalisée :</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 font-medium text-[11px]">Du :</span>
+                  <input
+                    type="date"
+                    value={tableDateFrom}
+                    onChange={(e) => setTableDateFrom(e.target.value)}
+                    className="h-7 px-2 rounded-md border border-slate-300 bg-white font-mono text-xs text-slate-800"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 font-medium text-[11px]">Au :</span>
+                  <input
+                    type="date"
+                    value={tableDateTo}
+                    onChange={(e) => setTableDateTo(e.target.value)}
+                    className="h-7 px-2 rounded-md border border-slate-300 bg-white font-mono text-xs text-slate-800"
+                  />
+                </div>
+                {(tableDateFrom || tableDateTo) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTableDateFrom('');
+                      setTableDateTo('');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline ml-auto cursor-pointer"
+                  >
+                    Effacer les dates
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Main Paginated Movements Table Container */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            {/* Table Header Row 3 Indicator matching StockView */}
+            <div className="px-4 py-2.5 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+              <div className="font-bold text-slate-800 text-[12px] flex items-center gap-2">
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Journal des Mouvements • Colonnes Excel A→L</span>
+              </div>
+              <div className="font-mono text-[10.5px] text-slate-400 hidden xl:flex items-center gap-2">
+                <span>(A) N°</span>
+                <span>•</span>
+                <span>(B) Bon/Date</span>
+                <span>•</span>
+                <span>(C) OT/Cmd</span>
+                <span>•</span>
+                <span>(D) Type</span>
+                <span>•</span>
+                <span>(E) Action</span>
+                <span>•</span>
+                <span>(F) Réf</span>
+                <span>•</span>
+                <span>(G) Qté</span>
+                <span>•</span>
+                <span>(H) Machine</span>
+                <span>•</span>
+                <span>(I) Zone/Empl</span>
+                <span>•</span>
+                <span>(J) Tech</span>
+                <span>•</span>
+                <span>(K) Demandeur</span>
+                <span>•</span>
+                <span>(L) Motif</span>
+              </div>
+            </div>
+
             <div className="max-h-[60vh] overflow-y-auto overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse min-w-[800px]">
-                <thead className="sticky top-0 bg-slate-100 text-[10.5px] font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 z-10 shadow-2xs">
+              <table className="w-full text-left text-xs border-collapse min-w-[980px]">
+                <thead className="sticky top-0 bg-slate-100/95 backdrop-blur-xs text-[10.5px] font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 z-10 shadow-2xs">
                   <tr>
-                    <th className="py-3 px-3 text-center w-12 text-slate-500 font-mono text-[10px] bg-slate-200/60 border-r border-slate-200 shrink-0">
-                      N°
+                    {/* (A) N° Column Header */}
+                    <th className="py-2.5 px-3 text-center w-12 text-slate-500 font-mono text-[10px] bg-slate-200/60 border-r border-slate-200 shrink-0">
+                      N° <span className="text-slate-400 font-normal">(A)</span>
                     </th>
 
+                    {/* (B) Bon / Date Column Header */}
                     <th
                       onClick={() => handleTableSort('date')}
-                      className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/70 transition"
-                      title="Trier par Bon / Date"
+                      className="py-2.5 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                      title="Trier par Bon / Date (B)"
                     >
                       <div className="flex items-center gap-1">
-                        <span>Bon # / Date</span>
-                        {tableSortField === 'date' ? (
-                          tableSortOrder === 'asc' ? (
-                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
-                          ) : (
-                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
-                        )}
+                        <span>BON / DATE</span>{' '}
+                        <span className="text-slate-400 font-normal text-[10px]">(B)</span>
+                        {renderSortIcon('date')}
                       </div>
                     </th>
 
+                    {/* (C) N° OT / Commande Column Header */}
                     <th
                       onClick={() => handleTableSort('num_commande')}
-                      className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/70 transition"
-                      title="N° Commande / Ordre de Travail"
+                      className="py-2.5 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                      title="Trier par N° Commande / Ordre de Travail (C)"
                     >
                       <div className="flex items-center gap-1">
-                        <span>N° OT / Commande</span>
-                        {tableSortField === 'num_commande' ? (
-                          tableSortOrder === 'asc' ? (
-                            <ArrowUp className="w-3 h-3 text-purple-600 shrink-0" />
-                          ) : (
-                            <ArrowDown className="w-3 h-3 text-purple-600 shrink-0" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
-                        )}
+                        <span>N° OT / CMD</span>{' '}
+                        <span className="text-slate-400 font-normal text-[10px]">(C)</span>
+                        {renderSortIcon('num_commande')}
                       </div>
                     </th>
 
+                    {/* (D) Type Column Header */}
                     <th
                       onClick={() => handleTableSort('type')}
-                      className="py-3 px-2 cursor-pointer select-none hover:bg-slate-200/70 transition"
-                      title="Trier par Type"
+                      className="py-2.5 px-2 cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                      title="Trier par Type de flux (D)"
                     >
                       <div className="flex items-center gap-1">
-                        <span>Type (5 Flux)</span>
-                        {tableSortField === 'type' ? (
-                          tableSortOrder === 'asc' ? (
-                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
-                          ) : (
-                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
-                        )}
+                        <span>TYPE (5 FLUX)</span>{' '}
+                        <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+                        {renderSortIcon('type')}
                       </div>
                     </th>
 
+                    {/* (E) Action ID Column Header */}
                     <th
                       onClick={() => handleTableSort('action_id')}
-                      className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/70 transition"
-                      title="Trier par Action ID"
+                      className="py-2.5 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                      title="Trier par Action / Motif (E)"
                     >
                       <div className="flex items-center gap-1">
-                        <span>Action ID</span>
-                        {tableSortField === 'action_id' ? (
-                          tableSortOrder === 'asc' ? (
-                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
-                          ) : (
-                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
-                        )}
+                        <span>ACTION ID</span>{' '}
+                        <span className="text-slate-400 font-normal text-[10px]">(E)</span>
+                        {renderSortIcon('action_id')}
                       </div>
                     </th>
 
+                    {/* (F) Réf & Article Column Header */}
                     <th
                       onClick={() => handleTableSort('ref')}
-                      className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/70 transition"
-                      title="Trier par Réf Article"
+                      className="py-2.5 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                      title="Trier par Référence / Article (F)"
                     >
                       <div className="flex items-center gap-1">
-                        <span>Réf & Article</span>
-                        {tableSortField === 'ref' ? (
-                          tableSortOrder === 'asc' ? (
-                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
-                          ) : (
-                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
-                        )}
+                        <span>RÉF & ARTICLE</span>{' '}
+                        <span className="text-slate-400 font-normal text-[10px]">(F)</span>
+                        {renderSortIcon('ref')}
                       </div>
                     </th>
 
+                    {/* (G) Quantité Column Header */}
                     <th
                       onClick={() => handleTableSort('quantite')}
-                      className="py-3 px-2 text-right cursor-pointer select-none hover:bg-slate-200/70 transition"
-                      title="Trier par Quantité"
+                      className="py-2.5 px-2 text-right cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                      title="Trier par Quantité (G)"
                     >
                       <div className="flex items-center justify-end gap-1">
-                        <span>Qté</span>
-                        {tableSortField === 'quantite' ? (
-                          tableSortOrder === 'asc' ? (
-                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
-                          ) : (
-                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
-                        )}
+                        <span>QTÉ</span>{' '}
+                        <span className="text-slate-400 font-normal text-[10px]">(G)</span>
+                        {renderSortIcon('quantite')}
                       </div>
                     </th>
 
-                    <th className="py-3 px-3">Machine / Zone / Emplacement</th>
-
+                    {/* (H) Machine Column Header */}
                     <th
-                      onClick={() => handleTableSort('technicien')}
-                      className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/70 transition"
-                      title="Trier par Intervenant"
+                      onClick={() => handleTableSort('id_machine_registered')}
+                      className="py-2.5 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                      title="Trier par Machine assignée (H)"
                     >
                       <div className="flex items-center gap-1">
-                        <span>Utilisateur / Intervenant</span>
-                        {tableSortField === 'technicien' ? (
-                          tableSortOrder === 'asc' ? (
-                            <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
-                          ) : (
-                            <ArrowDown className="w-3 h-3 text-indigo-600 shrink-0" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="w-3 h-3 text-slate-300 shrink-0" />
-                        )}
+                        <span>MACHINE</span>{' '}
+                        <span className="text-slate-400 font-normal text-[10px]">(H)</span>
+                        {renderSortIcon('id_machine_registered')}
                       </div>
                     </th>
 
-                    <th className="py-3 px-3">Motif / Commentaire</th>
-                    <th className="py-3 px-2 text-center">Action</th>
+                    {/* (I) Zone / Emplacement Column Header */}
+                    <th
+                      onClick={() => handleTableSort('id_zone')}
+                      className="py-2.5 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                      title="Trier par Zone ou Emplacement Magasin (I)"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>ZONE / EMPL.</span>{' '}
+                        <span className="text-slate-400 font-normal text-[10px]">(I)</span>
+                        {renderSortIcon('id_zone')}
+                      </div>
+                    </th>
+
+                    {/* (J) Intervenant / Technicien Column Header */}
+                    <th
+                      onClick={() => handleTableSort('technicien')}
+                      className="py-2.5 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                      title="Trier par Intervenant / Technicien (J)"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>INTERVENANT</span>{' '}
+                        <span className="text-slate-400 font-normal text-[10px]">(J)</span>
+                        {renderSortIcon('technicien')}
+                      </div>
+                    </th>
+
+                    {/* (K) Demandeur / Opérateur / Chef Column Header */}
+                    <th
+                      onClick={() => handleTableSort('operation')}
+                      className="py-2.5 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                      title="Trier par Demandeur / Opérateur / Chef (K)"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>DEMANDEUR</span>{' '}
+                        <span className="text-slate-400 font-normal text-[10px]">(K)</span>
+                        {renderSortIcon('operation')}
+                      </div>
+                    </th>
+
+                    {/* (L) Motif / Commentaire Column Header */}
+                    <th className="py-2.5 px-3">
+                      <div className="flex items-center gap-1">
+                        <span>MOTIF / COMMENTAIRE</span>{' '}
+                        <span className="text-slate-400 font-normal text-[10px]">(L)</span>
+                      </div>
+                    </th>
+
+                    {/* Actions Column Header */}
+                    <th className="py-2.5 px-2 text-center w-16">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200/80">
                   {isTableLoading ? (
-                    // Smooth Lazy Loading Skeletons for High Performance
+                    // Smooth Skeletons for Table Loading
                     [...Array(Math.min(pageSize || 5, 6))].map((_, sIdx) => (
                       <tr key={`loading-row-${sIdx}`} className="animate-pulse bg-white">
                         <td className="py-3 px-3 text-center">
@@ -3167,13 +3434,19 @@ export default function SortieRapideView({
                           <div className="h-4 w-8 bg-slate-200 rounded ml-auto" />
                         </td>
                         <td className="py-3 px-3">
-                          <div className="h-3.5 w-24 bg-slate-200 rounded" />
+                          <div className="h-3.5 w-20 bg-slate-200 rounded" />
                         </td>
                         <td className="py-3 px-3">
-                          <div className="h-3.5 w-24 bg-slate-200 rounded" />
+                          <div className="h-3.5 w-20 bg-slate-200 rounded" />
                         </td>
                         <td className="py-3 px-3">
-                          <div className="h-3 w-28 bg-slate-100 rounded" />
+                          <div className="h-3.5 w-20 bg-slate-200 rounded" />
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="h-3.5 w-20 bg-slate-200 rounded" />
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="h-3 w-24 bg-slate-100 rounded" />
                         </td>
                         <td className="py-3 px-2 text-center">
                           <div className="h-4 w-4 bg-slate-200 rounded mx-auto" />
@@ -3183,7 +3456,7 @@ export default function SortieRapideView({
                   ) : displayedMouvements.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={11}
+                        colSpan={13}
                         className="py-10 text-center text-xs text-slate-400 font-medium"
                       >
                         Aucun mouvement correspondant aux critères.
@@ -3213,17 +3486,24 @@ export default function SortieRapideView({
                         m.type === 'Sortie Externe' ||
                         m.type === 'Sortie';
 
+                      // Handle Action ID normalization & qualification
+                      const isUnknownAction =
+                        !m.action_id ||
+                        m.action_id === 'INCONNU' ||
+                        m.action_id === 'MACHINE' ||
+                        m.action_id === 'machine';
+
                       return (
                         <tr
                           key={m.id || `mvt-${realIndex}`}
                           className="even:bg-slate-50/80 odd:bg-white hover:bg-indigo-50/50 border-b border-slate-200/70 transition-colors"
                         >
-                          {/* Row N° */}
+                          {/* (A) Row N° */}
                           <td className="py-2.5 px-3 text-center font-mono text-[11px] font-bold text-slate-400 bg-slate-100/40 border-r border-slate-200/80 shrink-0">
                             {realIndex + 1}
                           </td>
 
-                          {/* Bon # & Date */}
+                          {/* (B) Bon # & Date */}
                           <td className="py-2.5 px-3 whitespace-nowrap">
                             <div className="font-mono font-bold text-indigo-950 text-[11px] flex items-center gap-1">
                               <Hash className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
@@ -3236,7 +3516,7 @@ export default function SortieRapideView({
                             </div>
                           </td>
 
-                          {/* N° OT / Commande */}
+                          {/* (C) N° OT / Commande */}
                           <td className="py-2.5 px-3 whitespace-nowrap">
                             {m.num_commande === 'INCONNU' ||
                             (!m.num_commande && m.tags && m.tags.includes('#INCONNU')) ? (
@@ -3256,7 +3536,7 @@ export default function SortieRapideView({
                             )}
                           </td>
 
-                          {/* Type (5 Badge Variants) */}
+                          {/* (D) Type (5 Badge Variants) */}
                           <td className="py-2.5 px-2 whitespace-nowrap">
                             <span
                               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -3275,58 +3555,191 @@ export default function SortieRapideView({
                                       : m.type === 'Entrée Externe' ||
                                           (m.type === 'Entrée' && m.action_id === 'REAPPRO')
                                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                        : 'bg-amber-100 text-amber-950 border border-amber-300 font-extrabold animate-pulse'
+                                        : 'bg-amber-100 text-amber-950 border border-amber-300 font-extrabold'
                               }`}
                             >
                               {m.type}
                             </span>
                           </td>
 
-                          {/* Action ID */}
-                          <td className="py-2.5 px-3 whitespace-nowrap">
-                            <span
-                              className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold ${
-                                m.action_id === 'CORRECTIVE'
-                                  ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                                  : m.action_id === 'PREVENTIVE'
-                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                    : m.action_id === 'AMELIORATIVE'
-                                      ? 'bg-purple-50 text-purple-800 border border-purple-200'
-                                      : m.action_id === 'USAGE'
-                                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                                        : m.action_id === 'REAPPRO'
-                                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                          : m.action_id === 'RETOUR'
-                                            ? 'bg-cyan-50 text-cyan-800 border border-cyan-200'
-                                            : m.action_id === 'REPARATION_EXTERNE' ||
-                                                m.action_id === 'SOUS_TRAITANCE'
-                                              ? 'bg-indigo-50 text-indigo-800 border border-indigo-200'
-                                              : m.action_id === 'COMMANDE_STOCK' ||
-                                                  m.type === 'COMMANDE'
-                                                ? 'bg-amber-100 text-amber-950 border border-amber-300'
-                                                : 'bg-slate-100 text-slate-700 border border-slate-200'
-                              }`}
-                            >
-                              {m.action_id || (isOutflow ? 'CORRECTIVE' : 'REAPPRO')}
-                            </span>
+                          {/* (E) Action ID with Interactive In-Place Qualification */}
+                          <td className="py-2.5 px-3 whitespace-nowrap relative">
+                            {isUnknownAction ? (
+                              <div className="relative inline-block quick-action-popover-container">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setQuickActionMvtId(
+                                      quickActionMvtId === m.id ? null : m.id
+                                    )
+                                  }
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition cursor-pointer shadow-2xs"
+                                  title="Cliquez pour qualifier cette action (Ancien statut MACHINE)"
+                                >
+                                  <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
+                                  <span>INCONNU (À qualifier)</span>
+                                  <ChevronDown className="w-2.5 h-2.5 text-amber-700 shrink-0" />
+                                </button>
+
+                                {quickActionMvtId === m.id && (
+                                  <div className="absolute left-0 top-full mt-1 w-64 bg-white rounded-xl border border-slate-200 shadow-2xl z-50 p-2.5 space-y-2 animate-in fade-in slide-in-from-top-1 text-xs">
+                                    <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 text-[10.5px] font-bold text-slate-500 uppercase">
+                                      <span>Qualifier l'action</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setQuickActionMvtId(null)}
+                                        className="text-slate-400 hover:text-slate-600 p-0.5 rounded"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                    <div className="space-y-1">
+                                      {[
+                                        { id: 'CORRECTIVE', label: 'Maintenance Corrective', bg: 'bg-blue-50 text-blue-800' },
+                                        { id: 'PREVENTIVE', label: 'Maintenance Préventive', bg: 'bg-emerald-50 text-emerald-800' },
+                                        { id: 'AMELIORATIVE', label: 'Amélioration', bg: 'bg-purple-50 text-purple-800' },
+                                        { id: 'USAGE', label: 'Usage Personnel / Service', bg: 'bg-amber-50 text-amber-800' },
+                                        { id: 'REAPPRO', label: 'Réapprovisionnement', bg: 'bg-emerald-50 text-emerald-800' },
+                                        { id: 'RETOUR', label: 'Retour Atelier', bg: 'bg-cyan-50 text-cyan-800' },
+                                        { id: 'REPARATION_EXTERNE', label: 'Réparation Extérieure', bg: 'bg-indigo-50 text-indigo-800' },
+                                        { id: 'SOUS_TRAITANCE', label: 'Sous-traitance', bg: 'bg-indigo-50 text-indigo-800' },
+                                      ].map((act) => (
+                                        <button
+                                          key={act.id}
+                                          type="button"
+                                          onClick={() => {
+                                            if (onUpdateMouvement) {
+                                              onUpdateMouvement(m.id, {
+                                                ...m,
+                                                action_id: act.id,
+                                              });
+                                            }
+                                            setQuickActionMvtId(null);
+                                          }}
+                                          className={`w-full text-left px-2.5 py-1.5 rounded-lg border border-transparent hover:border-slate-300 font-semibold text-[11px] flex items-center justify-between transition cursor-pointer ${act.bg}`}
+                                        >
+                                          <span>{act.label}</span>
+                                          <Check className="w-3 h-3 opacity-0 hover:opacity-100" />
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div className="pt-1.5 border-t border-slate-100">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setQuickActionMvtId(null);
+                                          setEditingMovement(m);
+                                          setEditFormData({
+                                            code_bon: m.code_bon || '',
+                                            num_commande: m.num_commande || '',
+                                            date: m.date || new Date().toISOString().split('T')[0],
+                                            ref: m.ref || '',
+                                            quantite: m.quantite || 1,
+                                            type: m.type || 'Sortie',
+                                            action_id: 'CORRECTIVE',
+                                            id_zone: m.id_zone || '',
+                                            id_machine_registered: m.id_machine_registered || '',
+                                            technicien: m.technicien || '',
+                                            id_technician: m.id_technician || '',
+                                            operation: m.operation || '',
+                                            id_operation: m.id_operation || '',
+                                            fournisseur: m.fournisseur || '',
+                                            emplacement_reception: m.emplacement_reception || '',
+                                            commentaire: m.commentaire || '',
+                                          });
+                                        }}
+                                        className="w-full text-center py-1 rounded-md text-[10.5px] font-bold text-indigo-600 hover:bg-indigo-50 transition cursor-pointer"
+                                      >
+                                        Ouvrir l'éditeur complet...
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingMovement(m);
+                                  setEditFormData({
+                                    code_bon: m.code_bon || '',
+                                    num_commande: m.num_commande || '',
+                                    date: m.date || new Date().toISOString().split('T')[0],
+                                    ref: m.ref || '',
+                                    quantite: m.quantite || 1,
+                                    type: m.type || 'Sortie',
+                                    action_id: m.action_id || 'CORRECTIVE',
+                                    id_zone: m.id_zone || '',
+                                    id_machine_registered: m.id_machine_registered || '',
+                                    technicien: m.technicien || '',
+                                    id_technician: m.id_technician || '',
+                                    operation: m.operation || '',
+                                    id_operation: m.id_operation || '',
+                                    fournisseur: m.fournisseur || '',
+                                    emplacement_reception: m.emplacement_reception || '',
+                                    commentaire: m.commentaire || '',
+                                  });
+                                }}
+                                className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold transition hover:opacity-80 cursor-pointer ${
+                                  m.action_id === 'CORRECTIVE'
+                                    ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                                    : m.action_id === 'PREVENTIVE'
+                                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                      : m.action_id === 'AMELIORATIVE'
+                                        ? 'bg-purple-50 text-purple-800 border border-purple-200'
+                                        : m.action_id === 'USAGE'
+                                          ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                          : m.action_id === 'REAPPRO'
+                                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                            : m.action_id === 'RETOUR'
+                                              ? 'bg-cyan-50 text-cyan-800 border border-cyan-200'
+                                              : m.action_id === 'REPARATION_EXTERNE' ||
+                                                  m.action_id === 'SOUS_TRAITANCE'
+                                                ? 'bg-indigo-50 text-indigo-800 border border-indigo-200'
+                                                : m.action_id === 'COMMANDE_STOCK' ||
+                                                    m.type === 'COMMANDE'
+                                                  ? 'bg-amber-100 text-amber-950 border border-amber-300'
+                                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                }`}
+                                title="Cliquer pour modifier l'action"
+                              >
+                                {m.action_id}
+                              </button>
+                            )}
                           </td>
 
-                          {/* Ref & Article */}
+                          {/* (F) Ref & Article */}
                           <td className="py-2.5 px-3">
                             <div className="font-mono font-bold text-slate-900">{m.ref}</div>
-                            <div className="text-[11px] text-slate-500 truncate max-w-[130px]">
+                            <div className="text-[11px] text-slate-500 truncate max-w-[140px]">
                               {art ? art.designation : m.designation || ''}
                             </div>
                           </td>
 
-                          {/* Qte */}
+                          {/* (G) Qte */}
                           <td className="py-2.5 px-2 text-right font-mono font-bold text-slate-900 text-xs">
                             <span className={isOutflow ? 'text-rose-600' : 'text-emerald-600'}>
                               {isOutflow ? `-${m.quantite}` : `+${m.quantite}`}
                             </span>
                           </td>
 
-                          {/* Machine / Zone / Warehouse Location */}
+                          {/* (H) Machine */}
+                          <td className="py-2.5 px-3 whitespace-nowrap text-[11px]">
+                            {m.type.includes('Entrée') ? (
+                              <span className="text-slate-400 font-mono text-[10px] italic">
+                                Magasin
+                              </span>
+                            ) : m.id_machine_registered ? (
+                              <div className="font-mono font-bold text-slate-800 flex items-center gap-1">
+                                <Cpu className="w-3 h-3 text-indigo-600 shrink-0" />
+                                <span>{m.id_machine_registered}</span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 italic">Sans Machine</span>
+                            )}
+                          </td>
+
+                          {/* (I) Zone / Emplacement */}
                           <td className="py-2.5 px-3 whitespace-nowrap text-[11px]">
                             {m.type.includes('Entrée') ? (
                               <div>
@@ -3345,28 +3758,16 @@ export default function SortieRapideView({
                                 )}
                               </div>
                             ) : (
-                              <div>
-                                <div className="font-mono font-semibold text-slate-800">
-                                  {m.id_machine_registered ? (
-                                    <span className="flex items-center gap-1">
-                                      <Cpu className="w-3 h-3 text-indigo-600 shrink-0" />
-                                      <span>{m.id_machine_registered}</span>
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-400 italic">Sans Machine</span>
-                                  )}
-                                </div>
-                                <div className="text-[10px] text-purple-700 flex items-center gap-0.5 mt-0.5">
-                                  <MapPin className="w-2.5 h-2.5 text-purple-500 shrink-0" />
-                                  <span>{m.id_zone || '-'}</span>
-                                </div>
+                              <div className="text-purple-700 flex items-center gap-1 font-semibold">
+                                <MapPin className="w-3 h-3 text-purple-500 shrink-0" />
+                                <span>{m.id_zone || '-'}</span>
                               </div>
                             )}
                           </td>
 
-                          {/* Intervenant / Chef / Tech (With IDs) */}
+                          {/* (J) Intervenant / Technicien (With IDs) */}
                           <td className="py-2.5 px-3 whitespace-nowrap text-[11px]">
-                            {m.technicien && (
+                            {m.technicien ? (
                               <div className="text-slate-800 font-medium flex items-center gap-1">
                                 <Users className="w-3 h-3 text-blue-600 shrink-0" />
                                 <span>{m.technicien}</span>
@@ -3376,9 +3777,15 @@ export default function SortieRapideView({
                                   </span>
                                 )}
                               </div>
+                            ) : (
+                              <span className="text-slate-400 italic">Non assigné</span>
                             )}
-                            {m.operation && (
-                              <div className="mt-0.5">
+                          </td>
+
+                          {/* (K) Demandeur / Opérateur / Chef */}
+                          <td className="py-2.5 px-3 whitespace-nowrap text-[11px]">
+                            {m.operation ? (
+                              <div>
                                 {isChef ? (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-amber-50 text-amber-900 border border-amber-200 font-semibold text-[10px]">
                                     <Crown className="w-2.5 h-2.5 text-amber-600 shrink-0" />
@@ -3401,18 +3808,21 @@ export default function SortieRapideView({
                                   </span>
                                 )}
                               </div>
-                            )}
-                            {!m.technicien && !m.operation && (
-                              <span className="text-slate-400 italic">Anonyme</span>
+                            ) : (
+                              <span className="text-slate-400 italic">-</span>
                             )}
                           </td>
 
-                          {/* Motif / Commentaire */}
-                          <td className="py-2.5 px-3 text-slate-500 truncate max-w-[120px] text-[11px]">
-                            {m.commentaire || '-'}
+                          {/* (L) Motif / Commentaire */}
+                          <td className="py-2.5 px-3 text-slate-500 truncate max-w-[130px] text-[11px]">
+                            {m.commentaire ? (
+                              <span title={m.commentaire}>{m.commentaire}</span>
+                            ) : (
+                              <span className="text-slate-300 italic">-</span>
+                            )}
                           </td>
 
-                          {/* Action */}
+                          {/* Actions */}
                           <td className="py-2.5 px-2 text-center">
                             <div className="flex items-center justify-center gap-1">
                               <button
@@ -3426,11 +3836,13 @@ export default function SortieRapideView({
                                     ref: m.ref || '',
                                     quantite: m.quantite || 1,
                                     type: m.type || 'Sortie',
-                                    action_id: m.action_id || 'CORRECTIVE',
+                                    action_id: isUnknownAction ? 'CORRECTIVE' : (m.action_id || 'CORRECTIVE'),
                                     id_zone: m.id_zone || '',
                                     id_machine_registered: m.id_machine_registered || '',
                                     technicien: m.technicien || '',
+                                    id_technician: m.id_technician || '',
                                     operation: m.operation || '',
+                                    id_operation: m.id_operation || '',
                                     fournisseur: m.fournisseur || '',
                                     emplacement_reception: m.emplacement_reception || '',
                                     commentaire: m.commentaire || '',
@@ -3527,8 +3939,8 @@ export default function SortieRapideView({
             </div>
           </div>
 
-          {/* Excel Twin Bottom Summary Cards (بطاقات قاع جدول الحركات) */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+          {/* Excel Twin Bottom Summary Cards (بطاقات قاع جدول الحركات المحسوبة بدقة) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1">
             {/* Total Sorties Qty Card */}
             <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
               <div>
@@ -3542,8 +3954,8 @@ export default function SortieRapideView({
                   {tableKPIs.countSorties} opérations
                 </div>
               </div>
-              <div className="w-8 h-8 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center font-bold text-xs shrink-0">
-                -
+              <div className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center font-bold text-xs shrink-0">
+                <ArrowUpRight className="w-3.5 h-3.5" />
               </div>
             </div>
 
@@ -3560,8 +3972,26 @@ export default function SortieRapideView({
                   {tableKPIs.countEntrees} réappros
                 </div>
               </div>
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center font-bold text-xs shrink-0">
-                +
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center font-bold text-xs shrink-0">
+                <ArrowDownLeft className="w-3.5 h-3.5" />
+              </div>
+            </div>
+
+            {/* Total Commandes Card */}
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Commandes (CMD)
+                </div>
+                <div className="font-mono text-xs font-bold text-amber-700 mt-0.5">
+                  {tableKPIs.totalCommandesQty} unités
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium">
+                  {tableKPIs.countCommandes} en attente
+                </div>
+              </div>
+              <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center font-bold text-xs shrink-0">
+                <Clock className="w-3.5 h-3.5" />
               </div>
             </div>
 
@@ -3575,7 +4005,7 @@ export default function SortieRapideView({
                   className={`font-mono text-xs font-bold mt-0.5 ${
                     tableKPIs.totalEntreesQty - tableKPIs.totalSortiesQty >= 0
                       ? 'text-emerald-700'
-                      : 'text-amber-700'
+                      : 'text-rose-700'
                   }`}
                 >
                   {tableKPIs.totalEntreesQty - tableKPIs.totalSortiesQty >= 0 ? '+' : ''}
@@ -3583,16 +4013,16 @@ export default function SortieRapideView({
                 </div>
                 <div className="text-[10px] text-slate-400 font-medium">= Entrées - Sorties</div>
               </div>
-              <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
-                =
+              <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                <Scale className="w-3.5 h-3.5" />
               </div>
             </div>
 
             {/* Total Records Filtered */}
-            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between col-span-2 sm:col-span-1">
               <div>
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Lignes Mouvements
+                  Total Lignes
                 </div>
                 <div className="font-mono text-xs font-bold text-indigo-950 mt-0.5">
                   {tableKPIs.totalCount} bons
@@ -3601,8 +4031,8 @@ export default function SortieRapideView({
                   Filtrés & Synchronisés
                 </div>
               </div>
-              <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
-                <Activity className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">
+                <Activity className="w-3.5 h-3.5" />
               </div>
             </div>
           </div>
@@ -3611,12 +4041,12 @@ export default function SortieRapideView({
 
       {/* ADVANCED ARTICLE SEARCH MODAL WITH REAL-TIME FILTERING & MATCH HIGHLIGHTING */}
       {isArticleSearchOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600">
+            {/* Modal Header (BDR Light Excel UI) */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-white">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 shadow-2xs">
                   <Search className="w-4 h-4" />
                 </div>
                 <div>
@@ -3631,29 +4061,29 @@ export default function SortieRapideView({
               <button
                 type="button"
                 onClick={() => setIsArticleSearchOpen(false)}
-                className="w-8 h-8 rounded-lg hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+                className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Search Input and Type Filter Pills */}
-            <div className="p-4 border-b border-slate-100 space-y-3">
+            <div className="p-4 border-b border-slate-100 space-y-3 bg-slate-50/50">
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <Search className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Tapez des lettres ou chiffres (ex: 6204, ROULEMENT, R1, Foret...)"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   autoFocus
-                  className="w-full h-10 pl-9 pr-3 rounded-xl border border-indigo-200 bg-indigo-50/20 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+                  className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs transition"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
                     Effacer
                   </button>
@@ -3667,7 +4097,7 @@ export default function SortieRapideView({
                   setIsArticleSearchOpen(false);
                   onOpenAddArticle?.();
                 }}
-                className="w-full py-2 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100/80 border border-dashed border-indigo-300 text-indigo-700 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer group shadow-2xs"
+                className="w-full py-2 px-3 rounded-xl bg-indigo-50/80 hover:bg-indigo-100 border border-dashed border-indigo-300 text-indigo-700 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer group shadow-2xs active:scale-[0.99]"
               >
                 <Plus className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
                 <span>Article non trouvé ? Créer un nouvel Article maintenant</span>
@@ -3681,10 +4111,10 @@ export default function SortieRapideView({
                 <button
                   type="button"
                   onClick={() => setFilterType('ALL')}
-                  className={`px-2.5 py-1 rounded-lg transition shrink-0 font-semibold ${
+                  className={`px-2.5 py-1 rounded-lg transition shrink-0 font-semibold cursor-pointer ${
                     filterType === 'ALL'
                       ? 'bg-indigo-600 text-white shadow-2xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
                   Tous ({stockItems.length})
@@ -3694,10 +4124,10 @@ export default function SortieRapideView({
                     key={t}
                     type="button"
                     onClick={() => setFilterType(t)}
-                    className={`px-2.5 py-1 rounded-lg transition shrink-0 font-semibold ${
+                    className={`px-2.5 py-1 rounded-lg transition shrink-0 font-semibold cursor-pointer ${
                       filterType === t
                         ? 'bg-indigo-600 text-white shadow-2xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     {t}
@@ -3721,7 +4151,7 @@ export default function SortieRapideView({
                   <button
                     type="button"
                     onClick={onOpenAddArticle}
-                    className="text-xs text-indigo-600 font-bold hover:underline"
+                    className="text-xs text-indigo-600 font-bold hover:underline cursor-pointer"
                   >
                     + Créer un nouvel article
                   </button>
@@ -3735,8 +4165,8 @@ export default function SortieRapideView({
                       onClick={() => handleSelectArticle(art)}
                       className={`p-3 rounded-xl border transition cursor-pointer flex items-center justify-between gap-3 ${
                         isSelected
-                          ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-500/20'
-                          : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                          ? 'bg-indigo-50/70 border-indigo-300 ring-2 ring-indigo-500/20 shadow-2xs'
+                          : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-2xs'
                       }`}
                     >
                       <div className="space-y-1">
@@ -3780,7 +4210,7 @@ export default function SortieRapideView({
                         </div>
                         <button
                           type="button"
-                          className="mt-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded transition"
+                          className="mt-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded transition cursor-pointer"
                         >
                           Sélectionner
                         </button>
@@ -3792,14 +4222,14 @@ export default function SortieRapideView({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
+            <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
               <span className="text-slate-500">
                 Cliquez sur un article pour l'insérer directement dans le formulaire
               </span>
               <button
                 type="button"
                 onClick={() => setIsArticleSearchOpen(false)}
-                className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition cursor-pointer"
+                className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-semibold rounded-xl transition cursor-pointer shadow-2xs"
               >
                 Fermer
               </button>
@@ -3808,46 +4238,110 @@ export default function SortieRapideView({
         </div>
       )}
 
-      {/* Edit Movement Modal */}
+      {/* Edit Movement Modal (BDR Light Excel UI — Support all 5 Flow Types & Dynamic Contextual Fields) */}
       {editingMovement && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
-          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-                  <Edit2 className="w-4 h-4 text-white" />
+        <div className="fixed inset-0 bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+            {/* Modal Header (BDR Light Excel UI) */}
+            <div className="p-4 sm:p-5 bg-white border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 shadow-2xs">
+                  <Edit2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm">Modifier le Mouvement</h3>
-                  <p className="text-[11px] text-slate-300 font-mono">
-                    {editFormData.code_bon || 'Bon'} • ID: {editingMovement.id}
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-sm text-slate-900">Modifier le Mouvement</h3>
+                    <span className="font-mono text-[10.5px] font-bold bg-slate-100 border border-slate-200 text-slate-700 px-2 py-0.5 rounded-md">
+                      {editFormData.code_bon || 'Sans bon'}
+                    </span>
+                  </div>
+                  <p className="text-[11.5px] text-slate-500 mt-0.5">
+                    Mise à jour des paramètres du mouvement • ID #{editingMovement.id}
                   </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setEditingMovement(null)}
-                className="p-1 rounded-lg hover:bg-white/10 text-slate-300 hover:text-white transition cursor-pointer"
+                className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
+            {/* Modal Body Form */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 if (onUpdateMouvement && editingMovement) {
-                  onUpdateMouvement({
+                  const updatedMvt = {
                     ...editingMovement,
                     ...editFormData,
                     quantite: Number(editFormData.quantite) || 1,
-                  });
+                  };
+                  onUpdateMouvement(editingMovement.id, updatedMvt);
                   setEditingMovement(null);
                 }
               }}
-              className="p-4 overflow-y-auto space-y-4 flex-1 text-xs"
+              className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 text-xs"
             >
-              <div className="grid grid-cols-2 gap-3">
+              {/* Type Selector (5 Flow Types) */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+                  Type de Flux & Mouvement (5 Types)
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    {
+                      id: 'Sortie Interne',
+                      label: 'Sortie Interne',
+                      desc: 'Stock → Machine / Atelier',
+                      color: 'border-rose-300 bg-rose-50 text-rose-800',
+                    },
+                    {
+                      id: 'Entrée Interne',
+                      label: 'Entrée Interne',
+                      desc: 'Machine → Retour Stock',
+                      color: 'border-cyan-300 bg-cyan-50 text-cyan-800',
+                    },
+                    {
+                      id: 'Sortie Externe',
+                      label: 'Sortie Externe',
+                      desc: 'Réparation Ext. / Sous-traitance',
+                      color: 'border-purple-300 bg-purple-50 text-purple-800',
+                    },
+                    {
+                      id: 'Entrée Externe',
+                      label: 'Entrée Externe',
+                      desc: 'Achat Fournisseur / Réappro',
+                      color: 'border-emerald-300 bg-emerald-50 text-emerald-800',
+                    },
+                    {
+                      id: 'COMMANDE',
+                      label: 'Commande',
+                      desc: 'En attente de livraison',
+                      color: 'border-amber-300 bg-amber-50 text-amber-900',
+                    },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setEditFormData({ ...editFormData, type: t.id })}
+                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer shadow-2xs ${
+                        editFormData.type === t.id
+                          ? `${t.color} font-bold ring-2 ring-indigo-500/20`
+                          : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">{t.label}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">{t.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bon Number, Order Number & Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
                     N° Bon Système
@@ -3856,12 +4350,12 @@ export default function SortieRapideView({
                     type="text"
                     value={editFormData.code_bon}
                     onChange={(e) => setEditFormData({ ...editFormData, code_bon: e.target.value })}
-                    className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-slate-50 font-mono font-bold text-slate-800"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 font-mono font-bold text-slate-800 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    N° Demande / Commande
+                    N° Demande / Commande / OT
                   </label>
                   <input
                     type="text"
@@ -3870,90 +4364,83 @@ export default function SortieRapideView({
                       setEditFormData({ ...editFormData, num_commande: e.target.value })
                     }
                     placeholder="Ex: CMD-2026-089"
-                    className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white font-mono text-slate-800"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white font-mono text-slate-800 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs"
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">Date</label>
                   <input
                     type="date"
                     value={editFormData.date}
                     onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })}
-                    className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs"
+                    required
                   />
                 </div>
+              </div>
+
+              {/* Action ID & Qte */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Type de Mouvement
-                  </label>
-                  <select
-                    value={editFormData.type}
-                    onChange={(e) => setEditFormData({ ...editFormData, type: e.target.value })}
-                    className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-800"
-                  >
-                    <option value="Sortie">🔴 Sortie</option>
-                    <option value="Entrée">🟢 Entrée</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Action / Motif
+                    Action / Motif d'intervention
                   </label>
                   <select
                     value={editFormData.action_id}
                     onChange={(e) =>
                       setEditFormData({ ...editFormData, action_id: e.target.value })
                     }
-                    className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white font-semibold text-slate-800"
+                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white font-semibold text-slate-800 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs"
                   >
                     <option value="CORRECTIVE">Corrective</option>
                     <option value="PREVENTIVE">Préventive</option>
                     <option value="AMELIORATIVE">Améliorative</option>
-                    <option value="USAGE">Usage / Personnel</option>
-                    <option value="REAPPRO">Réapprovisionnement</option>
+                    <option value="USAGE">Usage Personnel / Service</option>
+                    <option value="REAPPRO">Réapprovisionnement Magasin</option>
                     <option value="RETOUR">Retour Atelier</option>
+                    <option value="REPARATION_EXTERNE">Réparation Extérieure</option>
+                    <option value="SOUS_TRAITANCE">Sous-traitance</option>
+                    <option value="COMMANDE_STOCK">Demande de Commande</option>
                     <option value="INVENTAIRE">Ajustement Inventaire</option>
                   </select>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Référence Pièce
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.ref}
-                    onChange={(e) => setEditFormData({ ...editFormData, ref: e.target.value })}
-                    className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white font-mono font-bold text-slate-800"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    Quantité
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={editFormData.quantite}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, quantite: Number(e.target.value) || 1 })
-                    }
-                    className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white font-mono font-bold text-slate-800"
-                    required
-                  />
-                </div>
-              </div>
-
-              {editFormData.type === 'Entrée' ? (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="sm:col-span-2 grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Référence Article
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.ref}
+                      onChange={(e) => setEditFormData({ ...editFormData, ref: e.target.value })}
+                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white font-mono font-bold text-slate-800 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Quantité
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editFormData.quantite}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, quantite: Number(e.target.value) || 1 })
+                      }
+                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white font-mono font-bold text-slate-800 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic Contextual Fields based on Flow Type */}
+              {editFormData.type === 'Entrée Externe' || editFormData.type === 'COMMANDE' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                  <div>
+                    <label className="block text-[11px] font-bold text-emerald-950 mb-1">
                       Fournisseur
                     </label>
                     <input
@@ -3962,13 +4449,88 @@ export default function SortieRapideView({
                       onChange={(e) =>
                         setEditFormData({ ...editFormData, fournisseur: e.target.value })
                       }
-                      placeholder="Nom du fournisseur"
-                      className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800"
+                      placeholder="Nom du fournisseur (ex: SKF France)"
+                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 shadow-2xs"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                      Emplacement Réception
+                    <label className="block text-[11px] font-bold text-emerald-950 mb-1">
+                      Emplacement de Réception
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.emplacement_reception}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, emplacement_reception: e.target.value })
+                      }
+                      placeholder="Ex: R1-B04 ou Magasin Central"
+                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono text-xs focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 shadow-2xs"
+                    />
+                  </div>
+                </div>
+              ) : editFormData.type === 'Sortie Externe' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-purple-50/50 rounded-xl border border-purple-100">
+                  <div>
+                    <label className="block text-[11px] font-bold text-purple-950 mb-1">
+                      Prestataire / Réparateur Externe
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.fournisseur}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, fournisseur: e.target.value })
+                      }
+                      placeholder="Nom de l'atelier externe"
+                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs focus:border-purple-500 focus:ring-2 focus:ring-purple-500/15 shadow-2xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-purple-950 mb-1">
+                      Machine d'origine
+                    </label>
+                    <select
+                      value={editFormData.id_machine_registered}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          id_machine_registered: e.target.value,
+                        })
+                      }
+                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono text-xs focus:border-purple-500 focus:ring-2 focus:ring-purple-500/15 shadow-2xs"
+                    >
+                      <option value="">Sélectionner une machine...</option>
+                      {machines.map((m) => (
+                        <option key={m.id_machine_registered} value={m.id_machine_registered}>
+                          {m.id_machine_registered} - {m.designation}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : editFormData.type === 'Entrée Interne' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-cyan-50/50 rounded-xl border border-cyan-100">
+                  <div>
+                    <label className="block text-[11px] font-bold text-cyan-950 mb-1">
+                      Zone d'origine
+                    </label>
+                    <select
+                      value={editFormData.id_zone}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, id_zone: e.target.value })
+                      }
+                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono text-xs focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15 shadow-2xs"
+                    >
+                      <option value="">Sélectionner une zone...</option>
+                      {zones.map((z) => (
+                        <option key={z.id_zone} value={z.id_zone}>
+                          {z.id_zone} - {z.nom_zone}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-cyan-950 mb-1">
+                      Emplacement de Remise en Stock
                     </label>
                     <input
                       type="text"
@@ -3977,73 +4539,100 @@ export default function SortieRapideView({
                         setEditFormData({ ...editFormData, emplacement_reception: e.target.value })
                       }
                       placeholder="Ex: R1-B04"
-                      className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800 font-mono"
+                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono text-xs focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15 shadow-2xs"
                     />
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">Zone</label>
-                    <input
-                      type="text"
+                    <select
                       value={editFormData.id_zone}
                       onChange={(e) =>
                         setEditFormData({ ...editFormData, id_zone: e.target.value })
                       }
-                      placeholder="Ex: ZONE-01"
-                      className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800 font-mono"
-                    />
+                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs"
+                    >
+                      <option value="">Sélectionner une zone...</option>
+                      {zones.map((z) => (
+                        <option key={z.id_zone} value={z.id_zone}>
+                          {z.id_zone} - {z.nom_zone}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Machine Enregistrée
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={editFormData.id_machine_registered}
                       onChange={(e) =>
-                        setEditFormData({ ...editFormData, id_machine_registered: e.target.value })
+                        setEditFormData({
+                          ...editFormData,
+                          id_machine_registered: e.target.value,
+                        })
                       }
-                      placeholder="Ex: MCH-001"
-                      className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800 font-mono"
-                    />
+                      className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs"
+                    >
+                      <option value="">Sélectionner une machine...</option>
+                      {machines.map((m) => (
+                        <option key={m.id_machine_registered} value={m.id_machine_registered}>
+                          {m.id_machine_registered} - {m.designation}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Technicien & Demandeur */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
                     Intervenant / Technicien
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={editFormData.technicien}
                     onChange={(e) =>
                       setEditFormData({ ...editFormData, technicien: e.target.value })
                     }
-                    className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800"
-                  />
+                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs"
+                  >
+                    <option value="">Sélectionner un technicien...</option>
+                    {technicians.map((t) => (
+                      <option key={t.id_technician || t.nom} value={t.nom}>
+                        {t.nom} ({t.specialite || 'Technicien'})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
                     Profil / Demandeur (Opération / Chef)
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={editFormData.operation}
                     onChange={(e) =>
                       setEditFormData({ ...editFormData, operation: e.target.value })
                     }
-                    className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-slate-800"
-                  />
+                    className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs"
+                  >
+                    <option value="">Sélectionner un demandeur...</option>
+                    {operations.map((o) => (
+                      <option key={o.id_operation || o.nom} value={o.nom}>
+                        {o.nom} ({o.type_profil || 'Opérateur'})
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
+              {/* Commentaire */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                  Commentaire / Motif
+                  Commentaire / Motif du Mouvement
                 </label>
                 <textarea
                   rows="2"
@@ -4052,21 +4641,22 @@ export default function SortieRapideView({
                     setEditFormData({ ...editFormData, commentaire: e.target.value })
                   }
                   placeholder="Détails supplémentaires sur le mouvement..."
-                  className="w-full p-2 rounded-lg border border-slate-200 bg-white text-slate-800 text-xs"
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              {/* Modal Actions */}
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setEditingMovement(null)}
-                  className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold transition cursor-pointer text-xs shadow-2xs"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition shadow-xs cursor-pointer flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition shadow-xs cursor-pointer text-xs flex items-center gap-1.5 active:scale-[0.98]"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Enregistrer les modifications</span>
@@ -4077,26 +4667,26 @@ export default function SortieRapideView({
         </div>
       )}
 
-      {/* Delete Movement Confirmation Modal */}
+      {/* Delete Movement Confirmation Modal with Stock Impact Analysis */}
       {deletingMovement && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+        <div className="fixed inset-0 bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden p-5 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0 shadow-2xs">
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="font-bold text-sm text-slate-900">Supprimer le mouvement</h3>
                 <p className="text-xs text-slate-500">
-                  Cette opération recalculera automatiquement le stock.
+                  Le stock actuel sera recalculé automatiquement selon les formules Excel.
                 </p>
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1 font-mono">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2 font-mono shadow-2xs">
               <div className="flex justify-between text-slate-700">
                 <span>N° Bon :</span>
-                <span className="font-bold">{deletingMovement.code_bon || 'Sans bon'}</span>
+                <span className="font-bold text-indigo-950">{deletingMovement.code_bon || 'Sans bon'}</span>
               </div>
               <div className="flex justify-between text-slate-700">
                 <span>Article :</span>
@@ -4105,18 +4695,26 @@ export default function SortieRapideView({
               <div className="flex justify-between text-slate-700">
                 <span>Type & Quantité :</span>
                 <span
-                  className={`font-bold ${deletingMovement.type === 'Sortie' ? 'text-rose-600' : 'text-emerald-700'}`}
+                  className={`font-bold ${
+                    deletingMovement.type.includes('Sortie') ? 'text-rose-600' : 'text-emerald-700'
+                  }`}
                 >
-                  {deletingMovement.type} ({deletingMovement.quantite})
+                  {deletingMovement.type} ({deletingMovement.quantite} pcs)
                 </span>
+              </div>
+              <div className="pt-2 border-t border-slate-200 text-[11.5px] text-slate-600 font-sans">
+                💡 <span className="font-semibold">Impact sur le stock : </span>
+                {deletingMovement.type.includes('Sortie')
+                  ? `Le stock de ${deletingMovement.ref} augmentera de +${deletingMovement.quantite}.`
+                  : `Le stock de ${deletingMovement.ref} diminuera de -${deletingMovement.quantite}.`}
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex items-center justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setDeletingMovement(null)}
-                className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition cursor-pointer text-xs"
+                className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold transition cursor-pointer text-xs shadow-2xs"
               >
                 Annuler
               </button>
@@ -4128,7 +4726,7 @@ export default function SortieRapideView({
                     setDeletingMovement(null);
                   }
                 }}
-                className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold transition shadow-xs cursor-pointer text-xs flex items-center gap-1.5"
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition shadow-xs cursor-pointer text-xs flex items-center gap-1.5 active:scale-[0.98]"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Confirmer la suppression</span>

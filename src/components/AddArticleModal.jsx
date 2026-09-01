@@ -38,30 +38,32 @@ export default function AddArticleModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 border border-slate-200">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+    <div className="fixed inset-0 z-50 bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col">
+        {/* Modal Header (BDR Light Excel UI) */}
+        <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs font-bold">
               <Package className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-slate-900">Nouvel Article (Stock)</h3>
+              <h3 className="font-bold text-sm text-slate-900">Nouvel Article (Stock)</h3>
               <p className="text-xs text-slate-500">Ajout d'une référence au magasin central</p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3.5 text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
                 Référence (Ref)
               </label>
               <input
@@ -69,13 +71,13 @@ export default function AddArticleModal({
                 placeholder="ex: ART-500"
                 value={form.ref}
                 onChange={(e) => setForm({ ...form, ref: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-bold uppercase"
+                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-mono font-bold uppercase focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs transition"
                 required
               />
             </div>
 
             <div>
-              <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
                 Désignation
               </label>
               <input
@@ -83,7 +85,7 @@ export default function AddArticleModal({
                 placeholder="ex: Roulement 6204 2RS"
                 value={form.designation}
                 onChange={(e) => setForm({ ...form, designation: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
+                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs transition"
                 required
               />
             </div>
@@ -93,15 +95,15 @@ export default function AddArticleModal({
             {/* Type with '+' Button */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+                <label className="text-[11px] font-bold text-slate-700">
                   Type d'Article (Famille / Genre)
                 </label>
                 <button
                   type="button"
                   onClick={onOpenAddTypeModal}
-                  className="text-[10.5px] text-cyan-600 hover:text-cyan-800 font-semibold inline-flex items-center gap-0.5"
+                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold inline-flex items-center gap-0.5 cursor-pointer"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5" />
                   <span>Nouveau Type</span>
                 </button>
               </div>
@@ -119,7 +121,7 @@ export default function AddArticleModal({
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
                 Stock Initial
               </label>
               <input
@@ -127,13 +129,13 @@ export default function AddArticleModal({
                 min="0"
                 value={form.stockInitial}
                 onChange={(e) => setForm({ ...form, stockInitial: parseInt(e.target.value) || 0 })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-bold"
+                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-mono font-bold focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs transition"
                 required
               />
             </div>
 
             <div>
-              <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
                 Seuil d'Alerte
               </label>
               <input
@@ -141,13 +143,13 @@ export default function AddArticleModal({
                 min="0"
                 value={form.seuil}
                 onChange={(e) => setForm({ ...form, seuil: parseInt(e.target.value) || 0 })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-bold text-amber-700"
+                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-mono font-bold text-amber-700 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/15 shadow-2xs transition"
                 required
               />
             </div>
 
             <div>
-              <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
                 Emplacement
               </label>
               <input
@@ -155,24 +157,26 @@ export default function AddArticleModal({
                 placeholder="R1-B01"
                 value={form.emplacement}
                 onChange={(e) => setForm({ ...form, emplacement: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-medium"
+                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-mono font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs transition"
               />
             </div>
           </div>
 
-          <div className="flex gap-2 pt-3">
+          {/* Modal Actions */}
+          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-medium"
+              className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold transition cursor-pointer text-xs shadow-2xs"
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="flex-1 h-10 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold"
+              className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition shadow-xs cursor-pointer text-xs flex items-center gap-1.5 active:scale-[0.98]"
             >
-              Enregistrer l'Article
+              <Plus className="w-3.5 h-3.5" />
+              <span>Enregistrer l'Article</span>
             </button>
           </div>
         </form>

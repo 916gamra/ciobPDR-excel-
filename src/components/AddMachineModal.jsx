@@ -120,32 +120,34 @@ export default function AddMachineModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 border border-slate-200">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+    <div className="fixed inset-0 z-50 bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col">
+        {/* Modal Header (BDR Light Excel UI) */}
+        <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-white">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shadow-2xs font-bold">
               <Cpu className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-slate-900">Nouvelle Machine Registered</h3>
+              <h3 className="font-bold text-sm text-slate-900">Nouvelle Machine Registered</h3>
               <p className="text-xs text-slate-500">
                 Ajout d'un équipement au catalogue global (Twin Stock)
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3.5 text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
                 Code Machine (Cde = Ref)
               </label>
               <input
@@ -153,13 +155,13 @@ export default function AddMachineModal({
                 placeholder="ex: MCH-007"
                 value={form.id_machine_registered}
                 onChange={(e) => setForm({ ...form, id_machine_registered: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-bold uppercase"
+                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-mono font-bold uppercase focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs transition"
                 required
               />
             </div>
 
             <div>
-              <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
                 Désignation de la Machine
               </label>
               <input
@@ -167,7 +169,7 @@ export default function AddMachineModal({
                 placeholder="ex: Ligne Ensacheuse 03"
                 value={form.designation}
                 onChange={(e) => setForm({ ...form, designation: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium"
+                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs transition"
                 required
               />
             </div>
@@ -177,15 +179,15 @@ export default function AddMachineModal({
             {/* Family with '+' Button */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+                <label className="text-[11px] font-bold text-slate-700">
                   Famille de Machine
                 </label>
                 <button
                   type="button"
                   onClick={onOpenAddFamilyModal}
-                  className="text-[10.5px] text-cyan-600 hover:text-cyan-800 font-semibold inline-flex items-center gap-0.5"
+                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold inline-flex items-center gap-0.5 cursor-pointer"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5" />
                   <span>Nouvelle</span>
                 </button>
               </div>
@@ -203,15 +205,15 @@ export default function AddMachineModal({
             {/* Template with '+' Button */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+                <label className="text-[11px] font-bold text-slate-700">
                   Template / Modèle
                 </label>
                 <button
                   type="button"
                   onClick={onOpenAddTemplateModal}
-                  className="text-[10.5px] text-amber-600 hover:text-amber-800 font-semibold inline-flex items-center gap-0.5"
+                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold inline-flex items-center gap-0.5 cursor-pointer"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5" />
                   <span>Nouveau</span>
                 </button>
               </div>
@@ -233,15 +235,15 @@ export default function AddMachineModal({
             {/* Zone with '+' Button */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+                <label className="text-[11px] font-bold text-slate-700">
                   Zone d'Installation
                 </label>
                 <button
                   type="button"
                   onClick={onOpenAddZoneModal}
-                  className="text-[10.5px] text-purple-600 hover:text-purple-800 font-semibold inline-flex items-center gap-0.5"
+                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold inline-flex items-center gap-0.5 cursor-pointer"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5" />
                   <span>Nouvelle</span>
                 </button>
               </div>
@@ -259,15 +261,15 @@ export default function AddMachineModal({
             {/* Technician with '+' Button */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+                <label className="text-[11px] font-bold text-slate-700">
                   Technicien Référent
                 </label>
                 <button
                   type="button"
                   onClick={onOpenAddTechModal}
-                  className="text-[10.5px] text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-0.5"
+                  className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold inline-flex items-center gap-0.5 cursor-pointer"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5" />
                   <span>Nouveau</span>
                 </button>
               </div>
@@ -284,7 +286,7 @@ export default function AddMachineModal({
           </div>
 
           <div>
-            <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            <label className="text-[11px] font-bold text-slate-700 block mb-1">
               Statut Opérationnel
             </label>
             <CustomSelect
@@ -313,19 +315,21 @@ export default function AddMachineModal({
             />
           </div>
 
-          <div className="flex gap-2 pt-3">
+          {/* Modal Actions */}
+          <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-medium"
+              className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold transition cursor-pointer text-xs shadow-2xs"
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="flex-1 h-10 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold"
+              className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition shadow-xs cursor-pointer text-xs flex items-center gap-1.5 active:scale-[0.98]"
             >
-              Enregistrer la Machine
+              <Plus className="w-3.5 h-3.5" />
+              <span>Enregistrer la Machine</span>
             </button>
           </div>
         </form>

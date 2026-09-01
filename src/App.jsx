@@ -29,6 +29,13 @@ import LoadingSkeleton from './components/LoadingSkeleton';
 import SplashScreen from './components/SplashScreen';
 import LoginScreen from './components/LoginScreen';
 import Toast from './components/Toast';
+import ErrorBoundary from './components/ErrorBoundary';
+
+import { validateImportedData } from './utils/validation';
+import { backupService } from './utils/BackupService';
+import { auditService } from './utils/AuditService';
+import { logger } from './utils/Logger';
+import { monitor } from './utils/PerformanceMonitor';
 
 // Lazy load views for instant app startup & fast tab transitions
 const DashboardView = lazy(() => import('./components/DashboardView'));
@@ -102,15 +109,54 @@ export default function App() {
     setRawStock,
   } = useGmaoState();
 
-  const diagnostics = designations;
+  // Auto Backup and Performance Monitor Initialization
+  useEffect(() => {
+    logger.info('Application started');
+    monitor.measure('App_Init', () => {
+      // Start auto backup
+      backupService.startAutoBackup(() => {
+        return {
+          Stock_Actuel: rawStock,
+          Mouvement: mouvements,
+          Machines_Registered: machines,
+          Families: families,
+          Templates: templates,
+          Zones: zones,
+          Diagnostics: designations,
+          Types: types,
+          Technicians: technicians,
+          Operations: operations,
+        };
+      }, currentUser?.nom || 'system');
+    });
 
+    return () => {
+      backupService.stopAutoBackup();
+    };
+  }, [
+    currentUser,
+    rawStock,
+    mouvements,
+    machines,
+    families,
+    templates,
+    zones,
+    designations,
+    types,
+    technicians,
+    operations,
+  ]);
+
+  const diagnostics = designations;
 
   // Compute Full Stock with Dynamic Live Calculations (Formula F, G, H, J)
   const stockItems = useMemo(() => {
     // Map entries and sorties by ref
     const mvtSummary = {};
     mouvements.forEach((m) => {
-      const r = String(m.ref || m['Référence'] || '').trim().toLowerCase();
+      const r = String(m.ref || m['Référence'] || '')
+        .trim()
+        .toLowerCase();
       if (!r) return;
       if (!mvtSummary[r]) {
         mvtSummary[r] = { entrees: 0, sorties: 0 };
@@ -138,11 +184,10 @@ export default function App() {
         entrees,
         sorties,
         stockActuel,
-        alerte
+        alerte,
       };
     });
   }, [rawStock, mouvements]);
-
 
   // Filter States
   const [stockSearch, setStockSearch] = useState('');
@@ -601,83 +646,90 @@ export default function App() {
   };
 
   // FILE IMPORT HANDLER WITH AUTOMATIC DATED BACKUP
-  const handleImportFile = (e) => {
+
+  const handleImportFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Restrict file size to 10MB
     if (file.size > 10 * 1024 * 1024) {
       showToast('Fichier trop volumineux. La taille maximale est de 10 MB.', 'error');
       return;
     }
 
-    // Restrict file extensions and MIME types
     const validExtensions = ['.json', '.xlsx'];
     const validMimeTypes = [
       'application/json',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     ];
     const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
     if (!validExtensions.includes(fileExt) || (file.type && !validMimeTypes.includes(file.type))) {
-      showToast(
-        'Format de fichier non supporté. Seuls les fichiers JSON et XLSX sont autorisés.',
-        'error'
-      );
+      showToast('Format de fichier non supporté. Seuls JSON et XLSX.', 'error');
       return;
     }
 
-    // Create Automatic Dated Backup before overwriting data
-    const backupDate = createAutomaticBackup(`Importation : ${file.name}`);
-
+    const backupDate = createAutomaticBackup('Importation : ' + file.name);
     const reader = new FileReader();
-    reader.onload = (evt) => {
+
+    reader.onload = async (evt) => {
       try {
+        let importedData = {};
         if (file.name.endsWith('.json')) {
-          const json = JSON.parse(evt.target.result);
-          if (json.Stock_Actuel) setRawStock(sanitizeObject(json.Stock_Actuel));
-          if (json.Mouvement) setMouvements(sanitizeObject(json.Mouvement));
-          if (json.Machines_Registered) setMachines(sanitizeObject(json.Machines_Registered));
-          if (json.Families) setFamilies(sanitizeObject(json.Families));
-          if (json.Templates) setTemplates(sanitizeObject(json.Templates));
-          if (json.Zones) setZones(sanitizeObject(json.Zones));
-          if (json.Technicians) setTechnicians(sanitizeObject(json.Technicians));
-          if (json.Operations) setOperations(sanitizeObject(json.Operations));
-          showToast(`Import JSON réussi ! (Backup daté du ${backupDate})`, 'success');
+          importedData = JSON.parse(evt.target.result);
         } else {
           const data = new Uint8Array(evt.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
+
           if (workbook.SheetNames.includes('Stock_Actuel')) {
-            const parsedStock = XLSX.utils.sheet_to_json(workbook.Sheets['Stock_Actuel']);
-            if (parsedStock.length > 0) setRawStock(sanitizeObject(parsedStock));
-          }
-          if (workbook.SheetNames.includes('Machines_Registered')) {
-            const parsedMch = XLSX.utils.sheet_to_json(workbook.Sheets['Machines_Registered']);
-            if (parsedMch.length > 0) setMachines(sanitizeObject(parsedMch));
+            importedData.Stock_Actuel = XLSX.utils.sheet_to_json(workbook.Sheets['Stock_Actuel']);
           }
           if (workbook.SheetNames.includes('Mouvements')) {
-            const parsedMvt = XLSX.utils.sheet_to_json(workbook.Sheets['Mouvements']);
-            if (parsedMvt.length > 0) setMouvements(sanitizeObject(parsedMvt));
+            importedData.Mouvement = XLSX.utils.sheet_to_json(workbook.Sheets['Mouvements']);
           }
-          if (workbook.SheetNames.includes('Types')) {
-            const parsedTypes = XLSX.utils.sheet_to_json(workbook.Sheets['Types']);
-            if (parsedTypes.length > 0) setTypes(parsedTypes);
+          if (workbook.SheetNames.includes('Machines_Registered')) {
+            importedData.Machines_Registered = XLSX.utils.sheet_to_json(
+              workbook.Sheets['Machines_Registered']
+            );
           }
-          if (workbook.SheetNames.includes('Families')) {
-            const parsedFam = XLSX.utils.sheet_to_json(workbook.Sheets['Families']);
-            if (parsedFam.length > 0) setFamilies(sanitizeObject(parsedFam));
-          }
-          if (workbook.SheetNames.includes('Zones')) {
-            const parsedZones = XLSX.utils.sheet_to_json(workbook.Sheets['Zones']);
-            if (parsedZones.length > 0) setZones(parsedZones);
-          }
-          showToast(
-            `Import Excel réussi via XLSX.read ! (Backup daté du ${backupDate})`,
-            'success'
-          );
         }
+
+        const validation = validateImportedData(importedData);
+        if (!validation.valid) {
+          const errorMsgs = [];
+          if (validation.errors.stock.length > 0)
+            errorMsgs.push('Erreurs Stock: ' + validation.errors.stock.length);
+          if (validation.errors.movements.length > 0)
+            errorMsgs.push('Erreurs Mouvements: ' + validation.errors.movements.length);
+          if (validation.errors.general.length > 0) errorMsgs.push(...validation.errors.general);
+
+          showToast('Import échoué: données invalides. ' + errorMsgs.join(', '), 'error');
+          logger.error('Validation failed on import', validation.errors);
+          return;
+        }
+
+        if (importedData.Stock_Actuel && importedData.Stock_Actuel.length > 0)
+          setRawStock(sanitizeObject(importedData.Stock_Actuel));
+        if (importedData.Mouvement && importedData.Mouvement.length > 0)
+          setMouvements(sanitizeObject(importedData.Mouvement));
+        if (importedData.Machines_Registered && importedData.Machines_Registered.length > 0)
+          setMachines(sanitizeObject(importedData.Machines_Registered));
+        if (importedData.Families && importedData.Families.length > 0)
+          setFamilies(sanitizeObject(importedData.Families));
+        if (importedData.Templates && importedData.Templates.length > 0)
+          setTemplates(sanitizeObject(importedData.Templates));
+        if (importedData.Zones && importedData.Zones.length > 0)
+          setZones(sanitizeObject(importedData.Zones));
+        if (importedData.Technicians && importedData.Technicians.length > 0)
+          setTechnicians(sanitizeObject(importedData.Technicians));
+        if (importedData.Operations && importedData.Operations.length > 0)
+          setOperations(sanitizeObject(importedData.Operations));
+
+        showToast('Import réussi ! (Backup daté du ' + backupDate + ')', 'success');
+        logger.info('File imported successfully', { file: file.name });
       } catch (err) {
         console.error('Import error:', err);
-        showToast("Erreur lors de l'importation du fichier.", 'error');
+        showToast('Erreur lors de la lecture du fichier.', 'error');
+        logger.error('Import error', { error: err.message });
       }
     };
 
@@ -780,7 +832,12 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col md:pl-[270px]">
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col md:pl-[270px] relative isolate select-none font-sans">
+      {/* Background Excel Grid Subtle Lines & Ambient Tones (Identical to Splash Screen) */}
+      <div className="fixed inset-0 opacity-[0.04] pointer-events-none bg-[radial-gradient(#107c41_1px,transparent_1px)] [background-size:20px_20px] -z-10" />
+      <div className="fixed -top-32 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="fixed -bottom-32 -left-32 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
+
       {/* Sidebar Navigation */}
       <Sidebar
         currentTab={currentTab}
@@ -822,227 +879,255 @@ export default function App() {
       <main className="flex-1 p-4 md:p-6 lg:p-8 w-full">
         <Suspense fallback={<LoadingSkeleton currentTab={currentTab} />}>
           {currentTab === 'dashboard' && (
-            <DashboardView
-              stockItems={stockItems}
-              machines={machines}
-              mouvements={mouvements}
-              types={types}
-              diagnostics={diagnostics}
-              zones={zones}
-              technicians={technicians}
-              stockKPIs={stockKPIs}
-              onNavigateToStock={() => React.startTransition(() => setCurrentTab('stock'))}
-              onNavigateToMachines={() => React.startTransition(() => setCurrentTab('machines'))}
-              onNavigateToSortie={() => React.startTransition(() => setCurrentTab('sortie'))}
-              onQuickSortie={handleQuickSortie}
-              onUpdateMouvement={handleUpdateMouvement}
-            />
+            <ErrorBoundary>
+              <DashboardView
+                stockItems={stockItems}
+                machines={machines}
+                mouvements={mouvements}
+                types={types}
+                diagnostics={diagnostics}
+                zones={zones}
+                technicians={technicians}
+                stockKPIs={stockKPIs}
+                onNavigateToStock={() => React.startTransition(() => setCurrentTab('stock'))}
+                onNavigateToMachines={() => React.startTransition(() => setCurrentTab('machines'))}
+                onNavigateToSortie={() => React.startTransition(() => setCurrentTab('sortie'))}
+                onQuickSortie={handleQuickSortie}
+                onUpdateMouvement={handleUpdateMouvement}
+              />
+            </ErrorBoundary>
           )}
 
           {currentTab === 'stock' && (
-            <StockView
-              stockItems={stockItems}
-              filteredStock={filteredStock}
-              stockSearch={stockSearch}
-              setStockSearch={setStockSearch}
-              stockTypeFilter={stockTypeFilter}
-              setStockTypeFilter={setStockTypeFilter}
-              stockAlertOnly={stockAlertOnly}
-              setStockAlertOnly={setStockAlertOnly}
-              types={types}
-              onOpenAddArticle={() => setShowAddArticleModal(true)}
-              onQuickSortie={handleQuickSortie}
-              stockKPIs={stockKPIs}
-              onNavigateToType={handleNavigateToStockFiltered}
-            />
+            <ErrorBoundary>
+              <StockView
+                stockItems={stockItems}
+                filteredStock={filteredStock}
+                stockSearch={stockSearch}
+                setStockSearch={setStockSearch}
+                stockTypeFilter={stockTypeFilter}
+                setStockTypeFilter={setStockTypeFilter}
+                stockAlertOnly={stockAlertOnly}
+                setStockAlertOnly={setStockAlertOnly}
+                types={types}
+                onOpenAddArticle={() => setShowAddArticleModal(true)}
+                onQuickSortie={handleQuickSortie}
+                stockKPIs={stockKPIs}
+                onNavigateToType={handleNavigateToStockFiltered}
+              />
+            </ErrorBoundary>
           )}
 
           {currentTab === 'types' && (
-            <TypeView
-              types={types}
-              designations={designations}
-              stockItems={stockItems}
-              onAddType={handleAddType}
-              onUpdateType={handleUpdateType}
-              onDeleteType={handleDeleteType}
-              onNavigateToStockFiltered={handleNavigateToStockFiltered}
-              onNavigateToDesignationsFiltered={handleNavigateToDesignationsFiltered}
-            />
+            <ErrorBoundary>
+              <TypeView
+                types={types}
+                designations={designations}
+                stockItems={stockItems}
+                onAddType={handleAddType}
+                onUpdateType={handleUpdateType}
+                onDeleteType={handleDeleteType}
+                onNavigateToStockFiltered={handleNavigateToStockFiltered}
+                onNavigateToDesignationsFiltered={handleNavigateToDesignationsFiltered}
+              />
+            </ErrorBoundary>
           )}
 
           {(currentTab === 'designations' || currentTab === 'diagnostics') && (
-            <DesignationView
-              designations={designations}
-              types={types}
-              stockItems={stockItems}
-              desigTypeFilter={diagTypeFilter}
-              setDesigTypeFilter={setDiagTypeFilter}
-              onAddDesignation={handleAddDesignation}
-              onUpdateDesignation={handleUpdateDesignation}
-              onDeleteDesignation={handleDeleteDesignation}
-              onOpenAddTypeModal={() => React.startTransition(() => setCurrentTab('types'))}
-              onNavigateToStockFilteredByRef={handleNavigateToStockFilteredByRef}
-            />
+            <ErrorBoundary>
+              <DesignationView
+                designations={designations}
+                types={types}
+                stockItems={stockItems}
+                desigTypeFilter={diagTypeFilter}
+                setDesigTypeFilter={setDiagTypeFilter}
+                onAddDesignation={handleAddDesignation}
+                onUpdateDesignation={handleUpdateDesignation}
+                onDeleteDesignation={handleDeleteDesignation}
+                onOpenAddTypeModal={() => React.startTransition(() => setCurrentTab('types'))}
+                onNavigateToStockFilteredByRef={handleNavigateToStockFilteredByRef}
+              />
+            </ErrorBoundary>
           )}
 
           {currentTab === 'machines' && (
-            <MachinesRegisteredView
-              machines={machines}
-              onUpdateMachine={handleUpdateMachine}
-              onDeleteMachine={handleDeleteMachine}
-              families={families}
-              templates={templates}
-              zones={zones}
-              technicians={technicians}
-              mouvements={mouvements}
-              mchFamilyFilter={mchFamilyFilter}
-              setMchFamilyFilter={setMchFamilyFilter}
-              mchTemplateFilter={mchTemplateFilter}
-              setMchTemplateFilter={setMchTemplateFilter}
-              mchZoneFilter={mchZoneFilter}
-              setMchZoneFilter={setMchZoneFilter}
-              mchSearch={mchSearch}
-              setMchSearch={setMchSearch}
-              onOpenAddMachine={() => setShowAddMachineModal(true)}
-              onNavigateToFamily={handleNavigateToMachinesByFamily}
-              onNavigateToTemplate={handleNavigateToMachinesByTemplate}
-              onNavigateToZone={handleNavigateToMachinesByZone}
-            />
+            <ErrorBoundary>
+              <MachinesRegisteredView
+                machines={machines}
+                onUpdateMachine={handleUpdateMachine}
+                onDeleteMachine={handleDeleteMachine}
+                families={families}
+                templates={templates}
+                zones={zones}
+                technicians={technicians}
+                mouvements={mouvements}
+                mchFamilyFilter={mchFamilyFilter}
+                setMchFamilyFilter={setMchFamilyFilter}
+                mchTemplateFilter={mchTemplateFilter}
+                setMchTemplateFilter={setMchTemplateFilter}
+                mchZoneFilter={mchZoneFilter}
+                setMchZoneFilter={setMchZoneFilter}
+                mchSearch={mchSearch}
+                setMchSearch={setMchSearch}
+                onOpenAddMachine={() => setShowAddMachineModal(true)}
+                onNavigateToFamily={handleNavigateToMachinesByFamily}
+                onNavigateToTemplate={handleNavigateToMachinesByTemplate}
+                onNavigateToZone={handleNavigateToMachinesByZone}
+              />
+            </ErrorBoundary>
           )}
 
           {currentTab === 'families' && (
-            <FamilyView
-              families={families}
-              templates={templates}
-              machines={machines}
-              onAddFamily={handleAddFamily}
-              onUpdateFamily={handleUpdateFamily}
-              onDeleteFamily={handleDeleteFamily}
-              onNavigateToTemplatesFiltered={handleNavigateToTemplatesFiltered}
-              onNavigateToMachinesByFamily={handleNavigateToMachinesByFamily}
-            />
+            <ErrorBoundary>
+              <FamilyView
+                families={families}
+                templates={templates}
+                machines={machines}
+                onAddFamily={handleAddFamily}
+                onUpdateFamily={handleUpdateFamily}
+                onDeleteFamily={handleDeleteFamily}
+                onNavigateToTemplatesFiltered={handleNavigateToTemplatesFiltered}
+                onNavigateToMachinesByFamily={handleNavigateToMachinesByFamily}
+              />
+            </ErrorBoundary>
           )}
 
           {currentTab === 'templates' && (
-            <TemplatesView
-              templates={templates}
-              families={families}
-              machines={machines}
-              templateFamilyFilter={templateFamilyFilter}
-              setTemplateFamilyFilter={setTemplateFamilyFilter}
-              onAddTemplate={handleAddTemplate}
-              onUpdateTemplate={handleUpdateTemplate}
-              onDeleteTemplate={handleDeleteTemplate}
-              onOpenAddFamilyModal={() => React.startTransition(() => setCurrentTab('families'))}
-              onNavigateToMachinesByTemplate={handleNavigateToMachinesByTemplate}
-              onNavigateToFamilyFiltered={handleNavigateToTemplatesFiltered}
-            />
+            <ErrorBoundary>
+              <TemplatesView
+                templates={templates}
+                families={families}
+                machines={machines}
+                templateFamilyFilter={templateFamilyFilter}
+                setTemplateFamilyFilter={setTemplateFamilyFilter}
+                onAddTemplate={handleAddTemplate}
+                onUpdateTemplate={handleUpdateTemplate}
+                onDeleteTemplate={handleDeleteTemplate}
+                onOpenAddFamilyModal={() => React.startTransition(() => setCurrentTab('families'))}
+                onNavigateToMachinesByTemplate={handleNavigateToMachinesByTemplate}
+                onNavigateToFamilyFiltered={handleNavigateToTemplatesFiltered}
+              />
+            </ErrorBoundary>
           )}
 
           {currentTab === 'zones' && (
-            <ZonesView
-              zones={zones}
-              technicians={technicians}
-              operations={operations}
-              machines={machines}
-              onAddZone={handleAddZone}
-              onUpdateZone={handleUpdateZone}
-              onDeleteZone={handleDeleteZone}
-              onNavigateToTechsByZone={handleNavigateToTechsByZone}
-              onNavigateToOpsByZone={handleNavigateToOpsByZone}
-              onNavigateToMachinesByZone={handleNavigateToMachinesByZone}
-            />
+            <ErrorBoundary>
+              <ZonesView
+                zones={zones}
+                technicians={technicians}
+                operations={operations}
+                machines={machines}
+                onAddZone={handleAddZone}
+                onUpdateZone={handleUpdateZone}
+                onDeleteZone={handleDeleteZone}
+                onNavigateToTechsByZone={handleNavigateToTechsByZone}
+                onNavigateToOpsByZone={handleNavigateToOpsByZone}
+                onNavigateToMachinesByZone={handleNavigateToMachinesByZone}
+              />
+            </ErrorBoundary>
           )}
 
           {currentTab === 'utilisateurs' && (
-            <UtilisateursView
-              technicians={technicians}
-              operations={operations}
-              zones={zones}
-              mouvements={mouvements}
-              onAddTechnician={handleAddTechnician}
-              onUpdateTechnician={handleUpdateTechnician}
-              onDeleteTechnician={handleDeleteTechnician}
-              onAddOperation={handleAddOperation}
-              onUpdateOperation={handleUpdateOperation}
-              onDeleteOperation={handleDeleteOperation}
-              onOpenAddZoneModal={() => React.startTransition(() => setCurrentTab('zones'))}
-            />
+            <ErrorBoundary>
+              <UtilisateursView
+                technicians={technicians}
+                operations={operations}
+                zones={zones}
+                mouvements={mouvements}
+                onAddTechnician={handleAddTechnician}
+                onUpdateTechnician={handleUpdateTechnician}
+                onDeleteTechnician={handleDeleteTechnician}
+                onAddOperation={handleAddOperation}
+                onUpdateOperation={handleUpdateOperation}
+                onDeleteOperation={handleDeleteOperation}
+                onOpenAddZoneModal={() => React.startTransition(() => setCurrentTab('zones'))}
+              />
+            </ErrorBoundary>
           )}
 
           {currentTab === 'sortie' && (
-            <SortieRapideView
-              mouvements={mouvements}
-              stockItems={stockItems}
-              zones={zones}
-              machines={machines}
-              technicians={technicians}
-              operations={operations}
-              onAddMouvement={handleAddMouvement}
-              onUpdateMouvement={handleUpdateMouvement}
-              onDeleteMouvement={handleDeleteMouvement}
-              onOpenAddArticle={() => setShowAddArticleModal(true)}
-              onOpenAddMachine={() => setShowAddMachineModal(true)}
-              onOpenAddZone={() => setShowAddZoneModal(true)}
-              onOpenAddTech={() => {
-                setAddUserModalType('TECHNICIEN');
-                setShowAddUserModal(true);
-              }}
-              onOpenAddChef={() => {
-                setAddUserModalType('CHEF');
-                setShowAddUserModal(true);
-              }}
-              onOpenAddOperator={() => {
-                setAddUserModalType('OPERATEUR');
-                setShowAddUserModal(true);
-              }}
-            />
+            <ErrorBoundary>
+              <SortieRapideView
+                mouvements={mouvements}
+                stockItems={stockItems}
+                zones={zones}
+                machines={machines}
+                technicians={technicians}
+                operations={operations}
+                onAddMouvement={handleAddMouvement}
+                onUpdateMouvement={handleUpdateMouvement}
+                onDeleteMouvement={handleDeleteMouvement}
+                onOpenAddArticle={() => setShowAddArticleModal(true)}
+                onOpenAddMachine={() => setShowAddMachineModal(true)}
+                onOpenAddZone={() => setShowAddZoneModal(true)}
+                onOpenAddTech={() => {
+                  setAddUserModalType('TECHNICIEN');
+                  setShowAddUserModal(true);
+                }}
+                onOpenAddChef={() => {
+                  setAddUserModalType('CHEF');
+                  setShowAddUserModal(true);
+                }}
+                onOpenAddOperator={() => {
+                  setAddUserModalType('OPERATEUR');
+                  setShowAddUserModal(true);
+                }}
+              />
+            </ErrorBoundary>
           )}
 
           {currentTab === 'nexus' && (
-            <NexusView
-              types={types}
-              diagnostics={diagnostics}
-              families={families}
-              templates={templates}
-              zones={zones}
-              technicians={technicians}
-              operations={operations}
-              machines={machines}
-              stockItems={stockItems}
-            />
+            <ErrorBoundary>
+              <NexusView
+                types={types}
+                diagnostics={diagnostics}
+                families={families}
+                templates={templates}
+                zones={zones}
+                technicians={technicians}
+                operations={operations}
+                machines={machines}
+                stockItems={stockItems}
+              />
+            </ErrorBoundary>
           )}
 
-          {currentTab === 'guide' && <GuideView />}
+          {currentTab === 'guide' && (
+            <ErrorBoundary>
+              <GuideView />
+            </ErrorBoundary>
+          )}
 
           {currentTab === 'settings' && (
-            <SettingsView
-              rawStock={rawStock}
-              setRawStock={setRawStock}
-              mouvements={mouvements}
-              setMouvements={setMouvements}
-              machines={machines}
-              setMachines={setMachines}
-              families={families}
-              setFamilies={setFamilies}
-              templates={templates}
-              setTemplates={setTemplates}
-              zones={zones}
-              setZones={setZones}
-              technicians={technicians}
-              setTechnicians={setTechnicians}
-              operations={operations}
-              setOperations={setOperations}
-              types={types}
-              setTypes={setTypes}
-              showToast={showToast}
-              linkedFileHandle={linkedFileHandle}
-              setLinkedFileHandle={setLinkedFileHandle}
-              linkedFileName={linkedFileName}
-              setLinkedFileName={setLinkedFileName}
-              onDirectLink={handleDirectFileLink}
-              onDirectSave={handleDirectSave}
-            />
+            <ErrorBoundary>
+              <SettingsView
+                rawStock={rawStock}
+                setRawStock={setRawStock}
+                mouvements={mouvements}
+                setMouvements={setMouvements}
+                machines={machines}
+                setMachines={setMachines}
+                families={families}
+                setFamilies={setFamilies}
+                templates={templates}
+                setTemplates={setTemplates}
+                zones={zones}
+                setZones={setZones}
+                technicians={technicians}
+                setTechnicians={setTechnicians}
+                operations={operations}
+                setOperations={setOperations}
+                types={types}
+                setTypes={setTypes}
+                showToast={showToast}
+                linkedFileHandle={linkedFileHandle}
+                setLinkedFileHandle={setLinkedFileHandle}
+                linkedFileName={linkedFileName}
+                setLinkedFileName={setLinkedFileName}
+                onDirectLink={handleDirectFileLink}
+                onDirectSave={handleDirectSave}
+              />
+            </ErrorBoundary>
           )}
         </Suspense>
       </main>

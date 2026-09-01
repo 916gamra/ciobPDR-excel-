@@ -112,23 +112,23 @@ export default function AddUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-indigo-300">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+      <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col">
+        {/* Header (BDR Light Excel UI) */}
+        <div className="p-4 sm:p-5 bg-white border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 shadow-2xs font-bold">
               <UserCheck className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-bold text-sm leading-none">
+              <h3 className="font-bold text-sm text-slate-900 leading-tight">
                 {profileType === 'TECHNICIEN'
                   ? 'Nouveau Technicien'
                   : profileType === 'CHEF'
                     ? "Nouveau Chef d'Équipe"
                     : 'Nouvelle Opération / Opérateur'}
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <p className="text-[11.5px] text-slate-500 mt-0.5">
                 Création rapide liée aux zones et au workflow
               </p>
             </div>
@@ -136,7 +136,7 @@ export default function AddUserModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -144,17 +144,17 @@ export default function AddUserModal({
 
         {/* Profile Switcher Tabs */}
         <div className="p-4 bg-slate-50 border-b border-slate-200">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-2">
+          <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
             Type de Profil
           </label>
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/80 rounded-xl">
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/70 rounded-xl border border-slate-200/80">
             <button
               type="button"
               onClick={() => {
                 setProfileType('TECHNICIEN');
                 setForm((prev) => ({ ...prev, specialite: 'Mécanique / Électrique' }));
               }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition ${
+              className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 profileType === 'TECHNICIEN'
                   ? 'bg-white text-blue-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -170,7 +170,7 @@ export default function AddUserModal({
                 setProfileType('CHEF');
                 setForm((prev) => ({ ...prev, specialite: 'Superviseur Atelier' }));
               }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition ${
+              className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 profileType === 'CHEF'
                   ? 'bg-white text-indigo-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -186,7 +186,7 @@ export default function AddUserModal({
                 setProfileType('OPERATEUR');
                 setForm((prev) => ({ ...prev, specialite: 'Opérateur de Ligne' }));
               }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition ${
+              className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 profileType === 'OPERATEUR'
                   ? 'bg-white text-emerald-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -199,7 +199,7 @@ export default function AddUserModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 text-xs">
           {error && (
             <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
               {error}
@@ -208,20 +208,20 @@ export default function AddUserModal({
 
           {/* Generated ID */}
           <div>
-            <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            <label className="text-[11px] font-bold text-slate-700 block mb-1">
               ID Auto-Généré
             </label>
             <input
               type="text"
               readOnly
               value={currentId}
-              className="w-full h-9 px-3 rounded-xl bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-700 cursor-not-allowed"
+              className="w-full h-9 px-3 rounded-xl bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-700 cursor-not-allowed shadow-2xs"
             />
           </div>
 
           {/* Nom / Intitulé */}
           <div>
-            <label className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+            <label className="text-[11px] font-bold text-slate-700 block mb-1">
               Nom / Intitulé complet <span className="text-rose-500">*</span>
             </label>
             <input
@@ -237,14 +237,14 @@ export default function AddUserModal({
               }
               value={form.nom}
               onChange={(e) => setForm({ ...form, nom: e.target.value })}
-              className="w-full h-9 px-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
+              className="w-full h-9 px-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs transition"
             />
           </div>
 
           {/* Zone affectée */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider">
+              <label className="text-[11px] font-bold text-slate-700">
                 Zone / Atelier de Rattachement <span className="text-rose-500">*</span>
               </label>
               {onOpenAddZoneModal && (
@@ -254,9 +254,10 @@ export default function AddUserModal({
                     onClose();
                     onOpenAddZoneModal();
                   }}
-                  className="text-[10.5px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline"
+                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer flex items-center gap-0.5"
                 >
-                  + Nouvelle Zone
+                  <Plus className="w-3 h-3" />
+                  <span>Nouvelle Zone</span>
                 </button>
               )}
             </div>
@@ -274,7 +275,7 @@ export default function AddUserModal({
           {/* Spécialité (if Technicien) */}
           {profileType === 'TECHNICIEN' && (
             <div>
-              <label className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
                 Spécialité / Compétence
               </label>
               <input
@@ -282,23 +283,23 @@ export default function AddUserModal({
                 placeholder="ex: Mécanique, Électricité, Automatisme..."
                 value={form.specialite}
                 onChange={(e) => setForm({ ...form, specialite: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10"
+                className="w-full h-9 px-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15 shadow-2xs transition"
               />
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 transition"
+              className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold transition cursor-pointer text-xs shadow-2xs"
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-xs"
+              className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition shadow-xs cursor-pointer text-xs flex items-center gap-1.5 active:scale-[0.98]"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Créer & Enregistrer</span>

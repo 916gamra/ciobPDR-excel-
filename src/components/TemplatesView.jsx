@@ -57,9 +57,9 @@ export default function TemplatesView({
     if (!search) return true;
     const q = search.toLowerCase();
     return (
-      t.id_templates.toLowerCase().includes(q) ||
-      t.libelle.toLowerCase().includes(q) ||
-      t.id_family.toLowerCase().includes(q)
+      String(t?.id_templates || '').toLowerCase().includes(q) ||
+      String(t?.libelle || '').toLowerCase().includes(q) ||
+      String(t?.id_family || '').toLowerCase().includes(q)
     );
   });
 

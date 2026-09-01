@@ -358,18 +358,20 @@ export default function TypeView({
           </thead>
           <tbody className="divide-y divide-slate-200/80">
             {displayedData.map((t, idx) => {
-              const typeVal = t.id_type || t.libelle;
-              const desigCount = designations.filter(
-                (d) =>
-                  (d.id_type && d.id_type.toLowerCase() === typeVal.toLowerCase()) ||
-                  (d.type && d.type.toLowerCase() === typeVal.toLowerCase())
-              ).length;
+              const typeVal = String(t.id_type || t.libelle || '');
+              const typeValLower = typeVal.toLowerCase();
 
-              const articleCount = stockItems.filter(
-                (s) =>
-                  (s.id_type && s.id_type.toLowerCase() === typeVal.toLowerCase()) ||
-                  (s.type && s.type.toLowerCase() === typeVal.toLowerCase())
-              ).length;
+              const desigCount = designations.filter((d) => {
+                const dIdType = String(d?.id_type || '').toLowerCase();
+                const dType = String(d?.type || '').toLowerCase();
+                return Boolean(typeValLower && (dIdType === typeValLower || dType === typeValLower));
+              }).length;
+
+              const articleCount = stockItems.filter((s) => {
+                const sIdType = String(s?.id_type || '').toLowerCase();
+                const sType = String(s?.type || '').toLowerCase();
+                return Boolean(typeValLower && (sIdType === typeValLower || sType === typeValLower));
+              }).length;
 
               return (
                 <tr
