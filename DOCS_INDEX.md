@@ -9,6 +9,7 @@
 
 | الشاشة / الوحدة | مسار ملف التوثيق | الوصف ومحتوى التوثيق |
 | :--- | :--- | :--- |
+| **Dashboard & Pilotage** | [`docs/DASHBOARD_VIEW.md`](./docs/DASHBOARD_VIEW.md) | قمرة القيادة الشاملة، تتبع طلبات الشراء، تحليلات التدخلات، والمؤشرات الحية. |
 | **Sortie & Entrée Rapide** | [`docs/SORTIE_RAPIDE_VIEW.md`](./docs/SORTIE_RAPIDE_VIEW.md) | دليل كامل لإدارة حركات المخزون، التدفقات الـ 5، الفرق بين المنفذ والطالب، وتأهيل الحركات. |
 | **Stock Actuel (Articles)** | [`docs/STOCK_VIEW.md`](./docs/STOCK_VIEW.md) | إدارة المقالات، حسابات `SUMIFS`، الحدود الدنيا، التنبيهات والأرصدة. |
 | **Machines Registered** | [`docs/MACHINES_VIEW.md`](./docs/MACHINES_VIEW.md) | بطاقة الآلات الصناعية، التوزيع الجغرافي، ونماذج العائلات والقوالب. |

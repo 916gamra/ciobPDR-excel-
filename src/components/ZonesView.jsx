@@ -64,9 +64,15 @@ export default function ZonesView({
 
   const sortMenuRef = useRef(null);
 
-  useEffect(() => {
+  const [prevFilters, setPrevFilters] = useState({ search, sortField, sortOrder });
+  if (
+    prevFilters.search !== search ||
+    prevFilters.sortField !== sortField ||
+    prevFilters.sortOrder !== sortOrder
+  ) {
+    setPrevFilters({ search, sortField, sortOrder });
     setCurrentPage(1);
-  }, [search, sortField, sortOrder]);
+  }
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -488,7 +494,7 @@ export default function ZonesView({
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200">
             <h3 className="font-bold text-base text-slate-900 mb-1">+ Nouvelle Zone / Atelier</h3>
             <p className="text-xs text-slate-500 mb-4">
-              Créez une zone géographique ou un secteur d'usine.
+              Créez une zone géographique ou un secteur d&apos;usine.
             </p>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>

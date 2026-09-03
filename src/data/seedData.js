@@ -26,10 +26,14 @@ export const INITIAL_DIAGNOSTICS = [
 ];
 
 export const INITIAL_FAMILIES = [
-  { id_family: 'FAM-EMB', libelle: 'Emballage' },
+  { id_family: 'FAM-EMB', libelle: 'Emballage & Conditionnement' },
   { id_family: 'FAM-USI', libelle: 'Usinage & Fraisage' },
   { id_family: 'FAM-DEC', libelle: 'Découpe & Presses' },
   { id_family: 'FAM-ASSEM', libelle: 'Assemblage & Lignes' },
+  { id_family: 'FAM-MOT', libelle: 'Moteurs & Motoréducteurs' },
+  { id_family: 'FAM-POM', libelle: 'Pompes & Centrales Hydrauliques' },
+  { id_family: 'FAM-EXT', libelle: 'Extincteurs & Sécurité Incendie' },
+  { id_family: 'FAM-COUR', libelle: 'Courroies & Bandes Spéciales' },
 ];
 
 export const INITIAL_TEMPLATES = [
@@ -39,7 +43,186 @@ export const INITIAL_TEMPLATES = [
   { id_templates: 'TPL-TOUR', libelle: 'Tour Numérique T-300', id_family: 'FAM-USI' },
   { id_templates: 'TPL-PRS50', libelle: 'Presse Hydraulique 50T', id_family: 'FAM-DEC' },
   { id_templates: 'TPL-DECCNT', libelle: 'Découpeuse Continue D-12', id_family: 'FAM-DEC' },
+  { id_templates: 'TPL-MOT380', libelle: 'Moteur Asynchrone 380V Trifasé', id_family: 'FAM-MOT' },
+  { id_templates: 'TPL-MOTRED', libelle: 'Motoréducteur à Arbre Creux', id_family: 'FAM-MOT' },
+  { id_templates: 'TPL-POMVAC', libelle: 'Pompe à Vide / Dépression', id_family: 'FAM-POM' },
+  { id_templates: 'TPL-POMHYD', libelle: 'Pompe Hydraulique Haute Pression', id_family: 'FAM-POM' },
+  { id_templates: 'TPL-EXT15', libelle: 'Extincteur Poudre ABC 15kg', id_family: 'FAM-EXT' },
+  { id_templates: 'TPL-EXT50', libelle: 'Extincteur Mobile 50kg sur Roues', id_family: 'FAM-EXT' },
+  { id_templates: 'TPL-COURPL', libelle: 'Courroie Plate Thermocollée 1200x50', id_family: 'FAM-COUR' },
 ];
+
+export const INITIAL_WAREHOUSE_ITEMS = [
+  {
+    id_warehouse_item: 'MOT-01',
+    stockInitial: 1,
+    seuil: 0,
+    designation: 'Moteur 380V 5.5kW - Entraînement Détacheuse',
+    nature: 'PARTIE', // 'PARTIE' (جزء / Ensemble) or 'COMPOSANT' (مكون)
+    id_family: 'FAM-MOT',
+    id_templates: 'TPL-MOT380',
+    id_type: '',
+    id_diag: '',
+    rattachement_type: 'MACHINE', // 'MACHINE' | 'ZONE' | 'ENTREPOT'
+    id_machine_registered: 'MCH-001',
+    id_zone: 'ZONE-DET',
+    technician: 'TECH-01',
+    status: 'En service',
+    emplacement: 'SUR-MCH-001',
+    remarques: 'Installé sur axe principal. Révision planifiée 2026.',
+  },
+  {
+    id_warehouse_item: 'MOT-02',
+    stockInitial: 1,
+    seuil: 0,
+    designation: 'Moteur 380V 7.5kW Réserve Atelier',
+    nature: 'PARTIE',
+    id_family: 'FAM-MOT',
+    id_templates: 'TPL-MOT380',
+    id_type: '',
+    id_diag: '',
+    rattachement_type: 'ENTREPOT',
+    id_machine_registered: '',
+    id_zone: 'ZONE-ATEL',
+    technician: 'TECH-04',
+    status: 'En stock (Disponible)',
+    emplacement: 'E-MAG-RAYON-A02',
+    remarques: 'Moteur de secours prêt à lemploi.',
+  },
+  {
+    id_warehouse_item: 'POM-01',
+    stockInitial: 1,
+    seuil: 0,
+    designation: 'Pompe à Vide Busch 40m3/h',
+    nature: 'PARTIE',
+    id_family: 'FAM-POM',
+    id_templates: 'TPL-POMVAC',
+    id_type: '',
+    id_diag: '',
+    rattachement_type: 'MACHINE',
+    id_machine_registered: 'MCH-002',
+    id_zone: 'ZONE-EMB',
+    technician: 'TECH-02',
+    status: 'En service',
+    emplacement: 'SUR-MCH-002',
+    remarques: 'Niveau dhuile vérifié mensuellement.',
+  },
+  {
+    id_warehouse_item: 'POM-02',
+    stockInitial: 1,
+    seuil: 0,
+    designation: 'Pompe Hydraulique 250 Bar Réserve',
+    nature: 'PARTIE',
+    id_family: 'FAM-POM',
+    id_templates: 'TPL-POMHYD',
+    id_type: '',
+    id_diag: '',
+    rattachement_type: 'ENTREPOT',
+    id_machine_registered: '',
+    id_zone: 'ZONE-ATEL',
+    technician: 'TECH-01',
+    status: 'En stock (Disponible)',
+    emplacement: 'E-MAG-PAL-04',
+    remarques: 'Joints neufs remplacés.',
+  },
+  {
+    id_warehouse_item: 'COMP-FIX-01',
+    stockInitial: 1,
+    seuil: 0,
+    designation: 'Cheville Filetée Haute Résistance 12x100',
+    nature: 'COMPOSANT',
+    id_family: '',
+    id_templates: '',
+    id_type: 'TYPE-FIX',
+    id_diag: 'DIAG-DESSERAGE',
+    rattachement_type: 'MACHINE',
+    id_machine_registered: 'MCH-001',
+    id_zone: 'ZONE-DET',
+    technician: 'TECH-01',
+    status: 'En service',
+    emplacement: 'SUR-MCH-001',
+    remarques: 'Ancrage socle lourd machine.',
+  },
+  {
+    id_warehouse_item: 'COMP-COU-01',
+    stockInitial: 1,
+    seuil: 0,
+    designation: 'Courroie Plate Thermocollée 1200x50 Spéciale',
+    nature: 'COMPOSANT',
+    id_family: '',
+    id_templates: '',
+    id_type: 'TYPE-MEC',
+    id_diag: 'DIAG-USURE',
+    rattachement_type: 'ENTREPOT',
+    id_machine_registered: '',
+    id_zone: 'ZONE-ATEL',
+    technician: 'TECH-02',
+    status: 'En révision / Externe',
+    emplacement: 'R-SOUS-TRAITANT',
+    remarques: 'Envoyé pour vulcanisation spéciale chez prestataire externe.',
+  },
+  {
+    id_warehouse_item: 'COMP-PNE-01',
+    stockInitial: 1,
+    seuil: 0,
+    designation: 'Vérin Pneumatique Compact Double Effet 50mm',
+    nature: 'COMPOSANT',
+    id_family: '',
+    id_templates: '',
+    id_type: 'TYPE-PNE',
+    id_diag: 'DIAG-FUITE',
+    rattachement_type: 'ZONE',
+    id_machine_registered: '',
+    id_zone: 'ZONE-EMB',
+    technician: 'TECH-02',
+    status: 'En stock (Disponible)',
+    emplacement: 'E-MAG-RAYON-C04',
+    remarques: 'Composant spécifique pour poussoir automatique.',
+  },
+];
+
+/**
+ * Auto-generates unique Warehouse Element / Component Code:
+ * - If PARTIE: based on Family prefix (e.g., FAM-MOT -> MOT-01, MOT-02)
+ * - If COMPOSANT: based on Type prefix (e.g., TYPE-FIX -> COMP-FIX-01, TYPE-MEC -> COMP-MEC-01)
+ */
+export function generateWarehouseItemCode(selectedId = '', existingItems = [], nature = 'PARTIE') {
+  let prefix = '';
+  if (nature === 'COMPOSANT') {
+    const raw = String(selectedId || '')
+      .replace(/^TYPE-?/i, '')
+      .replace(/^COMP-?/i, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 4) || 'MEC';
+    prefix = `COMP-${raw}`;
+  } else {
+    prefix =
+      String(selectedId || '')
+        .replace(/^FAM-?/i, '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 4) || 'MOT';
+  }
+
+  let maxIndex = 0;
+  existingItems.forEach((item) => {
+    // Only check items of the same nature
+    if (item.nature && item.nature !== nature) return;
+
+    const code = String(item.id_warehouse_item || item.id_element || '').toUpperCase();
+    if (code.startsWith(prefix + '-')) {
+      const match = code.match(/\d+$/);
+      if (match) {
+        const num = parseInt(match[0], 10);
+        if (num > maxIndex) maxIndex = num;
+      }
+    }
+  });
+
+  const nextNum = maxIndex + 1;
+  return `${prefix}-${String(nextNum).padStart(2, '0')}`;
+}
 
 export const INITIAL_MACHINES_REGISTERED = [
   {

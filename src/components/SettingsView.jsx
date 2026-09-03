@@ -601,18 +601,31 @@ export default function SettingsView({
     if (group === 'stock') {
       const mappedStock = (initialData.Stock_Actuel || []).map((item, idx) => {
         let initStock = 0;
-        if (typeof item.Type === 'number' && !isNaN(item.Type)) initStock = item.Type;
-        else if (item.stockInitial != null) initStock = Number(item.stockInitial) || 0;
+        if (item.stockInitial != null && item.stockInitial !== '' && !isNaN(Number(item.stockInitial))) {
+          initStock = Number(item.stockInitial);
+        } else if (item['Stock Initial'] != null && !isNaN(Number(item['Stock Initial']))) {
+          initStock = Number(item['Stock Initial']);
+        } else if (item['Stock Actuel'] != null && !isNaN(Number(item['Stock Actuel']))) {
+          initStock = Number(item['Stock Actuel']);
+        } else if (typeof item.Type === 'number' && !isNaN(item.Type)) {
+          initStock = item.Type;
+        } else if (item.Type != null && !isNaN(Number(item.Type)) && item.Type !== '' && typeof item.Type !== 'string') {
+          initStock = Number(item.Type);
+        }
+
+        const ref = item.ref || item.Ref || item['Référence'] || item['Reference'] || `ART${String(idx + 1).padStart(3, '0')}`;
+        const designation = item.designation || item.Ref || item.ref || item['Désignation'] || item['D\u00c3\u00a9signation'] || `Piece ${idx + 1}`;
+        const type = item.type || item.id_type || item['Désignation'] || 'Divers';
 
         return {
           id: item.id || idx + 1,
-          ref: item.ref || `ART${String(idx + 1).padStart(3, '0')}`,
-          designation: item.designation || item.Ref || `Piece ${idx + 1}`,
-          type: item.type || item['Designation'] || 'Divers',
-          id_type: item.type || item['Designation'] || 'Divers',
+          ref,
+          designation,
+          type,
+          id_type: type,
           stockInitial: initStock,
-          seuil: Number(item.seuil) || 3,
-          emplacement: item.emplacement || `A${(idx % 8) + 1}-R${(idx % 6) + 1}`,
+          seuil: Number(item["Seuil d'Alerte"] || item.seuil) || 3,
+          emplacement: item.Emplacement || item.emplacement || `A${(idx % 8) + 1}-R${(idx % 6) + 1}`,
         };
       });
       setRawStock(mappedStock);
@@ -621,7 +634,7 @@ export default function SettingsView({
         if (s.type) set.add(s.type);
       });
       setTypes(Array.from(set).map((t) => ({ id_type: t, libelle: t })));
-      showToast(`${mappedStock.length} articles injectes dans le stock.`, 'success');
+      showToast(`${mappedStock.length} articles injectes dans le stock avec quantites.`, 'success');
     } else if (group === 'parc') {
       setMachines(INITIAL_MACHINES_REGISTERED);
       setFamilies(INITIAL_FAMILIES);

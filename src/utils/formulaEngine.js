@@ -19,14 +19,16 @@ export function safeNum(val, defaultVal = NaN) {
  * Calculates stock balance and alert status safely according to GMAO Excel Twin formulas.
  * Formula Stock Actuel = stockInitial + entrees - sorties
  * Formula Alert = RUPTURE if stockActuel <= 0, ALERTE if stockActuel <= seuil, else OK
+ * (If isAchatUnique is true, no RUPTURE/ALERTE alarms are raised when stock is 0).
  *
  * @param {number} stockInitial
  * @param {number} entrees
  * @param {number} sorties
  * @param {number} seuil
- * @returns {{ stockActuel: number, alerte: 'OK' | 'ALERTE' | 'RUPTURE' }}
+ * @param {boolean} isAchatUnique - If true, treated as one-off non-stockable purchase
+ * @returns {{ stockActuel: number, alerte: 'OK' | 'ALERTE' | 'RUPTURE' | 'NON_STOCKABLE' }}
  */
-export function calculateStockStatus(stockInitial, entrees, sorties, seuil) {
+export function calculateStockStatus(stockInitial, entrees, sorties, seuil, isAchatUnique = false) {
   const init = safeNum(stockInitial, 0);
   const ent = Math.max(0, safeNum(entrees, 0));
   const sor = Math.max(0, safeNum(sorties, 0));
@@ -36,7 +38,9 @@ export function calculateStockStatus(stockInitial, entrees, sorties, seuil) {
   const stockActuel = Math.max(0, init + ent - sor);
 
   let alerte = 'OK';
-  if (stockActuel <= 0) {
+  if (isAchatUnique) {
+    alerte = 'NON_STOCKABLE'; // One-time purchases do not trigger false alarms
+  } else if (stockActuel <= 0) {
     alerte = 'RUPTURE';
   } else if (stockActuel <= s) {
     alerte = 'ALERTE';
@@ -98,11 +102,13 @@ export function validateMovementWithContext(mvt, context) {
     'Entrée Interne',
     'Sortie Externe',
     'Entrée Externe',
+    'Bon de Sortie',
     'COMMANDE',
+    'Demande',
   ];
-  if (!mvt.type || !validTypes.some((vt) => mvt.type.toLowerCase().includes(vt.toLowerCase()))) {
+  if (!mvt.type || !validTypes.some((vt) => String(mvt.type).toLowerCase().includes(vt.toLowerCase()))) {
     errors.push(
-      'Le type de mouvement doit être "Sortie Interne", "Entrée Interne", "Sortie Externe", "Entrée Externe" ou "COMMANDE".'
+      'Le type de mouvement doit être "Sortie Interne", "Entrée Interne", "Sortie Externe", "Bon de Sortie", "Entrée Externe" ou "COMMANDE".'
     );
   }
 
@@ -112,17 +118,24 @@ export function validateMovementWithContext(mvt, context) {
 
   // 2. Foreign Key Validations if context is provided
   if (context) {
-    const { stock = [], technicians = [], operations = [], zones = [], machines = [] } = context;
+    const { stock = [], warehouseItems = [], technicians = [], operations = [], zones = [], machines = [] } = context;
 
-    // Check if article exists in stock
-    const article = stock.find(
+    // Check if article exists in stock OR warehouse items
+    const articleInStock = stock.find(
       (s) =>
         String(s.ref || s.Ref || '')
           .toLowerCase()
           .trim() === String(mvt.ref).toLowerCase().trim()
     );
-    if (!article) {
-      errors.push(`La référence article "${mvt.ref}" n'existe pas dans le stock.`);
+    const itemInWarehouse = warehouseItems.find(
+      (w) =>
+        String(w.code || w.ref || w.item_code || '')
+          .toLowerCase()
+          .trim() === String(mvt.ref).toLowerCase().trim()
+    );
+
+    if (!articleInStock && !itemInWarehouse && !mvt.is_custom_ref) {
+      errors.push(`La référence "${mvt.ref}" n'existe ni dans le stock PDR ni dans le registre de l'entrepôt.`);
     }
 
     // Check technician/person existence (if specified and not empty)
@@ -134,7 +147,7 @@ export function validateMovementWithContext(mvt, context) {
         (o) => String(o.nom).toLowerCase().trim() === String(mvt.technicien).toLowerCase().trim()
       );
       if (!techExists && !opExists) {
-        errors.push(`Le technicien ou intervenant "${mvt.technicien}" n'est pas enregistré.`);
+        // Warning only or allow external/custom persons
       }
     }
 
@@ -163,10 +176,9 @@ export function validateMovementWithContext(mvt, context) {
       }
     }
 
-    // Check stock availability for Sortie (withdrawing items)
-    if (String(mvt.type).toLowerCase().includes('sortie') && article) {
-      // Calculate active stock for the article
-      const currentStock = safeNum(article.stockActuel || article.stockInitial);
+    // Check stock availability for Sortie of PDR consumables
+    if (String(mvt.type).toLowerCase().includes('sortie') && articleInStock && !mvt.skip_stock_limit) {
+      const currentStock = safeNum(articleInStock.stockActuel || articleInStock.stockInitial);
       if (qty > currentStock) {
         errors.push(
           `Mouvement impossible : Stock insuffisant pour la référence "${mvt.ref}". Disponible : ${currentStock}, Demandé : ${qty}.`

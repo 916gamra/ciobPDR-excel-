@@ -65,11 +65,21 @@ export default function MachinesRegisteredView({
     return () => clearTimeout(handler);
   }, [localSearch, setMchSearch]);
 
-  // Cascading templates based on selected family
-  const availableTemplates =
-    mchFamilyFilter === 'ALL'
-      ? templates
-      : templates.filter((t) => t.id_family === mchFamilyFilter);
+  // Only show families that have registered machines
+  const machineFamilies = useMemo(() => {
+    const usedFamilyIds = new Set(machines.map((m) => m.id_family).filter(Boolean));
+    return families.filter((f) => usedFamilyIds.has(f.id_family));
+  }, [families, machines]);
+
+  // Cascading templates based on selected family and existing registered machines
+  const availableTemplates = useMemo(() => {
+    let relTemplates = templates;
+    if (mchFamilyFilter !== 'ALL') {
+      relTemplates = templates.filter((t) => t.id_family === mchFamilyFilter);
+    }
+    const usedTemplateIds = new Set(machines.map((m) => m.id_templates).filter(Boolean));
+    return relTemplates.filter((t) => usedTemplateIds.has(t.id_templates));
+  }, [templates, mchFamilyFilter, machines]);
 
   const filteredMachines = useMemo(() => {
     return machines.filter((m) => {
@@ -77,13 +87,13 @@ export default function MachinesRegisteredView({
       if (mchTemplateFilter !== 'ALL' && m.id_templates !== mchTemplateFilter) return false;
       if (mchZoneFilter !== 'ALL' && m.id_zone_default !== mchZoneFilter) return false;
       if (mchSearch) {
-        const q = mchSearch.toLowerCase();
+        const q = String(mchSearch).trim().toLowerCase();
         return (
-          m.id_machine_registered.toLowerCase().includes(q) ||
-          m.designation.toLowerCase().includes(q) ||
-          m.id_family.toLowerCase().includes(q) ||
-          m.id_templates.toLowerCase().includes(q) ||
-          (m.id_zone_default && m.id_zone_default.toLowerCase().includes(q))
+          String(m.id_machine_registered || '').toLowerCase().includes(q) ||
+          String(m.designation || '').toLowerCase().includes(q) ||
+          String(m.id_family || '').toLowerCase().includes(q) ||
+          String(m.id_templates || '').toLowerCase().includes(q) ||
+          String(m.id_zone_default || '').toLowerCase().includes(q)
         );
       }
       return true;
@@ -500,8 +510,8 @@ export default function MachinesRegisteredView({
                 setMchTemplateFilter('ALL');
               }}
               options={[
-                { value: 'ALL', label: `Toutes les Familles (D) (${families.length})` },
-                ...families.map((f) => ({
+                { value: 'ALL', label: `Toutes les Familles (${machineFamilies.length})` },
+                ...machineFamilies.map((f) => ({
                   value: f.id_family,
                   label: `[D] ${f.libelle} (${f.id_family})`,
                 })),

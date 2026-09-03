@@ -537,7 +537,7 @@ export default function DesignationView({
                 const stockMatch = stockItems.find(
                   (s) =>
                     s.ref === item.ref ||
-                    s.designation.toLowerCase() === (item.designation || '').toLowerCase()
+                    (s.designation && String(s.designation).toLowerCase() === String(item.designation || '').toLowerCase())
                 );
 
                 const currentStock = stockMatch ? stockMatch.stockActuel : item.stockInitial || 0;

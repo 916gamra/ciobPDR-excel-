@@ -15,6 +15,7 @@ import {
   X,
   Database,
   Factory,
+  Warehouse,
   Lightbulb,
   Settings,
   Sun,
@@ -290,11 +291,11 @@ export default function Sidebar({
             </div>
           </div>
 
-          {/* GROUPE 2: PARC MACHINES */}
+          {/* GROUPE 2: PARC MACHINES & ENTREPÔT */}
           <div>
             <div className="px-3 mb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
               <Factory className="w-3.5 h-3.5 text-slate-400" />
-              <span>Parc Machines</span>
+              <span>Parc Machines & Entrepôt</span>
             </div>
             <div className="space-y-1">
               {/* Machines Registered - Updated with Factory icon */}
@@ -308,11 +309,22 @@ export default function Sidebar({
                 <span className={getBadgeClass('machines')}>{counts.machines || 0}</span>
               </button>
 
+              {/* Entrepôt (Éléments & Composants) - Twin of Machines */}
+              <button onClick={() => navTo('entrepot')} className={getTabClass('entrepot')}>
+                <span className="flex items-center gap-2.5">
+                  <Warehouse
+                    className={`w-4 h-4 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}
+                  />
+                  <span>Entrepôt (Éléments)</span>
+                </span>
+                <span className={getBadgeClass('entrepot')}>{counts.warehouse || 0}</span>
+              </button>
+
               {/* Families - Updated with Boxes icon */}
               <button onClick={() => navTo('families')} className={getTabClass('families', true)}>
                 <span className="flex items-center gap-2">
                   <Boxes
-                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}
                   />
                   <span>Familles</span>
                 </span>

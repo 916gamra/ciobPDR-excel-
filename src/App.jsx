@@ -23,6 +23,38 @@ import {
   mapItemToTypeAndDiag,
 } from './data/seedData';
 
+// Baseline stock lookup dictionary to ensure real quantities are permanently preserved
+const INITIAL_STOCK_LOOKUP = new Map();
+(initialData.Stock_Actuel || []).forEach((item, idx) => {
+  const refKey = String(item.Ref || item.ref || item['Référence'] || item['Reference'] || '').trim().toLowerCase();
+  const desigKey = String(item['Désignation'] || item.designation || '').trim().toLowerCase();
+
+  let initQty = 0;
+  if (item.stockInitial != null && item.stockInitial !== '' && !isNaN(Number(item.stockInitial))) {
+    initQty = Number(item.stockInitial);
+  } else if (item['Stock Initial'] != null && item['Stock Initial'] !== '' && !isNaN(Number(item['Stock Initial']))) {
+    initQty = Number(item['Stock Initial']);
+  } else if (item['Stock Actuel'] != null && item['Stock Actuel'] !== '' && !isNaN(Number(item['Stock Actuel']))) {
+    initQty = Number(item['Stock Actuel']);
+  } else if (typeof item.Type === 'number' && !isNaN(item.Type)) {
+    initQty = item.Type;
+  } else if (!isNaN(Number(item.Type)) && item.Type !== '' && item.Type !== null && typeof item.Type !== 'string') {
+    initQty = Number(item.Type);
+  }
+
+  const dataObj = {
+    qty: initQty,
+    ref: item.ref || item.Ref || item['Référence'] || item['Reference'] || `ART${String(idx + 1).padStart(3, '0')}`,
+    designation: item.designation || item.Ref || item.ref || item['Désignation'] || `Piece ${idx + 1}`,
+    type: item.type || item.id_type || item['Désignation'] || 'Divers',
+    seuil: Number(item["Seuil d'Alerte"] || item.seuil) || 3,
+    emplacement: item.Emplacement || item.emplacement || `A${(idx % 8) + 1}-R${(idx % 6) + 1}`,
+  };
+
+  if (refKey) INITIAL_STOCK_LOOKUP.set(refKey, dataObj);
+  if (desigKey && !INITIAL_STOCK_LOOKUP.has(desigKey)) INITIAL_STOCK_LOOKUP.set(desigKey, dataObj);
+});
+
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import LoadingSkeleton from './components/LoadingSkeleton';
@@ -43,6 +75,7 @@ const StockView = lazy(() => import('./components/StockView'));
 const TypeView = lazy(() => import('./components/TypeView'));
 const DesignationView = lazy(() => import('./components/DesignationView'));
 const MachinesRegisteredView = lazy(() => import('./components/MachinesRegisteredView'));
+const EntrepotView = lazy(() => import('./components/EntrepotView'));
 const FamilyView = lazy(() => import('./components/FamilyView'));
 const TemplatesView = lazy(() => import('./components/TemplatesView'));
 const ZonesView = lazy(() => import('./components/ZonesView'));
@@ -97,6 +130,8 @@ export default function App() {
     setTemplates,
     machines,
     setMachines,
+    warehouseItems,
+    setWarehouseItems,
     zones,
     setZones,
     technicians,
@@ -119,6 +154,7 @@ export default function App() {
           Stock_Actuel: rawStock,
           Mouvement: mouvements,
           Machines_Registered: machines,
+          Warehouse_Items: warehouseItems,
           Families: families,
           Templates: templates,
           Zones: zones,
@@ -138,6 +174,7 @@ export default function App() {
     rawStock,
     mouvements,
     machines,
+    warehouseItems,
     families,
     templates,
     zones,
@@ -154,7 +191,7 @@ export default function App() {
     // Map entries and sorties by ref
     const mvtSummary = {};
     mouvements.forEach((m) => {
-      const r = String(m.ref || m['Référence'] || '')
+      const r = String(m.ref || m['Référence'] || m['Reference'] || '')
         .trim()
         .toLowerCase();
       if (!r) return;
@@ -171,16 +208,26 @@ export default function App() {
     });
 
     return rawStock.map((item) => {
-      const itemRefKey = item.ref.toLowerCase();
-      let entrees = mvtSummary[itemRefKey]?.entrees || 0;
-      let sorties = mvtSummary[itemRefKey]?.sorties || 0;
+      const itemRefKey = String(item.ref || '').trim().toLowerCase();
+      const itemDesigKey = String(item.designation || '').trim().toLowerCase();
 
-      const stockInitial = safeNum(item.stockInitial, 0);
-      const seuil = safeNum(item.seuil, 0);
+      let entrees = mvtSummary[itemRefKey]?.entrees || (itemDesigKey ? mvtSummary[itemDesigKey]?.entrees || 0 : 0);
+      let sorties = mvtSummary[itemRefKey]?.sorties || (itemDesigKey ? mvtSummary[itemDesigKey]?.sorties || 0 : 0);
+
+      let stockInitial = safeNum(item.stockInitial, 0);
+      if (stockInitial <= 0) {
+        const baseline = INITIAL_STOCK_LOOKUP.get(itemRefKey) || (itemDesigKey ? INITIAL_STOCK_LOOKUP.get(itemDesigKey) : null);
+        if (baseline && baseline.qty > 0) {
+          stockInitial = baseline.qty;
+        }
+      }
+
+      const seuil = safeNum(item.seuil, 3);
       const { stockActuel, alerte } = calculateStockStatus(stockInitial, entrees, sorties, seuil);
 
       return {
         ...item,
+        stockInitial,
         entrees,
         sorties,
         stockActuel,
@@ -188,6 +235,49 @@ export default function App() {
       };
     });
   }, [rawStock, mouvements]);
+
+  const warehouseItemsComputed = useMemo(() => {
+    const mvtSummary = {};
+    mouvements.forEach((m) => {
+      const r = String(m.ref || m['Référence'] || m['Reference'] || '')
+        .trim()
+        .toLowerCase();
+      if (!r) return;
+      if (!mvtSummary[r]) {
+        mvtSummary[r] = { entrees: 0, sorties: 0 };
+      }
+      const q = safeNum(m.quantite != null ? m.quantite : m['Quantité'], 0);
+      const t = String(m.type || m['Type (Entrée/Sortie)'] || '').toLowerCase();
+      if (t.includes('entr')) {
+        mvtSummary[r].entrees += q;
+      } else if (t.includes('sort')) {
+        mvtSummary[r].sorties += q;
+      }
+    });
+
+    return warehouseItems.map((item) => {
+      const r = String(item.id_warehouse_item || '').trim().toLowerCase();
+      const initial = safeNum(item.stockInitial, 1);
+      const entrees = mvtSummary[r]?.entrees || 0;
+      const sorties = mvtSummary[r]?.sorties || 0;
+      const stockActuel = initial + entrees - sorties;
+      
+      const seuil = safeNum(item.seuil, 0);
+      let alerte = 'OK';
+      if (stockActuel <= 0) alerte = 'RUPTURE';
+      else if (stockActuel <= seuil && seuil > 0) alerte = 'ALERTE';
+
+      return {
+        ...item,
+        stockInitial: initial,
+        entrees,
+        sorties,
+        stockActuel,
+        seuil,
+        alerte,
+      };
+    });
+  }, [warehouseItems, mouvements]);
 
   // Filter States
   const [stockSearch, setStockSearch] = useState('');
@@ -225,13 +315,13 @@ export default function App() {
       if (stockAlertOnly && item.alerte === 'OK') return false;
 
       if (deferredStockSearch) {
-        const q = deferredStockSearch.toLowerCase();
+        const q = String(deferredStockSearch).toLowerCase().trim();
         return (
-          item.ref.toLowerCase().includes(q) ||
-          item.designation.toLowerCase().includes(q) ||
-          (item.type && item.type.toLowerCase().includes(q)) ||
-          (item.id_type && item.id_type.toLowerCase().includes(q)) ||
-          (item.emplacement && item.emplacement.toLowerCase().includes(q))
+          String(item.ref || '').toLowerCase().includes(q) ||
+          String(item.designation || '').toLowerCase().includes(q) ||
+          String(item.type || '').toLowerCase().includes(q) ||
+          String(item.id_type || '').toLowerCase().includes(q) ||
+          String(item.emplacement || '').toLowerCase().includes(q)
         );
       }
       return true;
@@ -525,6 +615,12 @@ export default function App() {
   const { handleUpdate: handleUpdateMouvement, handleDelete: handleDeleteMouvement } =
     useGenericCRUD(setMouvements, 'id');
 
+  const {
+    handleAdd: handleAddWarehouseItem,
+    handleUpdate: handleUpdateWarehouseItem,
+    handleDelete: handleDeleteWarehouseItem,
+  } = useGenericCRUD(setWarehouseItems, 'id');
+
   const handleQuickSortie = (article) => {
     // Navigate to Sortie Rapide tab
     React.startTransition(() => setCurrentTab('sortie'));
@@ -547,6 +643,7 @@ export default function App() {
           rawStock,
           mouvements,
           machines,
+          warehouseItems,
           families,
           templates,
           zones,
@@ -611,28 +708,45 @@ export default function App() {
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mchData), 'Machines_Registered');
 
-    // 3. Mouvements
+    // 3. Warehouse_Items (Entrepôt)
+    const warehouseData = warehouseItems.map((w) => ({
+      'Code Entrepôt (Ref)': w.id_warehouse_item || w.id_machine_registered,
+      Désignation: w.designation,
+      Nature: w.nature || 'COMPOSANT',
+      ID_Family: w.id_family,
+      ID_Template: w.id_templates,
+      Rattachement: w.rattachement_type || 'NON_ASSIGNE',
+      'Machine Associée': w.id_machine_associee || '',
+      Zone: w.id_zone_default,
+      Responsable: w.technician,
+      Statut: w.status,
+      Quantité: w.quantite || 1,
+      Emplacement: w.emplacement || '',
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(warehouseData), 'Warehouse_Items');
+
+    // 4. Mouvements
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(mouvements), 'Mouvements');
 
-    // 4. Types
+    // 5. Types
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(types), 'Types');
 
-    // 5. Diagnostics
+    // 6. Diagnostics
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(diagnostics), 'Diagnostics');
 
-    // 6. Families
+    // 7. Families
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(families), 'Families');
 
-    // 7. Templates
+    // 8. Templates
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(templates), 'Templates');
 
-    // 8. Zones
+    // 9. Zones
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(zones), 'Zones');
 
-    // 9. Technicians
+    // 10. Technicians
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(technicians), 'Technicians');
 
-    // 10. Operations
+    // 11. Operations
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(operations), 'Operations');
 
     return wb;
@@ -691,6 +805,15 @@ export default function App() {
               workbook.Sheets['Machines_Registered']
             );
           }
+          if (workbook.SheetNames.includes('Warehouse_Items')) {
+            importedData.Warehouse_Items = XLSX.utils.sheet_to_json(
+              workbook.Sheets['Warehouse_Items']
+            );
+          } else if (workbook.SheetNames.includes('Entrepot')) {
+            importedData.Warehouse_Items = XLSX.utils.sheet_to_json(
+              workbook.Sheets['Entrepot']
+            );
+          }
         }
 
         const validation = validateImportedData(importedData);
@@ -713,6 +836,8 @@ export default function App() {
           setMouvements(sanitizeObject(importedData.Mouvement));
         if (importedData.Machines_Registered && importedData.Machines_Registered.length > 0)
           setMachines(sanitizeObject(importedData.Machines_Registered));
+        if (importedData.Warehouse_Items && importedData.Warehouse_Items.length > 0)
+          setWarehouseItems(sanitizeObject(importedData.Warehouse_Items));
         if (importedData.Families && importedData.Families.length > 0)
           setFamilies(sanitizeObject(importedData.Families));
         if (importedData.Templates && importedData.Templates.length > 0)
@@ -883,17 +1008,26 @@ export default function App() {
               <DashboardView
                 stockItems={stockItems}
                 machines={machines}
+                warehouseItems={warehouseItemsComputed}
                 mouvements={mouvements}
                 types={types}
                 diagnostics={diagnostics}
                 zones={zones}
                 technicians={technicians}
+                operations={operations}
                 stockKPIs={stockKPIs}
                 onNavigateToStock={() => React.startTransition(() => setCurrentTab('stock'))}
                 onNavigateToMachines={() => React.startTransition(() => setCurrentTab('machines'))}
+                onNavigateToWarehouse={() => React.startTransition(() => setCurrentTab('entrepot'))}
                 onNavigateToSortie={() => React.startTransition(() => setCurrentTab('sortie'))}
+                onNavigateToZones={() => React.startTransition(() => setCurrentTab('zones'))}
+                onNavigateToUsers={() => React.startTransition(() => setCurrentTab('utilisateurs'))}
+                onNavigateToSettings={() => React.startTransition(() => setCurrentTab('settings'))}
                 onQuickSortie={handleQuickSortie}
+                onAddMouvement={handleAddMouvement}
                 onUpdateMouvement={handleUpdateMouvement}
+                onDeleteMouvement={handleDeleteMouvement}
+                onExportExcel={handleExportExcel}
               />
             </ErrorBoundary>
           )}
@@ -977,6 +1111,34 @@ export default function App() {
             </ErrorBoundary>
           )}
 
+          {currentTab === 'entrepot' && (
+            <ErrorBoundary>
+              <EntrepotView
+                warehouseItems={warehouseItemsComputed}
+                onAddWarehouseItem={handleAddWarehouseItem}
+                onUpdateWarehouseItem={handleUpdateWarehouseItem}
+                onDeleteWarehouseItem={handleDeleteWarehouseItem}
+                families={families}
+                templates={templates}
+                types={types}
+                diagnostics={diagnostics}
+                stockItems={stockItems}
+                zones={zones}
+                machines={machines}
+                technicians={technicians}
+                onNavigateToFamily={handleNavigateToMachinesByFamily}
+                onNavigateToTemplate={handleNavigateToMachinesByTemplate}
+                onNavigateToType={handleNavigateToStockFiltered}
+                onNavigateToDiag={handleNavigateToDesignationsFiltered}
+                onNavigateToZone={handleNavigateToMachinesByZone}
+                onNavigateToMachine={(mchId) => {
+                  setMchSearch(mchId);
+                  React.startTransition(() => setCurrentTab('machines'));
+                }}
+              />
+            </ErrorBoundary>
+          )}
+
           {currentTab === 'families' && (
             <ErrorBoundary>
               <FamilyView
@@ -1050,6 +1212,11 @@ export default function App() {
               <SortieRapideView
                 mouvements={mouvements}
                 stockItems={stockItems}
+                warehouseItems={warehouseItemsComputed}
+                families={families}
+                templates={templates}
+                types={types}
+                diagnostics={diagnostics}
                 zones={zones}
                 machines={machines}
                 technicians={technicians}
@@ -1057,6 +1224,8 @@ export default function App() {
                 onAddMouvement={handleAddMouvement}
                 onUpdateMouvement={handleUpdateMouvement}
                 onDeleteMouvement={handleDeleteMouvement}
+                onAddWarehouseItem={handleAddWarehouseItem}
+                onUpdateWarehouseItem={handleUpdateWarehouseItem}
                 onOpenAddArticle={() => setShowAddArticleModal(true)}
                 onOpenAddMachine={() => setShowAddMachineModal(true)}
                 onOpenAddZone={() => setShowAddZoneModal(true)}
@@ -1072,6 +1241,7 @@ export default function App() {
                   setAddUserModalType('OPERATEUR');
                   setShowAddUserModal(true);
                 }}
+                onNavigateToWarehouse={() => React.startTransition(() => setCurrentTab('entrepot'))}
               />
             </ErrorBoundary>
           )}
