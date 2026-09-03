@@ -299,6 +299,8 @@ export default function DashboardView({
       id: crypto.randomUUID(),
       code_bon: orderForm.code_bon || `CMD-${Date.now()}`,
       date: new Date().toISOString().split('T')[0],
+      heure: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toISOString(),
       ref: orderForm.ref,
       designation: orderForm.designation,
       quantite: Number(orderForm.quantite) || 1,
@@ -336,6 +338,8 @@ export default function DashboardView({
       type: 'Entrée Externe',
       action_id: isAchatUnique ? 'ACHAT_DIRECT' : 'REAPPRO',
       date: today,
+      heure: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toISOString(),
       tags: tags,
       commentaire: `${order.commentaire ? order.commentaire + ' | ' : ''}Réceptionné le ${today}`,
       is_achat_unique: isAchatUnique,
@@ -563,7 +567,7 @@ export default function DashboardView({
         {/* Order Cards Grid */}
         {displayedOrders.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {displayedOrders.map((cmd) => {
+            {displayedOrders.map((cmd, idx) => {
               const art = stockItems.find(
                 (s) => String(s.ref).toLowerCase() === String(cmd.ref).toLowerCase()
               );
@@ -572,7 +576,7 @@ export default function DashboardView({
 
               return (
                 <div
-                  key={cmd.id}
+                  key={`dash-cmd-${cmd.id ?? ''}-${cmd.ref ?? ''}-${idx}`}
                   className={`p-4 rounded-2xl border transition relative flex flex-col justify-between space-y-3 ${
                     isReceived
                       ? 'bg-emerald-50/40 border-emerald-200/90'
@@ -878,7 +882,7 @@ export default function DashboardView({
             {topConsumedArticles.length > 0 ? (
               topConsumedArticles.map((art, idx) => (
                 <div
-                  key={art.ref}
+                  key={`top-art-${art.ref ?? ''}-${idx}`}
                   className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs"
                 >
                   <div className="space-y-0.5">
@@ -935,9 +939,9 @@ export default function DashboardView({
 
           <div className="space-y-2">
             {machineHealth.topMachines.length > 0 ? (
-              machineHealth.topMachines.map((mch) => (
+              machineHealth.topMachines.map((mch, idx) => (
                 <div
-                  key={mch.id}
+                  key={`top-mch-${mch.id ?? ''}-${idx}`}
                   className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs"
                 >
                   <div className="space-y-0.5">
@@ -1071,7 +1075,7 @@ export default function DashboardView({
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {alertAndRuptureItems.slice(0, 8).map((item, idx) => (
-                  <tr key={item.id || `${item.ref}-${idx}`} className="hover:bg-slate-50/80 transition">
+                  <tr key={`alert-item-${item.id ?? ''}-${item.ref ?? ''}-${idx}`} className="hover:bg-slate-50/80 transition">
                     <td className="py-3 px-3.5 font-mono font-bold text-slate-900">{item.ref}</td>
                     <td className="py-3 px-3.5 font-medium text-slate-800">{item.designation}</td>
                     <td className="py-3 px-2 text-right font-mono font-bold text-rose-600">
@@ -1147,7 +1151,7 @@ export default function DashboardView({
 
               return (
                 <div
-                  key={m.id || `mvt-${idx}`}
+                  key={`feed-mvt-${m.id ?? ''}-${m.code_bon ?? ''}-${idx}`}
                   className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs hover:border-slate-300 transition"
                 >
                   <div className="space-y-0.5">

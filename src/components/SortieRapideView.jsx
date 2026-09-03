@@ -248,9 +248,15 @@ export default function SortieRapideView({
     return `Bon-${String(max + 1).padStart(3, '0')}`;
   };
 
+  const getCurrentTimeStr = () => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
   // Form State
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
+    heure: getCurrentTimeStr(),
     // 5 Operational Flow Types:
     // 1. 'Sortie Interne' (PDR / PARTIE / COMPOSANT -> Machine/Zone)
     // 2. 'Entrée Interne' (Machine/Atelier -> Stock PDR / Entrepôt)
@@ -1079,6 +1085,7 @@ export default function SortieRapideView({
       num_commande: '',
       is_inconnu: false,
       date: new Date().toISOString().split('T')[0],
+      heure: getCurrentTimeStr(),
       id_zone: '',
       id_machine_registered: '',
       id_operation: '',
@@ -1105,22 +1112,32 @@ export default function SortieRapideView({
     }
 
     // Process valid submission
+    const currentTime = form.heure && String(form.heure).trim() !== '' ? form.heure : getCurrentTimeStr();
 
     // Submit movement records for each item in the bon
-    mouvementItems.forEach((item, idx) => {
-      const isWarehouseSource = item.source.startsWith('WAREHOUSE');
-      const isWarehouseDest = form.destination_type?.startsWith('WAREHOUSE');
-
+    mouvementItems.forEach((item) => {
       const rawOt = form.num_commande ? form.num_commande.trim() : '';
       const finalNumCommande = rawOt !== '' ? rawOt : 'INCONNU';
+
+      const match = unifiedSearchCatalog.find((c) => c.ref === item.ref) || stockItems.find((s) => s.ref === item.ref);
+      const stockAvant = match ? (match.stockActuel ?? match.raw?.stockActuel ?? match.raw?.stockInitial ?? 0) : 0;
+      const seuilMin = match?.raw?.seuil ?? match?.seuil ?? 5;
+      const qteNum = Number(item.quantite) || 1;
+      const isSortie = form.type.includes('Sortie') || form.type === 'Bon de Sortie';
+      const stockApres = isSortie ? stockAvant - qteNum : stockAvant + qteNum;
 
       const mvtRecord = {
         code_bon: form.code_bon,
         num_commande: finalNumCommande,
         date: form.date,
+        heure: currentTime,
+        timestamp: new Date().toISOString(),
         ref: item.ref,
         designation: item.designation,
-        quantite: Number(item.quantite) || 1,
+        quantite: qteNum,
+        stock_avant: stockAvant,
+        stock_apres: stockApres,
+        seuil_min: seuilMin,
         unit: item.unit || 'pcs',
         source_category: item.source, // 'STOCK_PDR' | 'WAREHOUSE_PARTIE' | 'WAREHOUSE_COMPOSANT'
         destination_category: form.destination_type,
@@ -1349,9 +1366,9 @@ export default function SortieRapideView({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {pendingOrders.map((ord) => (
+              {pendingOrders.map((ord, idx) => (
                 <div
-                  key={ord.id}
+                  key={`pending-ord-${ord.id ?? ''}-${ord.code_bon ?? ''}-${idx}`}
                   className="p-4 rounded-xl border border-amber-200 bg-amber-50/30 space-y-2.5 hover:shadow-xs transition"
                 >
                   <div className="flex items-center justify-between">
@@ -1412,9 +1429,9 @@ export default function SortieRapideView({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {activeExternalRepairs.map((rep) => (
+              {activeExternalRepairs.map((rep, idx) => (
                 <div
-                  key={rep.id}
+                  key={`active-rep-${rep.id ?? ''}-${rep.code_bon ?? ''}-${idx}`}
                   className="p-4 rounded-xl border border-purple-200 bg-purple-50/30 space-y-2.5 hover:shadow-xs transition"
                 >
                   <div className="flex items-center justify-between">
@@ -1868,9 +1885,9 @@ export default function SortieRapideView({
 
                     <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
                       {/* Active Repairs in Bon de Sortie */}
-                      {activeExternalRepairs.map((rep) => (
+                      {activeExternalRepairs.map((rep, idx) => (
                         <button
-                          key={`track-rep-${rep.id}`}
+                          key={`track-rep-${rep.id ?? ''}-${rep.code_bon ?? ''}-${idx}`}
                           type="button"
                           onClick={() => handleReceiveRepairReturn(rep)}
                           className="px-2 py-1 rounded-lg bg-white hover:bg-purple-50 border border-purple-200 text-purple-950 text-[10.5px] font-semibold flex items-center gap-1 transition cursor-pointer shadow-2xs"
@@ -1884,9 +1901,9 @@ export default function SortieRapideView({
                       ))}
 
                       {/* Pending Orders from Demandes d'Achat */}
-                      {pendingOrders.map((ord) => (
+                      {pendingOrders.map((ord, idx) => (
                         <button
-                          key={`track-ord-${ord.id}`}
+                          key={`track-ord-${ord.id ?? ''}-${ord.code_bon ?? ''}-${idx}`}
                           type="button"
                           onClick={() => handleFulfillOrder(ord)}
                           className="px-2 py-1 rounded-lg bg-white hover:bg-amber-50 border border-amber-200 text-amber-950 text-[10.5px] font-semibold flex items-center gap-1 transition cursor-pointer shadow-2xs"
@@ -1904,8 +1921,8 @@ export default function SortieRapideView({
               </div>
             )}
 
-            {/* 4. DATE & OT/CMD REFERENCE */}
-            <div className="grid grid-cols-2 gap-2.5">
+            {/* 4. DATE, HEURE & OT/CMD REFERENCE */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div>
                 <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                   Date
@@ -1915,6 +1932,22 @@ export default function SortieRapideView({
                   value={form.date}
                   onChange={(e) => setForm({ ...form, date: e.target.value })}
                   className="w-full h-8 px-2.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                  <span>Heure</span>
+                  <span className="text-[9.5px] text-indigo-600 font-mono font-medium flex items-center gap-0.5">
+                    <Clock className="w-2.5 h-2.5" /> Auto
+                  </span>
+                </label>
+                <input
+                  type="time"
+                  value={form.heure || ''}
+                  onChange={(e) => setForm({ ...form, heure: e.target.value })}
+                  className="w-full h-8 px-2.5 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-800"
                   required
                 />
               </div>
@@ -3190,9 +3223,9 @@ export default function SortieRapideView({
                   <p className="text-xs">Aucun article trouvé pour "{searchQuery}"</p>
                 </div>
               ) : (
-                filteredCatalogResults.map((art) => (
+                filteredCatalogResults.map((art, idx) => (
                   <div
-                    key={art.id}
+                    key={`cat-item-${art.id ?? ''}-${art.ref ?? ''}-${idx}`}
                     onClick={() => handleSelectCatalogItem(art)}
                     className="p-3 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition cursor-pointer flex items-center justify-between gap-3 shadow-2xs"
                   >

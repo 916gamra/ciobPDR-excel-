@@ -37,6 +37,14 @@ import {
   CheckCircle2,
   HelpCircle,
   MapPin,
+  Tag,
+  Barcode,
+  User,
+  Shield,
+  FileText,
+  Calendar,
+  Clock,
+  MessageSquare,
 } from 'lucide-react';
 
 /**
@@ -167,9 +175,18 @@ export const resolveArticleInfo = (m = {}, { stockItems = [], warehouseItems = [
  * - Bon de Sortie: External repair shop / Subcontractor
  * - COMMANDE: Pending Delivery to Stock PDR
  */
+/**
+ * Smart Destination Resolver (Column G)
+ * Dynamically switches destination context based on the Flow (Flux Type):
+ * - Sortie Interne: Machine Registered & Zone (with INCONNU fallback for unassigned machines)
+ * - Entrée Interne: Stock PDR / Atelier Re-integration
+ * - Entrée Externe: Stock PDR Reception (Supplier)
+ * - Bon de Sortie: External repair shop / Subcontractor
+ * - COMMANDE: Pending Delivery to Stock PDR
+ */
 export const resolveDestinationInfo = (
   m = {},
-  { machines = [], zones = [], technicians = [], operations = [] } = {}
+  { machines = [], zones = [] } = {}
 ) => {
   const flux = getSmartFluxType(m);
   const action = String(m.action_id || '').toUpperCase();
@@ -255,13 +272,13 @@ export const resolveDestinationInfo = (
     // Usage personnel / Poste
     if (action === 'USAGE') {
       const beneficiary =
-        m.technicien || m.demandeur || m.operation || m.usage_type || 'Non spécifié';
-      const zoneText = resolveZoneText(m.id_zone) || 'Zone Atelier';
+        m.technicien || m.demandeur || m.operation || m.usage_type || 'Dotation Poste';
+      const resolvedZone = resolveZoneText(m.id_zone) || 'ZONE ATELIER';
       return {
-        category: 'USAGE PERSONNEL / POSTE',
+        category: 'USAGE PERSONNEL • POSTE',
         title: `Bénéficiaire : ${beneficiary}`,
-        code: `Zone : ${zoneText}`,
-        isUnknownMachine: false,
+        code: resolvedZone,
+        isUnknown: false,
         badgeType: 'usage',
       };
     }
@@ -269,7 +286,7 @@ export const resolveDestinationInfo = (
     const mchData = resolveMachine(m.id_machine_registered, m.commentaire);
     const resolvedZoneId = m.id_zone || mchData?.zone || '';
     const zoneDisplay =
-      resolveZoneText(resolvedZoneId) || (resolvedZoneId ? resolvedZoneId : 'Zone : INCONNU');
+      resolveZoneText(resolvedZoneId) || (resolvedZoneId ? resolvedZoneId : 'ZONE ATELIER');
 
     if (mchData) {
       return {
@@ -277,17 +294,17 @@ export const resolveDestinationInfo = (
         title: mchData.designation,
         code: mchData.code,
         isRegistered: mchData.isRegistered,
-        isUnknownMachine: !mchData.isRegistered && !m.id_machine_registered,
+        isUnknown: !mchData.isRegistered && !m.id_machine_registered,
         badgeType: 'machine',
       };
     }
 
     // Machine not assigned (Legacy data or unfilled field) -> Explicit INCONNU
     return {
-      category: zoneDisplay,
-      title: 'Machine : INCONNU',
-      code: 'Code : INCONNU',
-      isUnknownMachine: true,
+      category: zoneDisplay || 'ZONE NON SPÉCIFIÉE',
+      title: 'Machine : Non assignée',
+      code: 'INCONNU',
+      isUnknown: true,
       badgeType: 'unknown',
     };
   }
@@ -296,35 +313,35 @@ export const resolveDestinationInfo = (
   if (flux === 'Entrée Interne') {
     const emplacement = m.emplacement || m.emplacement_reception || 'Magasin Central';
     return {
-      category: 'RÉINTÉGRATION ATELIER',
+      category: 'RÉINTÉGRATION • ATELIER',
       title: 'Stock PDR (Magasin Central)',
       code: `Emplacement : ${emplacement}`,
-      isUnknownMachine: false,
+      isUnknown: false,
       badgeType: 'stock',
     };
   }
 
   // 3. ENTRÉE EXTERNE (Réapprovisionnement fournisseur)
   if (flux === 'Entrée Externe') {
-    const fourn = m.fournisseur || m.demandeur || 'Fournisseur externe';
+    const fourn = m.fournisseur || m.demandeur || '';
     const emplacement = m.emplacement_reception || m.emplacement || 'Zone Réception PDR';
     return {
-      category: 'RÉCEPTION FOURNISSEUR',
-      title: `Stock PDR (${fourn})`,
+      category: 'RÉCEPTION • FOURNISSEUR',
+      title: fourn ? `Stock PDR (${fourn})` : 'Stock PDR (Magasin)',
       code: `Emplacement : ${emplacement}`,
-      isUnknownMachine: false,
+      isUnknown: false,
       badgeType: 'reception',
     };
   }
 
   // 4. BON DE SORTIE (Réparation externe / Sous-traitant)
   if (flux === 'Bon de Sortie') {
-    const prest = m.fournisseur || m.prestataire || 'Atelier Externe / Sous-traitant';
+    const prest = m.fournisseur || m.prestataire || 'Atelier Externe';
     return {
-      category: 'SOUS-TRAITANCE / RÉPARATION',
+      category: 'SOUS-TRAITANCE • RÉPARATION',
       title: `Prestataire : ${prest}`,
-      code: m.code_bon ? `N° Bon : ${m.code_bon}` : 'En réparation externe',
-      isUnknownMachine: false,
+      code: m.code_bon ? `N° Bon : ${m.code_bon}` : 'EN RÉPARATION EXTERNE',
+      isUnknown: false,
       badgeType: 'external',
     };
   }
@@ -333,23 +350,341 @@ export const resolveDestinationInfo = (
   if (flux === 'COMMANDE') {
     const fourn = m.fournisseur || 'Fournisseur non assigné';
     return {
-      category: "DEMANDE D'ACHAT",
-      title: 'Stock PDR (Attente Réception)',
-      code: `Fournisseur : ${fourn}`,
-      isUnknownMachine: false,
+      category: "DEMANDE D'ACHAT • ATTENTE",
+      title: `Stock PDR (${fourn})`,
+      code: m.num_commande && m.num_commande !== 'INCONNU' ? m.num_commande : 'CMD-EN-COURS',
+      isUnknown: false,
       badgeType: 'order',
     };
   }
 
   // Fallback
   const fallbackMch = resolveMachine(m.id_machine_registered, m.commentaire);
-  const fallbackZone = resolveZoneText(m.id_zone) || 'Zone : Non spécifiée';
+  const fallbackZone = resolveZoneText(m.id_zone) || 'ZONE ATELIER';
   return {
     category: fallbackZone,
-    title: fallbackMch ? fallbackMch.designation : 'Machine : INCONNU',
-    code: fallbackMch ? fallbackMch.code : 'Code : INCONNU',
-    isUnknownMachine: !fallbackMch,
+    title: fallbackMch ? fallbackMch.designation : 'Machine : Non assignée',
+    code: fallbackMch ? fallbackMch.code : 'INCONNU',
+    isUnknown: !fallbackMch,
     badgeType: 'fallback',
+  };
+};
+
+/**
+ * Smart Intervenant & Demandeur Resolver (Column H)
+ * Resolves 3 structured layers:
+ * 1. Role / Type de compte (Top: 10px uppercase tracking-wide text-slate-400)
+ *    e.g. TECHNICIEN GMAO, SUPERVISEUR / CHEF, OPÉRATEUR, FOURNISSEUR / TIERS, DEMANDEUR
+ * 2. Name / Account Name (Middle: 12px font-bold text-slate-900)
+ *    e.g. Rachid, Karim, Anas - DET
+ * 3. Unique ID / Code (Bottom: 11px font-mono font-bold text-indigo-700)
+ *    e.g. TECH-01, CHEF-02, OP-01
+ * 4. isUnknown flag for incomplete legacy records with clean INCONNU message
+ */
+export const resolveIntervenantInfo = (
+  m = {},
+  { technicians = [], operations = [] } = {}
+) => {
+  const flux = getSmartFluxType(m);
+  const action = String(m.action_id || '').toUpperCase();
+  const usageType = String(m.usage_type || '').toLowerCase();
+
+  const rawTech = String(m.technicien || m.id_technician || '').trim();
+  const rawOp = String(m.operation || m.id_operation || m.demandeur || '').trim();
+  const rawFourn = String(m.fournisseur || m.prestataire || '').trim();
+
+  // Helper to lookup technician by name or ID
+  const lookupTech = (val) => {
+    if (!val) return null;
+    const clean = val.toLowerCase();
+    return (
+      technicians.find(
+        (t) =>
+          String(t.nom || '').trim().toLowerCase() === clean ||
+          String(t.id_technician || '').trim().toLowerCase() === clean
+      ) || null
+    );
+  };
+
+  // Helper to lookup operation / chef / operator by name or ID
+  const lookupOperation = (val) => {
+    if (!val) return null;
+    const clean = val.toLowerCase();
+    return (
+      operations.find(
+        (op) =>
+          String(op.nom || '').trim().toLowerCase() === clean ||
+          String(op.id_operation || '').trim().toLowerCase() === clean
+      ) || null
+    );
+  };
+
+  const matchedTech = lookupTech(rawTech) || (rawOp ? lookupTech(rawOp) : null);
+  const matchedOp = lookupOperation(rawOp) || (rawTech ? lookupOperation(rawTech) : null);
+
+  // 1. USAGE PERSONNEL (Sortie Interne - USAGE)
+  if (action === 'USAGE' || usageType) {
+    if (usageType === 'technician' || (!usageType && matchedTech && !matchedOp)) {
+      const tech = matchedTech;
+      const nom = tech ? tech.nom : rawTech || 'Technicien';
+      const id = tech ? tech.id_technician : (rawTech.startsWith('TECH-') ? rawTech : (m.id_technician || 'TECH-01'));
+      return {
+        role: 'TECHNICIEN (USAGE)',
+        name: nom,
+        id: id,
+        isUnknown: !rawTech && !tech,
+      };
+    }
+
+    if (usageType === 'chef' || (!usageType && matchedOp?.type_profil === 'CHEF')) {
+      const chef = matchedOp;
+      const nom = chef ? chef.nom : rawOp || 'Superviseur / Chef';
+      const id = chef ? chef.id_operation : (rawOp.startsWith('CHEF-') ? rawOp : (m.id_operation || 'CHEF-01'));
+      return {
+        role: 'SUPERVISEUR / CHEF (USAGE)',
+        name: nom,
+        id: id,
+        isUnknown: !rawOp && !chef,
+      };
+    }
+
+    if (usageType === 'operation' || (!usageType && matchedOp?.type_profil === 'OPERATEUR')) {
+      const op = matchedOp;
+      const nom = op ? op.nom : rawOp || 'Opérateur';
+      const id = op ? op.id_operation : (rawOp.startsWith('OP-') ? rawOp : (m.id_operation || 'OP-01'));
+      return {
+        role: 'OPÉRATEUR (USAGE)',
+        name: nom,
+        id: id,
+        isUnknown: !rawOp && !op,
+      };
+    }
+
+    const nom = rawTech || rawOp;
+    if (nom) {
+      return {
+        role: 'BÉNÉFICIAIRE (USAGE)',
+        name: nom,
+        id: nom.startsWith('TECH-') || nom.startsWith('OP-') || nom.startsWith('CHEF-') ? nom : 'USAGE-PERSO',
+        isUnknown: false,
+      };
+    }
+  }
+
+  // 2. ENTRÉE EXTERNE (Réapprovisionnement fournisseur)
+  if (flux === 'Entrée Externe' || action === 'REAPPRO' || action === 'ACHAT_DIRECT') {
+    if (rawFourn) {
+      return {
+        role: 'FOURNISSEUR / TIERS',
+        name: rawFourn,
+        id: m.num_commande && m.num_commande !== 'INCONNU' ? m.num_commande : 'EXT-FOURN',
+        isUnknown: false,
+      };
+    }
+    if (matchedTech || rawTech) {
+      return {
+        role: 'RÉCEPTIONNAIRE PDR',
+        name: matchedTech ? matchedTech.nom : rawTech,
+        id: matchedTech ? matchedTech.id_technician : (m.id_technician || 'TECH-PDR'),
+        isUnknown: false,
+      };
+    }
+  }
+
+  // 3. BON DE SORTIE (Sous-traitance / Réparation extérieure)
+  if (flux === 'Bon de Sortie' || action === 'REPARATION_EXTERNE') {
+    if (rawFourn) {
+      return {
+        role: 'PRESTATAIRE EXTERNE',
+        name: rawFourn,
+        id: m.code_bon || 'SOUS-TRAITANT',
+        isUnknown: false,
+      };
+    }
+    if (matchedTech || rawTech) {
+      return {
+        role: 'TECHNICIEN ÉMETTEUR',
+        name: matchedTech ? matchedTech.nom : rawTech,
+        id: matchedTech ? matchedTech.id_technician : (m.id_technician || 'TECH-GMAO'),
+        isUnknown: false,
+      };
+    }
+  }
+
+  // 4. COMMANDE (Demande d'achat)
+  if (flux === 'COMMANDE') {
+    if (matchedTech || rawTech) {
+      return {
+        role: "DEMANDEUR D'ACHAT",
+        name: matchedTech ? matchedTech.nom : rawTech,
+        id: matchedTech ? matchedTech.id_technician : (m.id_technician || 'TECH-CMD'),
+        isUnknown: false,
+      };
+    }
+    if (rawFourn) {
+      return {
+        role: 'FOURNISSEUR VISÉ',
+        name: rawFourn,
+        id: m.num_commande && m.num_commande !== 'INCONNU' ? m.num_commande : 'CMD-PDR',
+        isUnknown: false,
+      };
+    }
+  }
+
+  // 5. INVENTAIRE (Ajustement stock / Rebut)
+  if (action === 'INVENTAIRE') {
+    const nom = matchedTech ? matchedTech.nom : (rawTech || (matchedOp ? matchedOp.nom : rawOp) || 'Auditeur Stock');
+    const id = matchedTech ? matchedTech.id_technician : (matchedOp ? matchedOp.id_operation : 'INV-STOCK');
+    return {
+      role: 'RESPONSABLE INVENTAIRE',
+      name: nom,
+      id: id,
+      isUnknown: !rawTech && !rawOp,
+    };
+  }
+
+  // 6. STANDARD MAINTENANCE (CORRECTIVE, PREVENTIVE, AMELIORATIVE, RETOUR, DEMONTAGE)
+  // Both Tech and Supervisor / Chef present
+  if (matchedTech && matchedOp && matchedOp.type_profil === 'CHEF') {
+    return {
+      role: `TECHNICIEN • SUPERVISEUR`,
+      name: `${matchedTech.nom}`,
+      id: `${matchedTech.id_technician} • ${matchedOp.id_operation}`,
+      supervisor: matchedOp.nom,
+      isUnknown: false,
+    };
+  }
+
+  if (matchedTech) {
+    return {
+      role: 'TECHNICIEN GMAO',
+      name: matchedTech.nom,
+      id: matchedTech.id_technician,
+      isUnknown: false,
+    };
+  }
+
+  if (matchedOp) {
+    const isChef = matchedOp.type_profil === 'CHEF';
+    return {
+      role: isChef ? 'SUPERVISEUR / CHEF' : 'OPÉRATEUR DE LIGNE',
+      name: matchedOp.nom,
+      id: matchedOp.id_operation,
+      isUnknown: false,
+    };
+  }
+
+  // Raw string formats
+  if (rawTech) {
+    const isTechCode = /^TECH-\d+/i.test(rawTech);
+    return {
+      role: isTechCode ? 'TECHNICIEN GMAO' : 'INTERVENANT',
+      name: rawTech,
+      id: isTechCode ? rawTech : (m.id_technician || 'TECH-GMAO'),
+      isUnknown: false,
+    };
+  }
+
+  if (rawOp) {
+    const isChefCode = /^CHEF-\d+/i.test(rawOp);
+    const isOpCode = /^OP-\d+/i.test(rawOp);
+    return {
+      role: isChefCode ? 'SUPERVISEUR / CHEF' : isOpCode ? 'OPÉRATEUR' : 'DEMANDEUR',
+      name: rawOp,
+      id: isChefCode || isOpCode ? rawOp : (m.id_operation || 'INTERV-01'),
+      isUnknown: false,
+    };
+  }
+
+  // 7. INCOMPLETE / MISSING LEGACY DATA
+  return {
+    role: 'INTERVENANT',
+    name: 'INCONNU',
+    id: 'INCONNU',
+    isUnknown: true,
+  };
+};
+
+/**
+ * Smart Stock Progression & Equation Resolver (Column E)
+ * Displays the full mathematical equation: [Stock Avant] [ - / + ] [Qte] = [Stock Après]
+ * - Stock Avant: Black (text-slate-900 font-bold)
+ * - Operator (- / +) and Quantity:
+ *     - If Subtraction (Sortie): Red (text-rose-600 font-bold)
+ *     - If Addition (Entrée): Green (text-emerald-600 font-bold)
+ * - Equal sign (=): Neutral slate (text-slate-400)
+ * - Stock Après:
+ *     - If === 0: Red (text-rose-600 font-extrabold)
+ *     - If < seuil: Amber / Yellow (text-amber-600 font-extrabold)
+ *     - If >= seuil: Black (text-slate-900 font-bold)
+ */
+export const resolveStockEquation = (m = {}, { stockItems = [], warehouseItems = [] } = {}) => {
+  const isOutflow = String(m.type || '').toLowerCase().includes('sortie');
+  const qte = Number(m.quantite) || 0;
+
+  // 1. Direct recorded snapshot if present from form submission
+  let stockAvant = m.stock_avant !== undefined && m.stock_avant !== null ? Number(m.stock_avant) : null;
+  let stockApres = m.stock_apres !== undefined && m.stock_apres !== null ? Number(m.stock_apres) : null;
+  let seuilMin = m.seuil_min !== undefined && m.seuil_min !== null ? Number(m.seuil_min) : null;
+
+  // Look up catalog item if needed
+  const rawRef = String(m.ref || '').trim();
+  const rawRefLower = rawRef.toLowerCase();
+  const matchedStock = stockItems.find(
+    (s) =>
+      (s.ref && String(s.ref).trim().toLowerCase() === rawRefLower) ||
+      (s.id_article && String(s.id_article).trim().toLowerCase() === rawRefLower) ||
+      (s.designation && String(s.designation).trim().toLowerCase() === rawRefLower)
+  );
+  const matchedWarehouse = warehouseItems.find(
+    (w) =>
+      (w.id_warehouse_item && String(w.id_warehouse_item).trim().toLowerCase() === rawRefLower) ||
+      (w.code && String(w.code).trim().toLowerCase() === rawRefLower) ||
+      (w.designation && String(w.designation).trim().toLowerCase() === rawRefLower)
+  );
+
+  if (seuilMin === null || isNaN(seuilMin)) {
+    seuilMin = Number(matchedStock?.seuil ?? matchedWarehouse?.seuil ?? 5);
+  }
+
+  // 2. Compute/fallback for historical legacy rows without explicit snapshot
+  if (stockAvant === null || isNaN(stockAvant)) {
+    if (matchedStock) {
+      const current = Number(matchedStock.stockActuel ?? matchedStock.stockInitial ?? 0);
+      stockAvant = isOutflow ? Math.max(0, current + qte) : Math.max(0, current - qte);
+    } else if (matchedWarehouse) {
+      const current = Number(matchedWarehouse.quantite ?? 1);
+      stockAvant = isOutflow ? Math.max(0, current + qte) : Math.max(0, current - qte);
+    } else {
+      stockAvant = isOutflow ? qte + 5 : 0;
+    }
+  }
+
+  if (stockApres === null || isNaN(stockApres)) {
+    stockApres = isOutflow ? stockAvant - qte : stockAvant + qte;
+  }
+
+  // Determine Stock Après color
+  let apresClass = 'text-slate-900 font-bold';
+  if (stockApres <= 0) {
+    apresClass = 'text-rose-600 font-extrabold';
+  } else if (stockApres < seuilMin) {
+    apresClass = 'text-amber-600 font-extrabold';
+  } else {
+    apresClass = 'text-slate-900 font-bold';
+  }
+
+  return {
+    isOutflow,
+    qte,
+    stockAvant,
+    stockApres,
+    seuilMin,
+    operator: isOutflow ? '−' : '+',
+    operatorClass: isOutflow ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold',
+    qteClass: isOutflow ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold',
+    apresClass,
+    unit: m.unit || 'pcs',
   };
 };
 
@@ -552,11 +887,18 @@ export default function MouvementsJournalTable({
           String(destInfo.category || '').toLowerCase().includes(q) ||
           String(destInfo.code || '').toLowerCase().includes(q);
 
+        const intervInfo = resolveIntervenantInfo(m, { technicians, operations });
+        const matchesIntervenant =
+          String(intervInfo.name || '').toLowerCase().includes(q) ||
+          String(intervInfo.role || '').toLowerCase().includes(q) ||
+          String(intervInfo.id || '').toLowerCase().includes(q);
+
         const matches =
           matchesOt ||
           matchesFlux ||
           matchesArticle ||
           matchesDestination ||
+          matchesIntervenant ||
           String(m.code_bon || '').toLowerCase().includes(q) ||
           String(m.action_id || '').toLowerCase().includes(q) ||
           String(m.technicien || '').toLowerCase().includes(q) ||
@@ -603,6 +945,9 @@ export default function MouvementsJournalTable({
       } else if (tableSortField === 'id_machine_registered' || tableSortField === 'destination') {
         valA = String(resolveDestinationInfo(a, { machines, zones, technicians, operations }).title || '').toLowerCase();
         valB = String(resolveDestinationInfo(b, { machines, zones, technicians, operations }).title || '').toLowerCase();
+      } else if (tableSortField === 'technicien' || tableSortField === 'intervenant') {
+        valA = String(resolveIntervenantInfo(a, { technicians, operations }).name || '').toLowerCase();
+        valB = String(resolveIntervenantInfo(b, { technicians, operations }).name || '').toLowerCase();
       } else if (tableSortField === 'quantite') {
         valA = Number(valA) || 0;
         valB = Number(valB) || 0;
@@ -787,10 +1132,13 @@ export default function MouvementsJournalTable({
     const exportRows = sortedMouvements.map((m, idx) => {
       const artInfo = resolveArticleInfo(m, { stockItems, warehouseItems });
       const destInfo = resolveDestinationInfo(m, { machines, zones, technicians, operations });
+      const intervInfo = resolveIntervenantInfo(m, { technicians, operations });
+      const eq = resolveStockEquation(m, { stockItems, warehouseItems });
       return {
         'N°': idx + 1,
         'Code Bon (A)': m.code_bon || '',
         'Date (A)': m.date || '',
+        'Heure (A)': m.heure || '',
         'N° OT / Cde (A)': getSmartOtCommande(m),
         'Type Flux (B)': getSmartFluxType(m),
         'Source (C)': artInfo.sourceCat,
@@ -798,11 +1146,14 @@ export default function MouvementsJournalTable({
         'Désignation (D)': artInfo.designation,
         'Référence (D)': artInfo.ref,
         'Quantité (E)': m.quantite || 0,
+        'Équation Stock (E)': `${eq.stockAvant} ${eq.operator} ${eq.qte} = ${eq.stockApres}`,
         'Type Intervention (F)': m.action_id || '',
         'Destination Catégorie (G)': destInfo.category,
         'Destination Titre (G)': destInfo.title,
         'Destination Code (G)': destInfo.code,
-        'Intervenant (H)': m.technicien || m.operation || '',
+        'Intervenant Rôle (H)': intervInfo.role,
+        'Intervenant Nom (H)': intervInfo.name,
+        'Intervenant ID (H)': intervInfo.id,
         'Commentaire (I)': m.commentaire || '',
         'Statut (J)': m.statut || 'Effectué',
       };
@@ -1229,8 +1580,8 @@ export default function MouvementsJournalTable({
                 {/* QTÉ (E) */}
                 <th
                   onClick={() => handleTableSort('quantite')}
-                  className="py-2.5 px-2 text-right cursor-pointer select-none hover:bg-slate-200/80 transition group"
-                  title="Cliquer pour trier par Quantité"
+                  className="py-2.5 px-2.5 text-right cursor-pointer select-none hover:bg-slate-200/80 transition group min-w-[130px]"
+                  title="Cliquer pour trier par Quantité / Évolution de Stock"
                 >
                   <div className="flex items-center justify-end gap-1">
                     <span>QTÉ</span>{' '}
@@ -1329,18 +1680,50 @@ export default function MouvementsJournalTable({
 
                   return (
                     <tr
-                      key={m.id || `mvt-${realIndex}`}
+                      key={`mvt-row-${m.id ?? ''}-${m.code_bon ?? ''}-${realIndex}`}
                       className="even:bg-slate-50/70 odd:bg-white hover:bg-indigo-50/40 transition-colors border-b border-slate-100"
                     >
                       <td className="py-2 px-3 text-center font-mono text-[10.5px] font-bold text-slate-400">
                         {realIndex + 1}
                       </td>
 
-                      <td className="py-2 px-3 whitespace-nowrap">
-                        <div className="font-mono font-bold text-indigo-950 text-[11px]">
-                          {m.code_bon}
+                      {/* DATE / BON / HEURE (A): Code Bon on top with FileText icon, Date in middle with Calendar icon, Time on bottom with Clock icon */}
+                      <td className="py-2.5 px-3 whitespace-nowrap min-w-[130px]">
+                        <div className="flex flex-col gap-0.5">
+                          {/* Top: Code Bon */}
+                          <div className="flex items-center gap-1.5 font-mono font-bold text-indigo-950 text-[11px]">
+                            <FileText className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                            <span>{m.code_bon || 'BON-000'}</span>
+                          </div>
+                          {/* Middle: Date */}
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+                            <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span>{m.date || '----/--/--'}</span>
+                          </div>
+                          {/* Bottom: Heure (Auto/Enregistré) */}
+                          {(() => {
+                            let timeVal = m.heure ? String(m.heure).trim() : '';
+                            if (!timeVal && m.timestamp) {
+                              try {
+                                const dt = new Date(m.timestamp);
+                                if (!isNaN(dt.getTime())) {
+                                  timeVal = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+                                }
+                              } catch {
+                                // ignore
+                              }
+                            }
+                            if (!timeVal) {
+                              timeVal = '08:30';
+                            }
+                            return (
+                              <div className="flex items-center gap-1.5 text-[9.5px] text-slate-400 font-mono">
+                                <Clock className="w-3 h-3 text-indigo-500/70 shrink-0" />
+                                <span>{timeVal}</span>
+                              </div>
+                            );
+                          })()}
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono">{m.date}</div>
                       </td>
 
                       {/* N° OT / COMMANDE / RÉF */}
@@ -1391,25 +1774,69 @@ export default function MouvementsJournalTable({
                         )}
                       </td>
 
-                      {/* ARTICLE (D): Type (top lighter), Désignation (middle prominent), Réf (bottom mono/robot) */}
+                      {/* ARTICLE (D): Type (top lighter), Désignation (middle prominent), Réf (bottom mono/robot) with clean offline SVG icons */}
                       <td className="py-2.5 px-3 min-w-[220px]">
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-[10px] font-semibold tracking-wide uppercase text-slate-400">
-                            {artInfo.type}
-                          </span>
-                          <span className="text-[12px] font-bold text-slate-900 leading-snug break-words">
-                            {artInfo.designation}
-                          </span>
-                          <span className="font-mono text-[11px] font-bold text-indigo-700 tracking-wider">
-                            {artInfo.ref}
-                          </span>
+                          {/* Top: Type / Catégorie with Tag icon */}
+                          <div className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide uppercase text-slate-400">
+                            <Tag className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="truncate max-w-[190px]" title={artInfo.type}>
+                              {artInfo.type}
+                            </span>
+                          </div>
+
+                          {/* Middle: Désignation with Package icon */}
+                          <div className="flex items-start gap-1.5">
+                            <Package className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                            <span className="text-[12px] font-bold text-slate-900 leading-snug break-words">
+                              {artInfo.designation}
+                            </span>
+                          </div>
+
+                          {/* Bottom: Réf Code with Barcode icon in font-mono */}
+                          <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold text-indigo-700 tracking-wider">
+                            <Barcode className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                            <span>{artInfo.ref}</span>
+                          </div>
                         </div>
                       </td>
 
-                      <td className="py-2 px-2 text-right font-mono font-bold text-xs">
-                        <span className={isOutflow ? 'text-rose-600' : 'text-emerald-600'}>
-                          {isOutflow ? `-${m.quantite}` : `+${m.quantite}`}
-                        </span>
+                      {/* QTÉ (E): Mathematical Equation [Stock Avant] [ - / + ] [Qte] = [Stock Après] */}
+                      <td className="py-2 px-2.5 whitespace-nowrap text-right min-w-[130px]">
+                        {(() => {
+                          const eq = resolveStockEquation(m, { stockItems, warehouseItems });
+                          return (
+                            <div
+                              className="inline-flex items-center justify-end font-mono text-[11.5px] leading-none select-text gap-0.5 bg-slate-50/90 px-2 py-1 rounded-md border border-slate-200/90 shadow-2xs group-hover:border-slate-300 transition"
+                              title={`Stock initial : ${eq.stockAvant} | Mouvement : ${eq.operator}${eq.qte} | Solde résultant : ${eq.stockApres} (Seuil : ${eq.seuilMin})`}
+                            >
+                              {/* Stock Avant (Black) */}
+                              <span className="text-slate-900 font-bold" title="Stock avant opération">
+                                {eq.stockAvant}
+                              </span>
+
+                              {/* Operator (- Red / + Green) */}
+                              <span className={`px-0.5 ${eq.operatorClass}`}>
+                                {eq.operator}
+                              </span>
+
+                              {/* Quantité mouvement (- Red / + Green) */}
+                              <span className={`font-bold ${eq.qteClass}`} title="Quantité de la transaction">
+                                {eq.qte}
+                              </span>
+
+                              {/* Equal Sign (Neutral slate) */}
+                              <span className="text-slate-400 font-normal px-0.5">
+                                =
+                              </span>
+
+                              {/* Stock Après (0 -> Red, < seuil -> Amber, >= seuil -> Black) */}
+                              <span className={eq.apresClass} title={`Nouveau stock : ${eq.stockApres}`}>
+                                {eq.stockApres}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* TYPE INTERVENTION / ACTION */}
@@ -1417,69 +1844,171 @@ export default function MouvementsJournalTable({
                         {renderActionBadge(m)}
                       </td>
 
-                      {/* DESTINATION (G): Dynamic smart display based on Flux and Machine Registry */}
+                      {/* DESTINATION (G): Unified 3-Layer Design (Zone/Cat -> Machine/Target -> Code/Emplacement) with clean offline SVG icons */}
                       <td className="py-2.5 px-3 min-w-[210px]">
                         <div className="flex flex-col gap-0.5">
-                          {/* Top: Category / Zone */}
-                          <span
-                            className="text-[10px] font-semibold tracking-wide uppercase text-slate-400 truncate max-w-[200px]"
-                            title={destInfo.category}
-                          >
-                            {destInfo.category}
-                          </span>
-                          {/* Middle: Prominent Machine Name / Target */}
-                          <span
-                            className={`text-[12px] font-bold leading-snug break-words ${
-                              destInfo.isUnknownMachine
-                                ? 'text-amber-800 flex items-center gap-1.5'
-                                : 'text-slate-900'
-                            }`}
-                          >
-                            {destInfo.isUnknownMachine ? (
-                              <>
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
-                                <span>{destInfo.title}</span>
-                              </>
-                            ) : (
-                              destInfo.title
-                            )}
-                          </span>
-                          {/* Bottom: Machine Code / Emplacement in font-mono */}
-                          <span
-                            className={`font-mono text-[11px] font-bold tracking-wider ${
-                              destInfo.isUnknownMachine ? 'text-slate-400' : 'text-indigo-700'
-                            }`}
-                          >
-                            {destInfo.code}
-                          </span>
+                          {/* Top: Category / Zone with MapPin icon */}
+                          <div className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide uppercase text-slate-400">
+                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span
+                              className="truncate max-w-[190px]"
+                              title={destInfo.category}
+                            >
+                              {destInfo.category}
+                            </span>
+                          </div>
+
+                          {/* Middle: Prominent Machine Name / Target with Factory icon */}
+                          <div className="flex items-start gap-1.5">
+                            <Factory className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                            <span
+                              className={`text-[12px] font-bold leading-snug break-words ${
+                                destInfo.isUnknown
+                                  ? 'text-slate-500 font-medium inline-flex items-center gap-1.5'
+                                  : 'text-slate-900'
+                              }`}
+                            >
+                              {destInfo.isUnknown ? (
+                                <>
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
+                                  <span>{destInfo.title}</span>
+                                </>
+                              ) : (
+                                destInfo.title
+                              )}
+                            </span>
+                          </div>
+
+                          {/* Bottom: Machine Code / Emplacement with Barcode icon in font-mono */}
+                          <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-wider">
+                            <Barcode
+                              className={`w-3.5 h-3.5 shrink-0 ${
+                                destInfo.isUnknown ? 'text-slate-400' : 'text-indigo-500'
+                              }`}
+                            />
+                            <span
+                              className={
+                                destInfo.isUnknown ? 'text-slate-400 font-medium' : 'text-indigo-700'
+                              }
+                            >
+                              {destInfo.code}
+                            </span>
+                          </div>
                         </div>
                       </td>
 
-                      <td className="py-2 px-3 whitespace-nowrap text-[11px] text-slate-700 font-medium">
-                        {m.technicien || m.operation || '-'}
+                      {/* INTERVENANT (H): Unified 3-Layer Design (Rôle -> Nom -> ID) with clean offline SVG icons */}
+                      <td className="py-2.5 px-3 min-w-[190px]">
+                        {(() => {
+                          const intervInfo = resolveIntervenantInfo(m, { technicians, operations });
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              {/* Top: Rôle / Type de profil with Shield icon */}
+                              <div className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide uppercase text-slate-400">
+                                <Shield className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span
+                                  className="truncate max-w-[180px]"
+                                  title={intervInfo.role}
+                                >
+                                  {intervInfo.role}
+                                </span>
+                              </div>
+
+                              {/* Middle: Nom du compte / Personne with User icon */}
+                              <div className="flex items-start gap-1.5">
+                                <User className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                                <span
+                                  className={`text-[12px] font-bold leading-snug break-words ${
+                                    intervInfo.isUnknown
+                                      ? 'text-slate-500 font-medium inline-flex items-center gap-1.5'
+                                      : 'text-slate-900'
+                                  }`}
+                                >
+                                  {intervInfo.isUnknown ? (
+                                    <>
+                                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
+                                      <span>INCONNU</span>
+                                    </>
+                                  ) : (
+                                    intervInfo.name
+                                  )}
+                                </span>
+                              </div>
+
+                              {/* Bottom: ID / Code unique with Barcode icon in font-mono */}
+                              <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-wider">
+                                <Barcode
+                                  className={`w-3.5 h-3.5 shrink-0 ${
+                                    intervInfo.isUnknown ? 'text-slate-400' : 'text-indigo-500'
+                                  }`}
+                                />
+                                <span
+                                  className={
+                                    intervInfo.isUnknown ? 'text-slate-400 font-medium' : 'text-indigo-700'
+                                  }
+                                >
+                                  {intervInfo.id}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
 
-                      <td className="py-2 px-3 text-[11px] text-slate-500 truncate max-w-[130px]">
-                        {m.commentaire || (m.num_commande !== 'INCONNU' ? m.num_commande : '-')}
+                      {/* COMMENTAIRE (I): With MessageSquare icon and clean null badge if empty */}
+                      <td className="py-2.5 px-3 text-[11px] max-w-[160px]">
+                        {(() => {
+                          const rawComment = m.commentaire ? String(m.commentaire).trim() : '';
+                          if (!rawComment) {
+                            return (
+                              <span
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[9.5px] font-semibold bg-slate-100 text-slate-400 border border-slate-200"
+                                title="Aucun commentaire renseigné (null)"
+                              >
+                                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                                null
+                              </span>
+                            );
+                          }
+                          return (
+                            <div
+                              className="flex items-start gap-1.5 text-slate-700 text-[11px] leading-snug"
+                              title={rawComment}
+                            >
+                              <MessageSquare className="w-3 h-3 text-slate-400 shrink-0 mt-0.5" />
+                              <span className="truncate max-w-[135px] font-medium">{rawComment}</span>
+                            </div>
+                          );
+                        })()}
                       </td>
 
+                      {/* STATUT (J): Lifecycle status of the transaction */}
                       <td className="py-2 px-2 text-center whitespace-nowrap">
                         {m.type === 'COMMANDE' || m.type === 'Bon de Sortie' ? (
                           <span
-                            className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold uppercase ${
                               m.type === 'COMMANDE'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-purple-100 text-purple-800'
+                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                : 'bg-purple-50 text-purple-800 border border-purple-200'
                             }`}
                           >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                m.type === 'COMMANDE' ? 'bg-amber-500' : 'bg-purple-500'
+                              }`}
+                            ></span>
                             {m.type === 'COMMANDE' ? 'En attente' : 'En réparation'}
                           </span>
                         ) : m.type === 'Entrée Externe' && m.action_id !== 'ACHAT_DIRECT' ? (
-                          <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-100 text-emerald-800">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
                             Livré
                           </span>
                         ) : (
-                          <span className="text-slate-300">-</span>
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-medium text-slate-500 bg-slate-50 border border-slate-200">
+                            <Check className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                            Effectué
+                          </span>
                         )}
                       </td>
 
@@ -1634,6 +2163,18 @@ export default function MouvementsJournalTable({
                   value={editFormData.date || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })}
                   className="w-full h-8 px-2.5 rounded-xl border border-slate-200 bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  Heure de l&apos;opération
+                </label>
+                <input
+                  type="time"
+                  value={editFormData.heure || '08:30'}
+                  onChange={(e) => setEditFormData({ ...editFormData, heure: e.target.value })}
+                  className="w-full h-8 px-2.5 rounded-xl border border-slate-200 bg-white font-semibold font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
 

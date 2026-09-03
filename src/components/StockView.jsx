@@ -610,7 +610,7 @@ export default function StockView({
 
                   return (
                     <tr
-                      key={item.id || item.ref || idx}
+                      key={`stock-row-${item.id ?? ''}-${item.ref ?? ''}-${rowNum}`}
                       className="even:bg-slate-50/80 odd:bg-white hover:bg-blue-50/80 border-b border-slate-200/70 transition-colors"
                     >
                       {/* Row N° Column */}

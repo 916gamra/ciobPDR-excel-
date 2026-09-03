@@ -667,7 +667,7 @@ export default function UtilisateursView({
 
                     return (
                       <tr
-                        key={user.id}
+                        key={`user-row-${user.id ?? ''}-${user.type ?? ''}-${idx + startIndex}`}
                         className="even:bg-slate-50/80 odd:bg-white hover:bg-slate-100/70 border-b border-slate-200/70 transition-colors"
                       >
                         {/* Row N° Column */}
