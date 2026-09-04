@@ -1,5 +1,6 @@
 import React from 'react';
 import { Menu, Upload, Download, Link, Save, FileSpreadsheet } from 'lucide-react';
+import PWAInstallButton from './PWAInstallButton';
 
 export default function Header({
   currentTab,
@@ -198,6 +199,8 @@ export default function Header({
             <span>🔗 Lien Direct Excel</span>
           </button>
         )}
+
+        <PWAInstallButton variant="header" />
 
         <button
           onClick={() => fileInputRef.current?.click()}

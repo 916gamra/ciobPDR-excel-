@@ -38,6 +38,11 @@ import {
   Unlock,
   Shield,
   Key,
+  Monitor,
+  Globe,
+  LogIn,
+  LogOut as LogOutIcon,
+  Laptop,
 } from 'lucide-react';
 
 import {
@@ -54,6 +59,7 @@ import initialData from '../initialData.json';
 import { storageService } from '../utils/storageService';
 import { backupService } from '../utils/BackupService';
 import { auditService } from '../utils/AuditService';
+import { accessLogService } from '../utils/AccessLogService';
 import { logger } from '../utils/Logger';
 
 
@@ -798,13 +804,29 @@ export default function SettingsView({
   const [backupsList, setBackupsList] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
+  const [accessLogs, setAccessLogs] = useState([]);
+  const [auditSubTab, setAuditSubTab] = useState('access'); // 'access' | 'backups' | 'events'
 
   useEffect(() => {
     if (activeTab === 'backup-audit') {
       loadBackups();
       loadAuditLogs();
+      loadAccessLogs();
     }
   }, [activeTab]);
+
+  const loadAccessLogs = () => {
+    const logs = accessLogService.getLogs();
+    setAccessLogs(logs || []);
+  };
+
+  const handleClearAccessLogs = () => {
+    if (window.confirm('Êtes-vous sûr de vouloir vider le journal des connexions et sessions ?')) {
+      accessLogService.clearLogs();
+      setAccessLogs([]);
+      showToast('Journal des accès réinitialisé.', 'info');
+    }
+  };
 
   const loadBackups = async () => {
     try {
@@ -971,9 +993,9 @@ export default function SettingsView({
             },
             {
               id: 'backup-audit',
-              label: 'Sauvegardes & Audit',
-              sub: 'Historique & Restauration',
-              icon: Clock,
+              label: 'Logs d\'Accès & Audit',
+              sub: 'Historique, IP & Restauration',
+              icon: Shield,
               color: 'text-fuchsia-600',
               activeBg: 'bg-fuchsia-50/70',
               activeBorder: 'border-fuchsia-500',
@@ -2062,69 +2084,189 @@ export default function SettingsView({
         )}
 
 
-        {/* PANEL: SAUVEGARDES & AUDIT */}
+        {/* PANEL: SAUVEGARDES, AUDIT & LOGS D'ACCÈS */}
         {activeTab === 'backup-audit' && (
           <div className="space-y-6 max-w-full overflow-hidden">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
               <div className="min-w-0 flex-1">
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-fuchsia-600 shrink-0" />
-                  Sauvegardes et Journal d'Audit
+                  <span>Traçabilité, Sécurité & Journal des Accès (Audit Logs)</span>
                 </h3>
-                <p className="text-xs text-slate-500 mt-1 truncate">
-                  Gérez vos points de restauration locaux et consultez l'historique complet des actions.
+                <p className="text-xs text-slate-500 mt-1">
+                  Surveillance en temps réel des sessions de connexion, adresses IP des postes, durées d'activité et historique des modifications.
                 </p>
+              </div>
+
+              {/* Subtabs Switcher */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200 shrink-0">
+                <button
+                  onClick={() => setAuditSubTab('access')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    auditSubTab === 'access'
+                      ? 'bg-white text-fuchsia-700 shadow-xs border border-fuchsia-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Laptop className="w-3.5 h-3.5 text-fuchsia-600" />
+                  <span>Connexions & Postes ({accessLogs.length})</span>
+                </button>
+                <button
+                  onClick={() => setAuditSubTab('events')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    auditSubTab === 'events'
+                      ? 'bg-white text-fuchsia-700 shadow-xs border border-fuchsia-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Activity className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Actions & Données ({auditLogs.length})</span>
+                </button>
+                <button
+                  onClick={() => setAuditSubTab('backups')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    auditSubTab === 'backups'
+                      ? 'bg-white text-fuchsia-700 shadow-xs border border-fuchsia-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Points de Restauration ({backupsList.length})</span>
+                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {/* Backups Column */}
+            {/* SUBTAB 1: ACCESS LOGS & SESSIONS */}
+            {auditSubTab === 'access' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Points de Restauration
-                  </h4>
-                  <button onClick={loadBackups} className="text-xs text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 font-bold cursor-pointer">
-                    <RefreshCw className="w-3.5 h-3.5" /> Actualiser
-                  </button>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-fuchsia-50/60 p-3.5 rounded-2xl border border-fuchsia-200/80">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-fuchsia-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-fuchsia-950">
+                        Surveillance des Postes & Historique de Connexion
+                      </h4>
+                      <p className="text-[11px] text-fuchsia-800/80">
+                        Enregistre l'adresse IP, le nom du poste/ordinateur, le navigateur, l'heure d'entrée et la durée d'utilisation.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={loadAccessLogs}
+                      className="px-2.5 py-1.5 bg-white hover:bg-slate-50 text-fuchsia-800 text-xs font-bold rounded-xl border border-fuchsia-200 shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-fuchsia-600" />
+                      <span>Actualiser</span>
+                    </button>
+                    <button
+                      onClick={handleClearAccessLogs}
+                      className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl border border-rose-200 shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Vider</span>
+                    </button>
+                  </div>
                 </div>
-                
-                <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase">
-                      <tr>
-                        <th className="px-4 py-2">Date & Heure</th>
-                        <th className="px-4 py-2">Utilisateur</th>
-                        <th className="px-4 py-2 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {backupsList.length === 0 ? (
-                        <tr><td colSpan="3" className="px-4 py-6 text-center text-slate-500">Aucune sauvegarde disponible</td></tr>
-                      ) : backupsList.map(b => (
-                        <tr key={b.id} className="hover:bg-white transition-colors">
-                          <td className="px-4 py-2.5 whitespace-nowrap font-mono text-[11px]">{new Date(b.timestamp).toLocaleString()}</td>
-                          <td className="px-4 py-2.5 truncate max-w-[100px]">{b.userId}</td>
-                          <td className="px-4 py-2.5 text-right flex items-center justify-end gap-2">
-                             <button onClick={() => handleExportBackup(b.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer" title="Exporter en JSON">
-                               <Download className="w-3.5 h-3.5" />
-                             </button>
-                             <button onClick={() => handleRestoreBackup(b.id)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer" title="Restaurer cette version">
-                               <RotateCcw className="w-3.5 h-3.5" />
-                             </button>
-                          </td>
+
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+                  <div className="overflow-x-auto max-h-[500px]">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-slate-100/90 border-b border-slate-200 text-slate-700 font-bold uppercase sticky top-0 z-10 text-[11px]">
+                        <tr>
+                          <th className="px-4 py-3">Statut & Session</th>
+                          <th className="px-4 py-3">Utilisateur Connecté</th>
+                          <th className="px-4 py-3">Poste / Ordinateur</th>
+                          <th className="px-4 py-3">Adresse IP</th>
+                          <th className="px-4 py-3">Système & Navigateur</th>
+                          <th className="px-4 py-3">Heure Connexion</th>
+                          <th className="px-4 py-3">Heure Déconnexion</th>
+                          <th className="px-4 py-3 text-right">Durée Session</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {accessLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan="8" className="px-4 py-8 text-center text-slate-500 font-medium">
+                              Aucune session enregistrée pour le moment.
+                            </td>
+                          </tr>
+                        ) : (
+                          accessLogs.map((log) => (
+                            <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                    log.status === 'En cours'
+                                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                      : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      log.status === 'En cours' ? 'bg-emerald-500 animate-ping' : 'bg-slate-400'
+                                    }`}
+                                  />
+                                  {log.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="font-bold text-slate-900">{log.userName}</div>
+                                <div className="text-[10px] text-slate-500 font-mono">{log.userRole}</div>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5 text-slate-800 font-bold font-mono">
+                                  <Laptop className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                  <span>{log.stationName || 'Station-Client'}</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-mono">ID: {log.deviceId}</div>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span className="font-mono text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded font-bold text-[11px]">
+                                  {log.ip}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div className="text-slate-800 font-medium">{log.os}</div>
+                                <div className="text-[10.5px] text-slate-500">{log.browser} • {log.screenRes}</div>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap font-mono text-[11px] text-slate-700">
+                                <div className="flex items-center gap-1">
+                                  <LogIn className="w-3 h-3 text-emerald-600" />
+                                  <span>{new Date(log.loginTime).toLocaleString('fr-FR')}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap font-mono text-[11px] text-slate-500">
+                                {log.logoutTime ? (
+                                  <div className="flex items-center gap-1">
+                                    <LogOutIcon className="w-3 h-3 text-rose-500" />
+                                    <span>{new Date(log.logoutTime).toLocaleString('fr-FR')}</span>
+                                  </div>
+                                ) : (
+                                  <span className="italic text-emerald-600 font-sans text-xs">Session active...</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-right font-mono font-bold text-slate-800">
+                                {log.durationMinutes ? `${log.durationMinutes} min` : '< 1 min'}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
+            )}
 
-              {/* Audit Column */}
+            {/* SUBTAB 2: DATA & AUDIT EVENTS */}
+            {auditSubTab === 'events' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Journal des Événements
+                    Journal des Modifications de Données
                   </h4>
                   <button onClick={loadAuditLogs} className="text-xs text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 font-bold cursor-pointer">
                     <RefreshCw className={`w-3.5 h-3.5 ${loadingAudit ? 'animate-spin' : ''}`} /> Actualiser
@@ -2132,7 +2274,7 @@ export default function SettingsView({
                 </div>
                 
                 <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-                  <div className="max-h-[350px] overflow-y-auto">
+                  <div className="max-h-[450px] overflow-y-auto">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase sticky top-0 z-10">
                         <tr>
@@ -2169,14 +2311,53 @@ export default function SettingsView({
                       </tbody>
                     </table>
                   </div>
-                  {auditLogs.length > 100 && (
-                    <div className="p-2 text-center text-[10px] text-slate-500 bg-slate-100 border-t border-slate-200">
-                      Affichage limité aux 100 derniers événements
-                    </div>
-                  )}
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* SUBTAB 3: BACKUPS & RESTORE */}
+            {auditSubTab === 'backups' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Points de Restauration Locaux
+                  </h4>
+                  <button onClick={loadBackups} className="text-xs text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 font-bold cursor-pointer">
+                    <RefreshCw className="w-3.5 h-3.5" /> Actualiser
+                  </button>
+                </div>
+                
+                <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase">
+                      <tr>
+                        <th className="px-4 py-2">Date & Heure</th>
+                        <th className="px-4 py-2">Utilisateur</th>
+                        <th className="px-4 py-2 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {backupsList.length === 0 ? (
+                        <tr><td colSpan="3" className="px-4 py-6 text-center text-slate-500">Aucune sauvegarde disponible</td></tr>
+                      ) : backupsList.map(b => (
+                        <tr key={b.id} className="hover:bg-white transition-colors">
+                          <td className="px-4 py-2.5 whitespace-nowrap font-mono text-[11px]">{new Date(b.timestamp).toLocaleString()}</td>
+                          <td className="px-4 py-2.5 truncate max-w-[100px]">{b.userId}</td>
+                          <td className="px-4 py-2.5 text-right flex items-center justify-end gap-2">
+                             <button onClick={() => handleExportBackup(b.id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer" title="Exporter en JSON">
+                               <Download className="w-3.5 h-3.5" />
+                             </button>
+                             <button onClick={() => handleRestoreBackup(b.id)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer" title="Restaurer cette version">
+                               <RotateCcw className="w-3.5 h-3.5" />
+                             </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

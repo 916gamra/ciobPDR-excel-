@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SortieEntreeIcon from './SortieEntreeIcon';
+import PWAInstallButton from './PWAInstallButton';
 import {
   LayoutDashboard,
   Package,
@@ -427,6 +428,11 @@ export default function Sidebar({
               associées.
             </div>
           </div>
+        </div>
+
+        {/* PWA Install Button Container */}
+        <div className="px-3 pb-2">
+          <PWAInstallButton variant="sidebar" />
         </div>
 
         {/* Bottom Control Actions: Settings (Parameters) & Light/Dark Theme Switcher */}

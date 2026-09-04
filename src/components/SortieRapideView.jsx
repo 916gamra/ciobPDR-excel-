@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import {
   FileSpreadsheet,
@@ -61,6 +61,9 @@ import {
   Scale,
   ArrowUpRight,
   ArrowDownLeft,
+  Gauge,
+  ShieldCheck,
+  Hammer,
 } from 'lucide-react';
 
 import { validateMovementWithContext } from '../utils/formulaEngine';
@@ -329,7 +332,8 @@ export default function SortieRapideView({
       newDestType = 'STOCK_PDR';
     } else if (newType === 'Bon de Sortie' || newType === 'Sortie Externe') {
       newAction = 'REPARATION_EXTERNE';
-      newItemSource = 'WAREHOUSE_PARTIE'; // Dedicated to Warehouse Parts & Components only
+      newItemSource = 'WAREHOUSE_PARTIE'; // Dedicated to Warehouse Parts & Components strictly by default
+      newDestType = 'PRESTATAIRE_EXTERNE';
     } else if (newType === 'Entrée Externe') {
       newAction = 'REAPPRO';
       newItemSource = 'STOCK_PDR';
@@ -658,6 +662,8 @@ export default function SortieRapideView({
     if (raw === 'REAPPRO' || raw === 'REAPPROVISIONNEMENT') return 'REAPPRO';
     if (raw === 'RETOUR' || raw === 'RETOUR_ATELIER') return 'RETOUR';
     if (raw === 'REPARATION_EXTERNE' || raw === 'REPARATION') return 'REPARATION_EXTERNE';
+    if (raw === 'ETALONNAGE_CONTROLE' || raw === 'ETALONNAGE' || raw === 'CONTROLE') return 'ETALONNAGE_CONTROLE';
+    if (raw === 'GARANTIE_ECHANGE' || raw === 'GARANTIE' || raw === 'ECHANGE') return 'GARANTIE_ECHANGE';
     if (raw === 'INVENTAIRE') return 'INVENTAIRE';
     if (raw === 'ACHAT_DIRECT') return 'ACHAT_DIRECT';
     return raw;
@@ -753,13 +759,41 @@ export default function SortieRapideView({
 
     if (act === 'REPARATION_EXTERNE') {
       return (
-        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-950 shadow-2xs">
-          <div className="w-4 h-4 rounded-md bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 shadow-2xs">
+          <div className="w-4 h-4 rounded-md bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
             <Truck className="w-2.5 h-2.5 stroke-[2.5]" />
           </div>
-          <span className="text-[10.5px] font-bold whitespace-nowrap text-indigo-950">Rép. Externe</span>
-          <span className="text-[8.5px] font-mono px-1 py-0.2 rounded bg-indigo-100 text-indigo-700 font-bold">
+          <span className="text-[10.5px] font-bold whitespace-nowrap text-purple-950">Rép. Externe</span>
+          <span className="text-[8.5px] font-mono px-1 py-0.2 rounded bg-purple-100 text-purple-700 font-bold">
             SOUS-TRAITANCE
+          </span>
+        </div>
+      );
+    }
+
+    if (act === 'ETALONNAGE_CONTROLE') {
+      return (
+        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 shadow-2xs">
+          <div className="w-4 h-4 rounded-md bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+            <Gauge className="w-2.5 h-2.5 stroke-[2.5]" />
+          </div>
+          <span className="text-[10.5px] font-bold whitespace-nowrap text-blue-950">Étalonnage</span>
+          <span className="text-[8.5px] font-mono px-1 py-0.2 rounded bg-blue-100 text-blue-700 font-bold">
+            MÉTROLOGIE
+          </span>
+        </div>
+      );
+    }
+
+    if (act === 'GARANTIE_ECHANGE') {
+      return (
+        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 shadow-2xs">
+          <div className="w-4 h-4 rounded-md bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+            <ShieldCheck className="w-2.5 h-2.5 stroke-[2.5]" />
+          </div>
+          <span className="text-[10.5px] font-bold whitespace-nowrap text-emerald-950">Garantie</span>
+          <span className="text-[8.5px] font-mono px-1 py-0.2 rounded bg-emerald-100 text-emerald-700 font-bold">
+            ÉCHANGE
           </span>
         </div>
       );
@@ -790,35 +824,182 @@ export default function SortieRapideView({
     return list;
   }, [mouvements]);
 
-  // Dynamic available machines and technicians based on selected zone
+  // Dynamic available machines based on selected zone
   const availableMachines = useMemo(() => {
     if (!form.id_zone) return machines;
     return machines.filter((m) => m.id_zone_default === form.id_zone);
   }, [machines, form.id_zone]);
 
+  // Available technicians:
+  // For Corrective: ALL technicians across the factory can intervene
+  // For Preventive / other: ALL technicians with zone technicians prioritized
   const availableTechs = useMemo(() => {
+    if (form.action_id === 'CORRECTIVE') {
+      return technicians;
+    }
     if (!form.id_zone) return technicians;
-    return technicians.filter((t) => t.id_zone === form.id_zone);
-  }, [technicians, form.id_zone]);
+    const zoneTechs = technicians.filter((t) => t.id_zone === form.id_zone);
+    const otherTechs = technicians.filter((t) => t.id_zone !== form.id_zone);
+    return [...zoneTechs, ...otherTechs];
+  }, [technicians, form.id_zone, form.action_id]);
 
-  // Filtered lists for Operations and Chefs
-  const chefsList = useMemo(() => {
+  // Filtered lists for Responsables (all RESP / CHEF profiles)
+  const responsablesList = useMemo(() => {
     return operations.filter(
       (op) =>
+        op.type_profil === 'RESPONSABLE' ||
         op.type_profil === 'CHEF' ||
+        String(op.id_operation).startsWith('RESP') ||
         String(op.id_operation).startsWith('CHEF') ||
+        String(op.nom).toUpperCase().includes('RESP') ||
         String(op.nom).toUpperCase().includes('CHEF')
     );
   }, [operations]);
 
+  // Backward-compatible aliases for existing references
+  const supervisorsList = responsablesList;
+  const chefsList = responsablesList;
+
+  // Helper to extract allowed zones for a given responsable
+  const getResponsableAllowedZones = useCallback((resp) => {
+    if (!resp) return zones;
+    let zoneIds = [];
+    if (Array.isArray(resp.zones) && resp.zones.length > 0) {
+      zoneIds = resp.zones;
+    } else if (resp.id_zone) {
+      zoneIds = String(resp.id_zone).split(',').map((s) => s.trim()).filter(Boolean);
+    }
+    if (zoneIds.length === 0 || zoneIds.includes('ALL')) {
+      return zones;
+    }
+    const matched = zones.filter((z) => zoneIds.includes(z.id_zone));
+    return matched.length > 0 ? matched : zones;
+  }, [zones]);
+
+  // Current Responsable for USAGE mode
+  const currentUsageResponsable = useMemo(() => {
+    return (
+      responsablesList.find(
+        (r) => r.nom === form.operation || r.id_operation === form.id_operation
+      ) ||
+      responsablesList[0] ||
+      null
+    );
+  }, [responsablesList, form.operation, form.id_operation]);
+
+  // Maintenance Workshop default zone (e.g. ZONE-ATEL)
+  const maintenanceZone = useMemo(() => {
+    return (
+      zones.find(
+        (z) =>
+          z.id_zone === 'ZONE-ATEL' ||
+          z.id_zone?.toUpperCase().includes('ATEL') ||
+          z.libelle?.toUpperCase().includes('ATELIER') ||
+          z.libelle?.toUpperCase().includes('MAINT')
+      ) ||
+      zones[0] || { id_zone: 'ZONE-ATEL', libelle: 'Atelier Central Maintenance' }
+    );
+  }, [zones]);
+
+  // Smart filter to find only Responsables related to a given zone (e.g. for Operator usage)
+  const getResponsablesForZone = useCallback(
+    (zoneId) => {
+      if (!zoneId) return responsablesList;
+      const filtered = responsablesList.filter((r) => {
+        if (r.id_zone === 'ALL' || (Array.isArray(r.zones) && r.zones.includes('ALL'))) return true;
+        if (r.id_zone === zoneId) return true;
+        if (Array.isArray(r.zones) && r.zones.includes(zoneId)) return true;
+        if (
+          typeof r.id_zone === 'string' &&
+          r.id_zone.split(',').map((s) => s.trim()).includes(zoneId)
+        ) {
+          return true;
+        }
+        return false;
+      });
+      return filtered.length > 0 ? filtered : responsablesList;
+    },
+    [responsablesList]
+  );
+
+  // Responsables list filtered for the current Operator's zone
+  const operatorFilteredResponsables = useMemo(() => {
+    return getResponsablesForZone(form.id_zone);
+  }, [getResponsablesForZone, form.id_zone]);
+
+  // Allowed zones for the currently selected USAGE Responsable
+  const usageAllowedZones = useMemo(() => {
+    return getResponsableAllowedZones(currentUsageResponsable);
+  }, [currentUsageResponsable, getResponsableAllowedZones]);
+
+  // Available machines for USAGE mode, filtered exclusively by selected zone
+  const usageAvailableMachines = useMemo(() => {
+    if (!form.id_zone) return [];
+    return machines.filter((m) => m.id_zone_default === form.id_zone);
+  }, [machines, form.id_zone]);
+
   const operatorsList = useMemo(() => {
     return operations.filter(
       (op) =>
-        op.type_profil !== 'CHEF' &&
-        !String(op.id_operation).startsWith('CHEF') &&
-        !String(op.nom).toUpperCase().includes('CHEF')
+        op.type_profil === 'OPERATEUR' ||
+        (!String(op.id_operation).startsWith('CHEF') &&
+          !String(op.id_operation).startsWith('RESP') &&
+          op.type_profil !== 'RESPONSABLE' &&
+          op.type_profil !== 'CHEF')
     );
   }, [operations]);
+
+  // Helper to smartly find responsable assigned to a specific zone
+  const findSupervisorForZone = (zoneId) => {
+    if (!zoneId) return responsablesList[0] || null;
+
+    const hasTpl = (s, tplId) => {
+      if (Array.isArray(s.templates) && s.templates.some((t) => (typeof t === 'string' ? t : t?.id) === tplId)) return true;
+      if (Array.isArray(s.template_ids) && s.template_ids.includes(tplId)) return true;
+      if (typeof s.template_id === 'string' && s.template_id.includes(tplId)) return true;
+      return false;
+    };
+
+    const zoneMatches = (s) =>
+      (s.zones && (s.zones.includes(zoneId) || s.zones.includes('ALL'))) ||
+      s.id_zone === zoneId ||
+      s.id_zone === 'ALL' ||
+      (typeof s.id_zone === 'string' && s.id_zone.split(',').map((x) => x.trim()).includes(zoneId));
+
+    // 1. Check Responsable Zone (RZN) matching this zone
+    const rzn = responsablesList.find((s) => hasTpl(s, 'RZN') && zoneMatches(s));
+    if (rzn) return rzn;
+
+    // 2. Check Responsable Maintenance (RMT)
+    const rmt = responsablesList.find((s) => hasTpl(s, 'RMT') && zoneMatches(s));
+    if (rmt) return rmt;
+
+    // 3. Direct match on zones or id_zone
+    const directMatch = responsablesList.find((s) => zoneMatches(s));
+    if (directMatch) return directMatch;
+
+    return responsablesList[0] || null;
+  };
+
+  // Auto-populate responsable when Zone changes for Corrective, Preventive and Améliorative
+  useEffect(() => {
+    if (
+      form.type === 'Sortie Interne' &&
+      (form.action_id === 'CORRECTIVE' || form.action_id === 'PREVENTIVE' || form.action_id === 'AMELIORATIVE')
+    ) {
+      const sup = findSupervisorForZone(form.id_zone);
+      if (sup) {
+        setForm((prev) => {
+          if (prev.operation === sup.nom && prev.id_operation === sup.id_operation) return prev;
+          return {
+            ...prev,
+            operation: sup.nom,
+            id_operation: sup.id_operation,
+          };
+        });
+      }
+    }
+  }, [form.id_zone, form.action_id, form.type, responsablesList]);
 
   // Search Modal State
   const [isArticleSearchOpen, setIsArticleSearchOpen] = useState(false);
@@ -913,6 +1094,8 @@ export default function SortieRapideView({
         m.type === 'Bon de Sortie' ||
         m.type === 'Sortie Externe' ||
         m.action_id === 'REPARATION_EXTERNE' ||
+        m.action_id === 'ETALONNAGE_CONTROLE' ||
+        m.action_id === 'GARANTIE_ECHANGE' ||
         m.action_id === 'SOUS_TRAITANCE'
     );
   }, [mouvements]);
@@ -1022,14 +1205,14 @@ export default function SortieRapideView({
       }
     });
 
-    const isSortie = form.type.includes('Sortie');
-    const isEntreeEx = form.type === 'Bon de Réception';
-    const isSortieEx = form.type === 'Bon de Sortie';
+    const isSortie = form.type === 'Sortie Interne';
+    const isEntreeEx = form.type === 'Bon de Réception' || form.type === 'Entrée Externe';
+    const isSortieEx = form.type === 'Bon de Sortie' || form.type === 'Sortie Externe';
 
     // Technicien validation
-    if (form.action_id !== 'INVENTAIRE' && form.action_id !== 'REAPPRO') {
+    if (form.action_id !== 'INVENTAIRE' && form.action_id !== 'REAPPRO' && !isSortieEx && form.action_id !== 'USAGE') {
       if (!form.id_technician && !form.technicien) {
-        errors.push('Veuillez sélectionner ou saisir un Intervenant / Demandeur.');
+        errors.push('Veuillez sélectionner ou saisir un Technicien intervenant.');
       }
     }
 
@@ -1043,12 +1226,40 @@ export default function SortieRapideView({
       }
     }
 
-    if (isSortieEx) {
-      if (!form.prestataire_externe) {
-        errors.push('Veuillez préciser le Prestataire Externe.');
+    // Specific USAGE Validation for 3 Profile Modes (Responsable, Technicien, Opérateur)
+    if (isSortie && form.action_id === 'USAGE') {
+      const uType = form.usage_type || 'responsable';
+      if (uType === 'technician') {
+        if (!form.technicien || String(form.technicien).trim() === '') {
+          errors.push('Veuillez sélectionner le Technicien demandeur.');
+        }
+      } else if (uType === 'operation' || uType === 'operator') {
+        if (!form.operation || String(form.operation).trim() === '') {
+          errors.push('Veuillez sélectionner l’Opérateur demandeur (Obligatoire).');
+        }
+        if (!form.id_zone || String(form.id_zone).trim() === '') {
+          errors.push('Zone d’affectation de l’Opérateur non définie.');
+        }
+      } else {
+        // 'responsable' / 'chef'
+        if (!form.operation || String(form.operation).trim() === '') {
+          errors.push('Veuillez sélectionner le Responsable demandeur (Obligatoire).');
+        }
+        if (!form.id_zone || String(form.id_zone).trim() === '') {
+          errors.push('Veuillez sélectionner la Zone rattachée au Responsable (Obligatoire).');
+        }
       }
-      if (!form.date_retour_prevue) {
-        errors.push('Veuillez définir la Date de Retour Prévue.');
+    }
+
+    if (isSortieEx) {
+      if (!form.prestataire_externe || String(form.prestataire_externe).trim() === '') {
+        errors.push('Veuillez préciser le Prestataire Externe (Obligatoire).');
+      }
+      if (!form.date_retour_prevue || String(form.date_retour_prevue).trim() === '') {
+        errors.push('Veuillez définir la Date de Retour Prévue (Obligatoire).');
+      }
+      if (!form.technicien || String(form.technicien).trim() === '') {
+        errors.push('Veuillez sélectionner le Technicien Émetteur de la sortie.');
       }
     }
 
@@ -1126,6 +1337,43 @@ export default function SortieRapideView({
       const isSortie = form.type.includes('Sortie') || form.type === 'Bon de Sortie';
       const stockApres = isSortie ? stockAvant - qteNum : stockAvant + qteNum;
 
+      let mvtTech = form.technicien;
+      let mvtIdTech = form.id_technician;
+      let mvtOp = form.operation;
+      let mvtIdOp = form.id_operation;
+      let mvtDemandeur = form.demandeur || form.operation || form.technicien || '';
+      let mvtZone = form.type.includes('Entrée') ? '' : form.id_zone;
+      let mvtUsageType = form.usage_type || 'responsable';
+
+      if (form.action_id === 'USAGE') {
+        if (form.usage_type === 'technician') {
+          mvtTech = form.technicien;
+          mvtIdTech = form.id_technician;
+          mvtOp = '';
+          mvtIdOp = form.id_technician;
+          mvtDemandeur = form.technicien;
+          mvtZone = form.id_zone || maintenanceZone.id_zone;
+          mvtUsageType = 'technician';
+        } else if (form.usage_type === 'operation' || form.usage_type === 'operator') {
+          mvtTech = form.operation; // Nom de l'opérateur
+          mvtIdTech = form.id_operation;
+          mvtOp = form.responsable_validation || form.operation;
+          mvtIdOp = form.id_responsable_validation || form.id_operation;
+          mvtDemandeur = form.operation;
+          mvtZone = form.id_zone;
+          mvtUsageType = 'operation';
+        } else {
+          // Responsable
+          mvtTech = form.operation;
+          mvtIdTech = form.id_operation;
+          mvtOp = form.operation;
+          mvtIdOp = form.id_operation;
+          mvtDemandeur = form.operation;
+          mvtZone = form.id_zone;
+          mvtUsageType = 'responsable';
+        }
+      }
+
       const mvtRecord = {
         code_bon: form.code_bon,
         num_commande: finalNumCommande,
@@ -1140,16 +1388,19 @@ export default function SortieRapideView({
         seuil_min: seuilMin,
         unit: item.unit || 'pcs',
         source_category: item.source, // 'STOCK_PDR' | 'WAREHOUSE_PARTIE' | 'WAREHOUSE_COMPOSANT'
-        destination_category: form.destination_type,
+        destination_category: isBonSortie ? 'PRESTATAIRE_EXTERNE' : form.destination_type,
         type: form.type,
         action_id: form.action_id,
-        id_zone: form.type.includes('Entrée') ? '' : form.id_zone,
-        id_machine_registered: form.type.includes('Entrée') || form.action_id === 'USAGE' ? '' : form.id_machine_registered,
-        technicien: form.technicien,
-        id_technician: form.id_technician,
-        operation: form.action_id === 'CORRECTIVE' || form.type.includes('Entrée') ? '' : form.operation,
-        id_operation: form.id_operation,
-        fournisseur: form.type === 'Bon de Sortie' ? form.prestataire_externe : form.fournisseur,
+        usage_type: mvtUsageType,
+        id_zone: form.type.includes('Entrée') ? '' : mvtZone,
+        id_machine_registered: form.type.includes('Entrée') ? '' : form.id_machine_registered,
+        technicien: mvtTech,
+        id_technician: mvtIdTech,
+        operation: form.type.includes('Entrée') ? '' : mvtOp,
+        id_operation: mvtIdOp,
+        demandeur: mvtDemandeur,
+        fournisseur: isBonSortie ? form.prestataire_externe : form.fournisseur,
+        prestataire_externe: isBonSortie ? form.prestataire_externe : (form.prestataire_externe || ''),
         emplacement_reception: form.emplacement_reception,
         commentaire: form.commentaire,
         date_retour_prevue: form.date_retour_prevue,
@@ -1435,18 +1686,31 @@ export default function SortieRapideView({
                   className="p-4 rounded-xl border border-purple-200 bg-purple-50/30 space-y-2.5 hover:shadow-xs transition"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-xs text-purple-950 bg-purple-100 px-2 py-0.5 rounded-md border border-purple-300">
-                      {rep.code_bon}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono font-bold text-xs text-purple-950 bg-purple-100 px-2 py-0.5 rounded-md border border-purple-300">
+                        {rep.code_bon}
+                      </span>
+                      {renderActionBadge(rep)}
+                    </div>
                     <span className="text-[11px] text-slate-500 font-mono">{rep.date}</span>
                   </div>
 
                   <div>
                     <div className="font-bold text-xs text-slate-800">{rep.ref}</div>
                     <div className="text-xs text-slate-500">{rep.designation || 'Partie / Composant Entrepôt'}</div>
-                    <div className="text-[11px] text-purple-800 font-medium mt-1">
-                      Prestataire : <b>{rep.fournisseur || 'Atelier Externe'}</b>
+                    <div className="text-[11px] text-purple-900 font-medium mt-1">
+                      Prestataire : <b>{rep.fournisseur || rep.prestataire_externe || 'Atelier Externe'}</b>
                     </div>
+                    {rep.id_machine_registered && (
+                      <div className="text-[10.5px] text-slate-600 font-mono mt-0.5">
+                        Machine d'origine : <b>{rep.id_machine_registered}</b>
+                      </div>
+                    )}
+                    {rep.date_retour_prevue && (
+                      <div className="text-[10.5px] text-indigo-700 font-medium mt-0.5">
+                        Retour prévu : <b>{rep.date_retour_prevue}</b>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between text-xs pt-2 border-t border-purple-100">
@@ -1595,7 +1859,7 @@ export default function SortieRapideView({
 
             {/* 2. DYNAMIC ITEM SOURCE SELECTOR FOR SORTIE INTERNE */}
             {isSortieInterne && (
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+              <div className="p-3 bg-slate-50/90 rounded-xl border border-slate-200 space-y-2">
                 <label className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider block flex items-center gap-1.5">
                   <Boxes className="w-3.5 h-3.5 text-slate-600" />
                   <span>Source de l'Article à Sortir :</span>
@@ -1607,13 +1871,13 @@ export default function SortieRapideView({
                       setForm({ ...form, item_source: 'STOCK_PDR' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'STOCK_PDR' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.item_source === 'STOCK_PDR'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold ring-2 ring-emerald-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-emerald-50/40 hover:border-emerald-200 hover:text-emerald-900'
                     }`}
                   >
-                    <Package className="w-3.5 h-3.5" />
+                    <Package className={`w-3.5 h-3.5 ${form.item_source === 'STOCK_PDR' ? 'text-emerald-600' : 'text-emerald-600/80'}`} />
                     <span>PDR (Stock)</span>
                   </button>
 
@@ -1623,13 +1887,13 @@ export default function SortieRapideView({
                       setForm({ ...form, item_source: 'WAREHOUSE_PARTIE' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'WAREHOUSE_PARTIE' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.item_source === 'WAREHOUSE_PARTIE'
-                        ? 'bg-purple-600 text-white border-purple-600 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-purple-50 border-purple-400 text-purple-950 font-bold ring-2 ring-purple-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-purple-50/40 hover:border-purple-200 hover:text-purple-900'
                     }`}
                   >
-                    <Settings className="w-3.5 h-3.5" />
+                    <Settings className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
                     <span>PARTIE (Entrepôt)</span>
                   </button>
 
@@ -1639,13 +1903,13 @@ export default function SortieRapideView({
                       setForm({ ...form, item_source: 'WAREHOUSE_COMPOSANT' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'WAREHOUSE_COMPOSANT' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.item_source === 'WAREHOUSE_COMPOSANT'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-blue-50/40 hover:border-blue-200 hover:text-blue-900'
                     }`}
                   >
-                    <Wrench className="w-3.5 h-3.5" />
+                    <Wrench className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_COMPOSANT' ? 'text-blue-600' : 'text-blue-600/80'}`} />
                     <span>COMPOSANT</span>
                   </button>
                 </div>
@@ -1666,13 +1930,13 @@ export default function SortieRapideView({
                       setForm({ ...form, destination_type: 'STOCK_PDR', item_source: 'STOCK_PDR' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'STOCK_PDR' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.destination_type === 'STOCK_PDR'
-                        ? 'bg-cyan-700 text-white border-cyan-700 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-cyan-50 border-cyan-400 text-cyan-950 font-bold ring-2 ring-cyan-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-cyan-50/40 hover:border-cyan-200 hover:text-cyan-900'
                     }`}
                   >
-                    <Package className="w-3.5 h-3.5" />
+                    <Package className={`w-3.5 h-3.5 ${form.destination_type === 'STOCK_PDR' ? 'text-cyan-600' : 'text-cyan-600/80'}`} />
                     <span>Magasin PDR</span>
                   </button>
 
@@ -1682,13 +1946,13 @@ export default function SortieRapideView({
                       setForm({ ...form, destination_type: 'WAREHOUSE_PARTIE', item_source: 'WAREHOUSE_PARTIE' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'WAREHOUSE_PARTIE' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.destination_type === 'WAREHOUSE_PARTIE'
-                        ? 'bg-purple-700 text-white border-purple-700 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-purple-50 border-purple-400 text-purple-950 font-bold ring-2 ring-purple-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-purple-50/40 hover:border-purple-200 hover:text-purple-900'
                     }`}
                   >
-                    <Settings className="w-3.5 h-3.5" />
+                    <Settings className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
                     <span>Entrepôt: PARTIE</span>
                   </button>
 
@@ -1698,41 +1962,46 @@ export default function SortieRapideView({
                       setForm({ ...form, destination_type: 'WAREHOUSE_COMPOSANT', item_source: 'WAREHOUSE_COMPOSANT' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'WAREHOUSE_COMPOSANT' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.destination_type === 'WAREHOUSE_COMPOSANT'
-                        ? 'bg-blue-700 text-white border-blue-700 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-blue-50/40 hover:border-blue-200 hover:text-blue-900'
                     }`}
                   >
-                    <Wrench className="w-3.5 h-3.5" />
+                    <Wrench className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_COMPOSANT' ? 'text-blue-600' : 'text-blue-600/80'}`} />
                     <span>Entrepôt: COMPOSANT</span>
                   </button>
                 </div>
               </div>
             )}
 
-            {/* 4. DYNAMIC SOURCE SELECTOR FOR BON DE SORTIE (Parts & Components strictly) */}
+            {/* 4. DYNAMIC SOURCE SELECTOR FOR BON DE SORTIE (Parts & Components strictly, with exception PDR Haute Valeur) */}
             {isBonSortie && (
               <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-200 space-y-2">
-                <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block flex items-center gap-1.5">
-                  <Truck className="w-3.5 h-3.5 text-purple-700" />
-                  <span>Matériel Expédié pour Réparation (Entrepôt) :</span>
-                </label>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5 text-purple-700" />
+                    <span>Source Matériel (Entrepôt Sortant) :</span>
+                  </label>
+                  <span className="text-[10px] text-purple-700 font-semibold italic">
+                    Priorité : PARTIE & COMPOSANT
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
                   <button
                     type="button"
                     onClick={() => {
                       setForm({ ...form, item_source: 'WAREHOUSE_PARTIE' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'WAREHOUSE_PARTIE' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.item_source === 'WAREHOUSE_PARTIE'
-                        ? 'bg-purple-700 text-white border-purple-700 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-purple-50 border-purple-400 text-purple-950 font-bold ring-2 ring-purple-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-purple-50/40 hover:border-purple-200 hover:text-purple-900'
                     }`}
                   >
-                    <Settings className="w-3.5 h-3.5" />
-                    <span>PARTIE (Machine Twin)</span>
+                    <Settings className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
+                    <span className="truncate">PARTIE (Organe)</span>
                   </button>
 
                   <button
@@ -1741,14 +2010,31 @@ export default function SortieRapideView({
                       setForm({ ...form, item_source: 'WAREHOUSE_COMPOSANT' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'WAREHOUSE_COMPOSANT' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.item_source === 'WAREHOUSE_COMPOSANT'
-                        ? 'bg-blue-700 text-white border-blue-700 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-blue-50/40 hover:border-blue-200 hover:text-blue-900'
                     }`}
                   >
-                    <Wrench className="w-3.5 h-3.5" />
-                    <span>COMPOSANT (Stock Twin)</span>
+                    <Wrench className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_COMPOSANT' ? 'text-blue-600' : 'text-blue-600/80'}`} />
+                    <span className="truncate">COMPOSANT (Moteur...)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm({ ...form, item_source: 'STOCK_PDR' });
+                      setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'STOCK_PDR' })));
+                    }}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                      form.item_source === 'STOCK_PDR'
+                        ? 'bg-amber-50 border-amber-400 text-amber-950 font-bold ring-2 ring-amber-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-amber-50/40 hover:border-amber-200 hover:text-amber-900'
+                    }`}
+                    title="Exception PDR de haute valeur (Carte électronique, automate)"
+                  >
+                    <Package className={`w-3.5 h-3.5 ${form.item_source === 'STOCK_PDR' ? 'text-amber-600' : 'text-amber-600/80'}`} />
+                    <span className="truncate">PDR (Exception)</span>
                   </button>
                 </div>
               </div>
@@ -1768,13 +2054,13 @@ export default function SortieRapideView({
                       setForm({ ...form, item_source: 'STOCK_PDR' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'STOCK_PDR' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.item_source === 'STOCK_PDR'
-                        ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-amber-50 border-amber-400 text-amber-950 font-bold ring-2 ring-amber-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-amber-50/40 hover:border-amber-200 hover:text-amber-900'
                     }`}
                   >
-                    <Package className="w-3.5 h-3.5" />
+                    <Package className={`w-3.5 h-3.5 ${form.item_source === 'STOCK_PDR' ? 'text-amber-600' : 'text-amber-600/80'}`} />
                     <span>PDR (Stock)</span>
                   </button>
 
@@ -1784,13 +2070,13 @@ export default function SortieRapideView({
                       setForm({ ...form, item_source: 'WAREHOUSE_PARTIE' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'WAREHOUSE_PARTIE' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.item_source === 'WAREHOUSE_PARTIE'
-                        ? 'bg-purple-600 text-white border-purple-600 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-purple-50 border-purple-400 text-purple-950 font-bold ring-2 ring-purple-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-purple-50/40 hover:border-purple-200 hover:text-purple-900'
                     }`}
                   >
-                    <Settings className="w-3.5 h-3.5" />
+                    <Settings className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
                     <span>PARTIE (Entrepôt)</span>
                   </button>
 
@@ -1800,13 +2086,13 @@ export default function SortieRapideView({
                       setForm({ ...form, item_source: 'WAREHOUSE_COMPOSANT' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'WAREHOUSE_COMPOSANT' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.item_source === 'WAREHOUSE_COMPOSANT'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-blue-50/40 hover:border-blue-200 hover:text-blue-900'
                     }`}
                   >
-                    <Wrench className="w-3.5 h-3.5" />
+                    <Wrench className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_COMPOSANT' ? 'text-blue-600' : 'text-blue-600/80'}`} />
                     <span>COMPOSANT</span>
                   </button>
                 </div>
@@ -1827,13 +2113,13 @@ export default function SortieRapideView({
                       setForm({ ...form, destination_type: 'STOCK_PDR', item_source: 'STOCK_PDR' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'STOCK_PDR' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.destination_type === 'STOCK_PDR'
-                        ? 'bg-emerald-700 text-white border-emerald-700 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold ring-2 ring-emerald-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-emerald-50/40 hover:border-emerald-200 hover:text-emerald-900'
                     }`}
                   >
-                    <Package className="w-3.5 h-3.5" />
+                    <Package className={`w-3.5 h-3.5 ${form.destination_type === 'STOCK_PDR' ? 'text-emerald-600' : 'text-emerald-600/80'}`} />
                     <span>PDR (Stock)</span>
                   </button>
 
@@ -1843,13 +2129,13 @@ export default function SortieRapideView({
                       setForm({ ...form, destination_type: 'WAREHOUSE_PARTIE', item_source: 'WAREHOUSE_PARTIE' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'WAREHOUSE_PARTIE' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.destination_type === 'WAREHOUSE_PARTIE'
-                        ? 'bg-purple-700 text-white border-purple-700 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-purple-50 border-purple-400 text-purple-950 font-bold ring-2 ring-purple-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-purple-50/40 hover:border-purple-200 hover:text-purple-900'
                     }`}
                   >
-                    <Settings className="w-3.5 h-3.5" />
+                    <Settings className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
                     <span>PARTIE (Entrepôt)</span>
                   </button>
 
@@ -1859,13 +2145,13 @@ export default function SortieRapideView({
                       setForm({ ...form, destination_type: 'WAREHOUSE_COMPOSANT', item_source: 'WAREHOUSE_COMPOSANT' });
                       setMouvementItems(mouvementItems.map((i) => ({ ...i, source: 'WAREHOUSE_COMPOSANT' })));
                     }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.destination_type === 'WAREHOUSE_COMPOSANT'
-                        ? 'bg-blue-700 text-white border-blue-700 shadow-2xs'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-blue-50/40 hover:border-blue-200 hover:text-blue-900'
                     }`}
                   >
-                    <Wrench className="w-3.5 h-3.5" />
+                    <Wrench className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_COMPOSANT' ? 'text-blue-600' : 'text-blue-600/80'}`} />
                     <span>COMPOSANT</span>
                   </button>
                 </div>
@@ -2410,21 +2696,53 @@ export default function SortieRapideView({
                           onClick={() => {
                             const updatedForm = { ...form, action_id: act.id };
                             if (act.id === 'USAGE') {
-                              updatedForm.id_machine_registered = '';
-                              // Auto sync zone based on usage_type
-                              if (form.usage_type === 'technician' && form.technicien) {
-                                const t = technicians.find((tech) => tech.nom === form.technicien);
-                                if (t?.id_zone) updatedForm.id_zone = t.id_zone;
-                              } else if (form.usage_type === 'operation' && form.operation) {
-                                const op = operatorsList.find((o) => o.nom === form.operation);
-                                if (op?.id_zone) updatedForm.id_zone = op.id_zone;
-                              } else if (form.usage_type === 'chef' && form.operation) {
-                                const ch = chefsList.find((c) => c.nom === form.operation);
-                                if (ch?.id_zone) updatedForm.id_zone = ch.id_zone;
+                              const uType = form.usage_type || 'responsable';
+                              if (uType === 'technician') {
+                                const tech = technicians.find((t) => t.nom === form.technicien) || technicians[0];
+                                updatedForm.technicien = tech ? tech.nom : '';
+                                updatedForm.id_technician = tech ? tech.id_technician : '';
+                                updatedForm.demandeur = tech ? tech.nom : '';
+                                updatedForm.operation = '';
+                                updatedForm.id_operation = tech ? tech.id_technician : '';
+                                updatedForm.id_zone = maintenanceZone.id_zone;
+                                updatedForm.id_machine_registered = '';
+                              } else if (uType === 'operation' || uType === 'operator') {
+                                const op = operatorsList.find((o) => o.nom === form.operation) || operatorsList[0];
+                                const opZone = op?.id_zone || zones[0]?.id_zone || '';
+                                const respsForZone = getResponsablesForZone(opZone);
+                                const bestResp = respsForZone[0] || null;
+                                updatedForm.operation = op ? op.nom : '';
+                                updatedForm.id_operation = op ? op.id_operation : '';
+                                updatedForm.technicien = op ? op.nom : '';
+                                updatedForm.id_technician = op ? op.id_operation : '';
+                                updatedForm.demandeur = op ? op.nom : '';
+                                updatedForm.id_zone = opZone;
+                                updatedForm.responsable_validation = bestResp ? bestResp.nom : '';
+                                updatedForm.id_responsable_validation = bestResp ? bestResp.id_operation : '';
+                                updatedForm.id_machine_registered = '';
+                              } else {
+                                const defaultResp = currentUsageResponsable || responsablesList[0];
+                                const allowed = getResponsableAllowedZones(defaultResp);
+                                const targetZone = allowed.some((z) => z.id_zone === form.id_zone)
+                                  ? form.id_zone
+                                  : (allowed[0]?.id_zone || '');
+                                const machs = machines.filter((m) => m.id_zone_default === targetZone);
+                                updatedForm.operation = defaultResp ? defaultResp.nom : '';
+                                updatedForm.id_operation = defaultResp ? defaultResp.id_operation : '';
+                                updatedForm.technicien = defaultResp ? defaultResp.nom : '';
+                                updatedForm.id_technician = defaultResp ? defaultResp.id_operation : '';
+                                updatedForm.demandeur = defaultResp ? defaultResp.nom : '';
+                                updatedForm.id_zone = targetZone;
+                                updatedForm.id_machine_registered = machs.some((m) => m.id_machine_registered === form.id_machine_registered)
+                                  ? form.id_machine_registered
+                                  : '';
                               }
-                            } else if (act.id === 'CORRECTIVE') {
-                              updatedForm.operation = '';
-                              updatedForm.id_operation = '';
+                            } else if (act.id === 'CORRECTIVE' || act.id === 'PREVENTIVE' || act.id === 'AMELIORATIVE') {
+                              const sup = findSupervisorForZone(form.id_zone);
+                              if (sup) {
+                                updatedForm.operation = sup.nom;
+                                updatedForm.id_operation = sup.id_operation;
+                              }
                             }
                             setForm(updatedForm);
                           }}
@@ -2446,82 +2764,507 @@ export default function SortieRapideView({
                 </div>
 
                 {/* Sub-fields for USAGE action */}
-                {form.action_id === 'USAGE' ? (
-                  <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200 space-y-2.5">
+                {form.action_id === 'USAGE' && (
+                  <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200/90 space-y-3">
                     <div className="flex items-center justify-between">
-                      <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block">
-                        Bénéficiaire de l'Usage Personnel :
+                      <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <Crown className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Type de Demandeur (Usage Personnel) :</span>
                       </label>
-                      <span className="text-[10px] text-amber-700 font-medium italic">
-                        Machine masquée (Non applicable)
+                      <span className="text-[9.5px] text-amber-800 font-semibold bg-amber-100/90 px-2 py-0.5 rounded border border-amber-300">
+                        {form.usage_type === 'technician'
+                          ? 'Technicien de Maintenance'
+                          : form.usage_type === 'operation' || form.usage_type === 'operator'
+                            ? 'Opérateur de Production'
+                            : 'Responsable (RESP)'}
                       </span>
                     </div>
 
-                    {/* Usage Type Toggle */}
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {[
-                        { id: 'technician', label: 'Technicien', icon: Wrench },
-                        { id: 'operation', label: 'Opérateur', icon: Users },
-                        { id: 'chef', label: 'Chef / Superviseur', icon: Crown },
-                      ].map((u) => {
-                        const UIcon = u.icon;
-                        const isSelected = form.usage_type === u.id;
-                        return (
-                          <button
-                            key={u.id}
-                            type="button"
-                            onClick={() => {
-                              let newZone = form.id_zone;
-                              let newTech = form.technicien;
-                              let newOp = form.operation;
-                              let newOpId = form.id_operation;
+                    {/* 3-Button Profile Selector */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* 1. Responsable (RESP) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const resp = currentUsageResponsable || responsablesList[0];
+                          const allowed = getResponsableAllowedZones(resp);
+                          const nextZone = allowed.some((z) => z.id_zone === form.id_zone)
+                            ? form.id_zone
+                            : (allowed[0]?.id_zone || '');
+                          const machs = machines.filter((m) => m.id_zone_default === nextZone);
+                          setForm((prev) => ({
+                            ...prev,
+                            usage_type: 'responsable',
+                            operation: resp ? resp.nom : '',
+                            id_operation: resp ? resp.id_operation : '',
+                            technicien: resp ? resp.nom : '',
+                            id_technician: resp ? resp.id_operation : '',
+                            demandeur: resp ? resp.nom : '',
+                            id_zone: nextZone,
+                            id_machine_registered: machs.some((m) => m.id_machine_registered === prev.id_machine_registered)
+                              ? prev.id_machine_registered
+                              : '',
+                          }));
+                        }}
+                        className={`p-2 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                          form.usage_type === 'responsable' || form.usage_type === 'chef' || !form.usage_type
+                            ? 'bg-amber-600 text-white border-amber-700 shadow-xs font-bold ring-2 ring-amber-300'
+                            : 'bg-white border-amber-200/80 text-amber-950 hover:bg-amber-100/60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <Crown className={`w-3.5 h-3.5 shrink-0 ${form.usage_type === 'responsable' || form.usage_type === 'chef' || !form.usage_type ? 'text-white' : 'text-amber-700'}`} />
+                          <span className="text-xs font-bold truncate">Responsable (RESP)</span>
+                        </div>
+                        <div className={`text-[9.5px] leading-tight truncate ${form.usage_type === 'responsable' || form.usage_type === 'chef' || !form.usage_type ? 'text-amber-100' : 'text-amber-800/80'}`}>
+                          Périmètre & Zones Responsable
+                        </div>
+                      </button>
 
-                              if (u.id === 'technician') {
-                                const t = technicians[0];
-                                newTech = t?.nom || '';
-                                if (t?.id_zone) newZone = t.id_zone;
-                                newOp = '';
-                                newOpId = '';
-                              } else if (u.id === 'operation') {
-                                const op = operatorsList[0];
-                                newOp = op?.nom || '';
-                                newOpId = op?.id_operation || '';
-                                if (op?.id_zone) newZone = op.id_zone;
-                              } else if (u.id === 'chef') {
-                                const ch = chefsList[0];
-                                newOp = ch?.nom || '';
-                                newOpId = ch?.id_operation || '';
-                                if (ch?.id_zone) newZone = ch.id_zone;
-                              }
+                      {/* 2. Technicien */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const tech = technicians.find((t) => t.nom === form.technicien) || technicians[0];
+                          setForm((prev) => ({
+                            ...prev,
+                            usage_type: 'technician',
+                            technicien: tech ? tech.nom : '',
+                            id_technician: tech ? tech.id_technician : '',
+                            demandeur: tech ? tech.nom : '',
+                            operation: '',
+                            id_operation: tech ? tech.id_technician : '',
+                            id_zone: maintenanceZone.id_zone,
+                            id_machine_registered: '',
+                          }));
+                        }}
+                        className={`p-2 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                          form.usage_type === 'technician'
+                            ? 'bg-blue-600 text-white border-blue-700 shadow-xs font-bold ring-2 ring-blue-300'
+                            : 'bg-white border-blue-200/80 text-blue-950 hover:bg-blue-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <Wrench className={`w-3.5 h-3.5 shrink-0 ${form.usage_type === 'technician' ? 'text-white' : 'text-blue-700'}`} />
+                          <span className="text-xs font-bold truncate">Technicien</span>
+                        </div>
+                        <div className={`text-[9.5px] leading-tight truncate ${form.usage_type === 'technician' ? 'text-blue-100' : 'text-blue-700/80'}`}>
+                          Atelier Maintenance auto
+                        </div>
+                      </button>
 
-                              setForm({
-                                ...form,
-                                usage_type: u.id,
-                                id_zone: newZone,
-                                technicien: newTech,
-                                operation: newOp,
-                                id_operation: newOpId,
-                              });
-                            }}
-                            className={`py-1.5 px-2 rounded-lg text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
-                              isSelected
-                                ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
-                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                            }`}
-                          >
-                            <UIcon className="w-3.5 h-3.5" />
-                            <span>{u.label}</span>
-                          </button>
-                        );
-                      })}
+                      {/* 3. Opérateur */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const op = operatorsList.find((o) => o.nom === form.operation) || operatorsList[0];
+                          const opZone = op?.id_zone || zones[0]?.id_zone || '';
+                          const respsForZone = getResponsablesForZone(opZone);
+                          const bestResp = respsForZone[0] || null;
+                          const machs = machines.filter((m) => m.id_zone_default === opZone);
+                          setForm((prev) => ({
+                            ...prev,
+                            usage_type: 'operation',
+                            operation: op ? op.nom : '',
+                            id_operation: op ? op.id_operation : '',
+                            demandeur: op ? op.nom : '',
+                            technicien: op ? op.nom : '',
+                            id_technician: op ? op.id_operation : '',
+                            id_zone: opZone,
+                            responsable_validation: bestResp ? bestResp.nom : '',
+                            id_responsable_validation: bestResp ? bestResp.id_operation : '',
+                            id_machine_registered: machs.some((m) => m.id_machine_registered === prev.id_machine_registered)
+                              ? prev.id_machine_registered
+                              : '',
+                          }));
+                        }}
+                        className={`p-2 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                          form.usage_type === 'operation' || form.usage_type === 'operator'
+                            ? 'bg-purple-600 text-white border-purple-700 shadow-xs font-bold ring-2 ring-purple-300'
+                            : 'bg-white border-purple-200/80 text-purple-950 hover:bg-purple-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <UserCheck className={`w-3.5 h-3.5 shrink-0 ${form.usage_type === 'operation' || form.usage_type === 'operator' ? 'text-white' : 'text-purple-700'}`} />
+                          <span className="text-xs font-bold truncate">Opérateur</span>
+                        </div>
+                        <div className={`text-[9.5px] leading-tight truncate ${form.usage_type === 'operation' || form.usage_type === 'operator' ? 'text-purple-100' : 'text-purple-700/80'}`}>
+                          Zone liée & Responsable
+                        </div>
+                      </button>
                     </div>
 
-                    {/* Beneficiary Dropdown based on usage_type */}
-                    <div className="grid grid-cols-2 gap-2.5 pt-1">
-                      {form.usage_type === 'technician' && (
+                    {/* Dynamic Form Content based on selected profile */}
+
+                    {/* MODE 1: RESPONSABLE */}
+                    {(form.usage_type === 'responsable' || form.usage_type === 'chef' || !form.usage_type) && (
+                      <div className="space-y-2.5 pt-1">
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {/* 1. Demandeur (Responsable) */}
+                          <div>
+                            <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                              <span>Demandeur (Responsable)</span>
+                              <span className="text-[9px] text-amber-800 font-bold">*Requis</span>
+                            </label>
+                            <CustomSelect
+                              value={form.operation}
+                              onChange={(val) => {
+                                const resp = responsablesList.find((r) => r.nom === val);
+                                const allowed = getResponsableAllowedZones(resp);
+                                const isZoneValid = allowed.some((z) => z.id_zone === form.id_zone);
+                                const nextZone = isZoneValid ? form.id_zone : (allowed[0]?.id_zone || '');
+                                const machs = machines.filter((m) => m.id_zone_default === nextZone);
+                                setForm((prev) => ({
+                                  ...prev,
+                                  operation: val,
+                                  id_operation: resp?.id_operation || '',
+                                  technicien: val,
+                                  id_technician: resp?.id_operation || '',
+                                  demandeur: val,
+                                  id_zone: nextZone,
+                                  id_machine_registered: machs.some((m) => m.id_machine_registered === prev.id_machine_registered)
+                                    ? prev.id_machine_registered
+                                    : '',
+                                }));
+                              }}
+                              options={responsablesList.map((r) => ({
+                                value: r.nom,
+                                label: r.nom,
+                                badge: r.id_operation,
+                                sublabel: r.template_label || r.template_id || r.type_profil || 'Responsable',
+                              }))}
+                              placeholder="-- Sélectionner le Responsable --"
+                              onAddNew={onOpenAddChef}
+                            />
+                          </div>
+
+                          {/* 2. Zone Rattachée (Filtrée par le Responsable) */}
+                          <div>
+                            <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                              <span>Zone Rattachée</span>
+                              <span className="text-[9px] text-amber-800 font-bold">*Requis (Filtrée)</span>
+                            </label>
+                            <CustomSelect
+                              value={form.id_zone}
+                              onChange={(val) => {
+                                const machs = machines.filter((m) => m.id_zone_default === val);
+                                setForm((prev) => ({
+                                  ...prev,
+                                  id_zone: val,
+                                  id_machine_registered: machs.some((m) => m.id_machine_registered === prev.id_machine_registered)
+                                    ? prev.id_machine_registered
+                                    : '',
+                                }));
+                              }}
+                              options={usageAllowedZones.map((z) => ({
+                                value: z.id_zone,
+                                label: `${z.libelle} (${z.id_zone})`,
+                              }))}
+                              placeholder="-- Zone du Responsable --"
+                              onAddNew={onOpenAddZone}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Machine Concernée (Optionnel) */}
                         <div>
-                          <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1">
-                            Sélectionner le Technicien
+                          <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Machine Concernée (Optionnel)</span>
+                            <span className="text-[9.5px] text-amber-700 font-medium">
+                              {form.id_zone
+                                ? 'Machines de la Zone sélectionnée uniquement (ou sans machine)'
+                                : 'Sélectionner d’abord la Zone'}
+                            </span>
+                          </label>
+                          <CustomSelect
+                            value={form.id_machine_registered}
+                            onChange={(val) => setForm({ ...form, id_machine_registered: val })}
+                            options={[
+                              { value: '', label: '-- Aucune machine / Usage ou dotation Zone générale --' },
+                              ...usageAvailableMachines.map((m) => ({
+                                value: m.id_machine_registered,
+                                label: `[${m.id_machine_registered}] ${m.designation}`,
+                                sublabel: m.technician ? `Tech: ${m.technician}` : '',
+                              })),
+                            ]}
+                            placeholder="-- Machine (Optionnel) --"
+                            onAddNew={onOpenAddMachine}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* MODE 2: TECHNICIEN */}
+                    {form.usage_type === 'technician' && (
+                      <div className="space-y-2.5 pt-1">
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {/* 1. Technicien Demandeur */}
+                          <div>
+                            <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                              <span>Technicien Demandeur</span>
+                              <span className="text-[9px] text-blue-700 font-bold">*Requis</span>
+                            </label>
+                            <CustomSelect
+                              value={form.technicien}
+                              onChange={(val) => {
+                                const tech = technicians.find((t) => t.nom === val);
+                                setForm((prev) => ({
+                                  ...prev,
+                                  technicien: val,
+                                  id_technician: tech?.id_technician || '',
+                                  demandeur: val,
+                                  operation: '',
+                                  id_operation: tech?.id_technician || '',
+                                  id_zone: maintenanceZone.id_zone,
+                                  id_machine_registered: '',
+                                }));
+                              }}
+                              options={technicians.map((t) => ({
+                                value: t.nom,
+                                label: t.nom,
+                                badge: t.id_technician,
+                                sublabel: t.specialite || 'Maintenance',
+                              }))}
+                              placeholder="-- Sélectionner le Technicien --"
+                              onAddNew={onOpenAddTech}
+                            />
+                          </div>
+
+                          {/* 2. Zone Automatique: Atelier Maintenance */}
+                          <div>
+                            <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                              <span>Zone d'Affectation</span>
+                              <span className="text-[9px] text-blue-700 font-bold font-mono">Automatique</span>
+                            </label>
+                            <div className="h-8 px-2.5 rounded-xl border border-blue-200 bg-blue-50/80 flex items-center justify-between text-xs font-semibold text-blue-900">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                <span className="truncate">{maintenanceZone.libelle}</span>
+                              </div>
+                              <span className="text-[10px] font-mono bg-blue-200/80 text-blue-900 px-1.5 py-0.5 rounded font-bold shrink-0">
+                                {maintenanceZone.id_zone}
+                              </span>
+                            </div>
+                            <p className="text-[9.5px] text-blue-700/80 mt-1">
+                              Attribution automatique à l'Atelier Central Maintenance pour l'usage personnel du technicien.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* MODE 3: OPÉRATEUR */}
+                    {(form.usage_type === 'operation' || form.usage_type === 'operator') && (
+                      <div className="space-y-2.5 pt-1">
+                        <div className="grid grid-cols-3 gap-2.5">
+                          {/* 1. Opérateur Demandeur (Mandatory) */}
+                          <div>
+                            <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                              <span>Opérateur Demandeur</span>
+                              <span className="text-[9px] text-purple-800 font-bold">*Requis</span>
+                            </label>
+                            <CustomSelect
+                              value={form.operation}
+                              onChange={(val) => {
+                                const op = operatorsList.find((o) => o.nom === val);
+                                const opZone = op?.id_zone || zones[0]?.id_zone || '';
+                                const respsForZone = getResponsablesForZone(opZone);
+                                const bestResp = respsForZone[0] || null;
+                                const machs = machines.filter((m) => m.id_zone_default === opZone);
+                                setForm((prev) => ({
+                                  ...prev,
+                                  operation: val,
+                                  id_operation: op?.id_operation || '',
+                                  technicien: val,
+                                  id_technician: op?.id_operation || '',
+                                  demandeur: val,
+                                  id_zone: opZone,
+                                  responsable_validation: bestResp ? bestResp.nom : '',
+                                  id_responsable_validation: bestResp ? bestResp.id_operation : '',
+                                  id_machine_registered: machs.some((m) => m.id_machine_registered === prev.id_machine_registered)
+                                    ? prev.id_machine_registered
+                                    : '',
+                                }));
+                              }}
+                              options={operatorsList.map((op) => ({
+                                value: op.nom,
+                                label: op.nom,
+                                badge: op.id_operation,
+                                sublabel: op.id_zone ? `Zone: ${op.id_zone}` : 'Opérateur',
+                              }))}
+                              placeholder="-- Sélectionner l'Opérateur --"
+                              onAddNew={onOpenAddOperator}
+                            />
+                          </div>
+
+                          {/* 2. Zone Déduite Automatiquement de l'Opérateur */}
+                          <div>
+                            <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                              <span>Zone (Liée à l'Opérateur)</span>
+                              <span className="text-[9px] text-purple-800 font-bold font-mono">Auto-Déduite</span>
+                            </label>
+                            <div className="h-8 px-2.5 rounded-xl border border-purple-200 bg-purple-50/80 flex items-center justify-between text-xs font-semibold text-purple-900">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <MapPin className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                                <span className="truncate">
+                                  {zones.find((z) => z.id_zone === form.id_zone)?.libelle || form.id_zone || 'Zone Opérateur'}
+                                </span>
+                              </div>
+                              <span className="text-[10px] font-mono bg-purple-200/80 text-purple-900 px-1.5 py-0.5 rounded font-bold shrink-0">
+                                {form.id_zone || 'ZONE'}
+                              </span>
+                            </div>
+                            <p className="text-[9.5px] text-purple-700/80 mt-1">
+                              Zone d'affectation rattachée à la fiche de l'opérateur.
+                            </p>
+                          </div>
+
+                          {/* 3. Responsable Validateur (Filtré intelligemment par la Zone de l'opérateur) */}
+                          <div>
+                            <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                              <span>Responsable Référent</span>
+                              <span className="text-[9px] text-purple-800 font-semibold font-mono">Filtré Zone</span>
+                            </label>
+                            <CustomSelect
+                              value={form.responsable_validation || form.technicien}
+                              onChange={(val) => {
+                                const r = responsablesList.find((resp) => resp.nom === val);
+                                setForm((prev) => ({
+                                  ...prev,
+                                  responsable_validation: val,
+                                  id_responsable_validation: r?.id_operation || '',
+                                }));
+                              }}
+                              options={operatorFilteredResponsables.map((r) => ({
+                                value: r.nom,
+                                label: r.nom,
+                                badge: r.id_operation,
+                                sublabel: r.template_label || r.type_profil || 'Responsable Zone',
+                              }))}
+                              placeholder="-- Responsable de la Zone --"
+                              onAddNew={onOpenAddChef}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Machine Concernée (Optionnel, filtrée par la Zone de l'opérateur) */}
+                        <div>
+                          <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Machine Concernée (Optionnel)</span>
+                            <span className="text-[9.5px] text-purple-700 font-medium">
+                              {form.id_zone
+                                ? `Machines de la Zone ${form.id_zone} (ou sans machine)`
+                                : 'Sélectionner d’abord l’Opérateur'}
+                            </span>
+                          </label>
+                          <CustomSelect
+                            value={form.id_machine_registered}
+                            onChange={(val) => setForm({ ...form, id_machine_registered: val })}
+                            options={[
+                              { value: '', label: '-- Aucune machine / Usage ou dotation Zone générale --' },
+                              ...usageAvailableMachines.map((m) => ({
+                                value: m.id_machine_registered,
+                                label: `[${m.id_machine_registered}] ${m.designation}`,
+                                sublabel: m.technician ? `Tech: ${m.technician}` : '',
+                              })),
+                            ]}
+                            placeholder="-- Machine (Optionnel) --"
+                            onAddNew={onOpenAddMachine}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Sub-fields for CORRECTIVE action */}
+                {form.action_id === 'CORRECTIVE' && (
+                  <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <Wrench className="w-3.5 h-3.5 text-blue-700" />
+                        <span>Paramètres de l'Intervention Corrective (Dépannage Curatif) :</span>
+                      </label>
+                      <span className="text-[9.5px] text-blue-800 font-semibold bg-blue-100/90 px-2 py-0.5 rounded border border-blue-300 flex items-center gap-1">
+                        <Wrench className="w-2.5 h-2.5 text-blue-600" />
+                        Dépannage & Curatif
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {/* Zone & Machine */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Zone de l'Intervention</span>
+                            <span className="text-[9px] text-blue-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.id_zone}
+                            onChange={(val) => {
+                              const machs = machines.filter((m) => m.id_zone_default === val);
+                              const sup = findSupervisorForZone(val);
+                              setForm((prev) => ({
+                                ...prev,
+                                id_zone: val,
+                                id_machine_registered: machs.some((m) => m.id_machine_registered === prev.id_machine_registered)
+                                  ? prev.id_machine_registered
+                                  : (machs[0]?.id_machine_registered || ''),
+                                operation: sup ? sup.nom : prev.operation,
+                                id_operation: sup ? sup.id_operation : prev.id_operation,
+                              }));
+                            }}
+                            options={zones.map((z) => ({
+                              value: z.id_zone,
+                              label: `${z.libelle} (${z.id_zone})`,
+                            }))}
+                            placeholder="-- Zone --"
+                            onAddNew={onOpenAddZone}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Machine Concernée</span>
+                            <span className="text-[9px] text-blue-700 font-mono">Filtrée par Zone</span>
+                          </label>
+                          <CustomSelect
+                            value={form.id_machine_registered}
+                            onChange={(val) => {
+                              const m = machines.find((mach) => mach.id_machine_registered === val);
+                              const targetZone = m?.id_zone_default || form.id_zone;
+                              const sup = findSupervisorForZone(targetZone);
+                              setForm((prev) => ({
+                                ...prev,
+                                id_machine_registered: val,
+                                id_zone: targetZone,
+                                technicien: m?.technician || prev.technicien,
+                                operation: sup ? sup.nom : prev.operation,
+                                id_operation: sup ? sup.id_operation : prev.id_operation,
+                              }));
+                            }}
+                            options={[
+                              { value: '', label: '-- Atelier / Sans Machine Spécifique --' },
+                              ...availableMachines.map((m) => ({
+                                value: m.id_machine_registered,
+                                label: `[${m.id_machine_registered}] ${m.designation}`,
+                                sublabel: m.technician ? `Tech assigné: ${m.technician}` : '',
+                              })),
+                            ]}
+                            placeholder="-- Machine --"
+                            onAddNew={onOpenAddMachine}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Technicien & Superviseur */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Technicien Intervenant</span>
+                            <span className="text-[9px] font-semibold text-blue-800 bg-blue-100 px-1.5 py-0.5 rounded border border-blue-200">
+                              Tous techniciens (Usine)
+                            </span>
                           </label>
                           <CustomSelect
                             value={form.technicien}
@@ -2531,154 +3274,394 @@ export default function SortieRapideView({
                                 ...form,
                                 technicien: val,
                                 id_technician: t?.id_technician || '',
-                                id_zone: t?.id_zone || form.id_zone,
                               });
                             }}
-                            options={technicians.map((t) => ({
+                            options={availableTechs.map((t) => ({
                               value: t.nom,
                               label: t.nom,
                               badge: t.id_technician,
+                              sublabel: t.specialite ? `${t.id_zone || 'Usine'} • ${t.specialite}` : t.id_zone,
                             }))}
                             placeholder="-- Technicien --"
                             onAddNew={onOpenAddTech}
                           />
                         </div>
-                      )}
 
-                      {form.usage_type === 'operation' && (
                         <div>
-                          <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1">
-                            Sélectionner l'Opérateur
+                          <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Responsable (RESP)</span>
+                            <span className="text-[9px] font-bold text-blue-800 bg-blue-100 px-1.5 py-0.5 rounded border border-blue-200 flex items-center gap-1">
+                              <Crown className="w-2.5 h-2.5 text-blue-600" />
+                              Auto-déduit (Zone)
+                            </span>
                           </label>
                           <CustomSelect
                             value={form.operation}
                             onChange={(val) => {
-                              const op = operatorsList.find((o) => o.nom === val);
+                              const s = responsablesList.find((sup) => sup.nom === val);
                               setForm({
                                 ...form,
                                 operation: val,
-                                id_operation: op?.id_operation || '',
-                                id_zone: op?.id_zone || form.id_zone,
+                                id_operation: s?.id_operation || '',
                               });
                             }}
-                            options={operatorsList.map((op) => ({
-                              value: op.nom,
-                              label: op.nom,
-                              badge: op.id_operation,
-                            }))}
-                            placeholder="-- Opérateur --"
+                            options={[
+                              { value: '', label: '-- Aucun Responsable --' },
+                              ...responsablesList.map((s) => ({
+                                value: s.nom,
+                                label: s.nom,
+                                badge: s.id_operation,
+                                sublabel: s.template_label || s.template_id || s.type_profil,
+                              })),
+                            ]}
+                            placeholder="-- Responsable (RESP) --"
                             onAddNew={onOpenAddChef}
                           />
                         </div>
-                      )}
-
-                      {form.usage_type === 'chef' && (
-                        <div>
-                          <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1">
-                            Sélectionner le Chef / Superviseur
-                          </label>
-                          <CustomSelect
-                            value={form.operation}
-                            onChange={(val) => {
-                              const ch = chefsList.find((c) => c.nom === val);
-                              setForm({
-                                ...form,
-                                operation: val,
-                                id_operation: ch?.id_operation || '',
-                                id_zone: ch?.id_zone || form.id_zone,
-                              });
-                            }}
-                            options={chefsList.map((ch) => ({
-                              value: ch.nom,
-                              label: ch.nom,
-                              badge: ch.id_operation,
-                            }))}
-                            placeholder="-- Chef d'équipe --"
-                            onAddNew={onOpenAddChef}
-                          />
-                        </div>
-                      )}
-
-                      {/* Auto-deduced Zone */}
-                      <div>
-                        <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
-                          <span>Zone Rattachée</span>
-                          <span className="text-[9px] text-amber-700 font-mono">(Déduite)</span>
-                        </label>
-                        <CustomSelect
-                          value={form.id_zone}
-                          onChange={(val) => setForm({ ...form, id_zone: val })}
-                          options={zones.map((z) => ({
-                            value: z.id_zone,
-                            label: `${z.libelle} (${z.id_zone})`,
-                          }))}
-                          placeholder="-- Zone --"
-                          onAddNew={onOpenAddZone}
-                        />
                       </div>
                     </div>
                   </div>
-                ) : (
-                  /* Standard intervention fields for CORRECTIVE, PREVENTIVE, AMELIORATIVE, INVENTAIRE */
-                  <div className="space-y-2.5">
-                    {/* Zone & Machine */}
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div>
-                        <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                          Zone de l'Intervention
-                        </label>
-                        <CustomSelect
-                          value={form.id_zone}
-                          onChange={(val) => setForm({ ...form, id_zone: val })}
-                          options={zones.map((z) => ({
-                            value: z.id_zone,
-                            label: `${z.libelle} (${z.id_zone})`,
-                          }))}
-                          placeholder="-- Zone --"
-                          onAddNew={onOpenAddZone}
-                        />
-                      </div>
+                )}
 
-                      {/* Machine is hidden in INVENTAIRE, active in others */}
-                      {form.action_id !== 'INVENTAIRE' ? (
+                {/* Sub-fields for PREVENTIVE action */}
+                {form.action_id === 'PREVENTIVE' && (
+                  <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10.5px] font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <ShieldAlert className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Paramètres de la Maintenance Préventive (Planifiée) :</span>
+                      </label>
+                      <span className="text-[9.5px] text-emerald-800 font-semibold bg-emerald-100/90 px-2 py-0.5 rounded border border-emerald-300 flex items-center gap-1">
+                        <ShieldCheck className="w-2.5 h-2.5 text-emerald-600" />
+                        Gamme & Entretien Planifié
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {/* Zone & Machine */}
+                      <div className="grid grid-cols-2 gap-2.5">
                         <div>
-                          <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                          <label className="text-[10.5px] font-bold text-emerald-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Zone de l'Intervention</span>
+                            <span className="text-[9px] text-emerald-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.id_zone}
+                            onChange={(val) => {
+                              const machs = machines.filter((m) => m.id_zone_default === val);
+                              const sup = findSupervisorForZone(val);
+                              setForm((prev) => ({
+                                ...prev,
+                                id_zone: val,
+                                id_machine_registered: machs.some((m) => m.id_machine_registered === prev.id_machine_registered)
+                                  ? prev.id_machine_registered
+                                  : (machs[0]?.id_machine_registered || ''),
+                                operation: sup ? sup.nom : prev.operation,
+                                id_operation: sup ? sup.id_operation : prev.id_operation,
+                              }));
+                            }}
+                            options={zones.map((z) => ({
+                              value: z.id_zone,
+                              label: `${z.libelle} (${z.id_zone})`,
+                            }))}
+                            placeholder="-- Zone --"
+                            onAddNew={onOpenAddZone}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-emerald-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
                             <span>Machine Concernée</span>
-                            {form.action_id === 'CORRECTIVE' && (
-                              <span className="text-[9px] text-rose-600 font-bold">*Requis</span>
-                            )}
+                            <span className="text-[9px] text-emerald-700 font-mono">Filtrée par Zone</span>
                           </label>
                           <CustomSelect
                             value={form.id_machine_registered}
                             onChange={(val) => {
                               const m = machines.find((mach) => mach.id_machine_registered === val);
-                              setForm({
-                                ...form,
+                              const targetZone = m?.id_zone_default || form.id_zone;
+                              const sup = findSupervisorForZone(targetZone);
+                              setForm((prev) => ({
+                                ...prev,
                                 id_machine_registered: val,
-                                id_zone: m?.id_zone_default || form.id_zone,
-                                technicien: m?.technician || form.technicien,
-                              });
+                                id_zone: targetZone,
+                                technicien: m?.technician || prev.technicien,
+                                operation: sup ? sup.nom : prev.operation,
+                                id_operation: sup ? sup.id_operation : prev.id_operation,
+                              }));
                             }}
                             options={[
                               { value: '', label: '-- Atelier / Sans Machine Spécifique --' },
                               ...availableMachines.map((m) => ({
                                 value: m.id_machine_registered,
                                 label: `[${m.id_machine_registered}] ${m.designation}`,
+                                sublabel: m.technician ? `Tech assigné: ${m.technician}` : '',
                               })),
                             ]}
                             placeholder="-- Machine --"
                             onAddNew={onOpenAddMachine}
                           />
                         </div>
-                      ) : (
+                      </div>
+
+                      {/* Technicien & Superviseur */}
+                      <div className="grid grid-cols-2 gap-2.5">
                         <div>
-                          <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                            Motif de l'Écart / Rebut
+                          <label className="text-[10.5px] font-bold text-emerald-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Technicien Intervenant</span>
+                            <span className="text-[9px] text-emerald-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.technicien}
+                            onChange={(val) => {
+                              const t = technicians.find((tech) => tech.nom === val);
+                              setForm({
+                                ...form,
+                                technicien: val,
+                                id_technician: t?.id_technician || '',
+                              });
+                            }}
+                            options={availableTechs.map((t) => ({
+                              value: t.nom,
+                              label: t.nom,
+                              badge: t.id_technician,
+                              sublabel: t.specialite ? `${t.id_zone || 'Usine'} • ${t.specialite}` : t.id_zone,
+                            }))}
+                            placeholder="-- Technicien --"
+                            onAddNew={onOpenAddTech}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-emerald-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Responsable (RESP)</span>
+                            <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                              <Crown className="w-2.5 h-2.5 text-emerald-600" />
+                              Auto-déduit (Zone)
+                            </span>
+                          </label>
+                          <CustomSelect
+                            value={form.operation}
+                            onChange={(val) => {
+                              const s = responsablesList.find((sup) => sup.nom === val);
+                              setForm({
+                                ...form,
+                                operation: val,
+                                id_operation: s?.id_operation || '',
+                              });
+                            }}
+                            options={[
+                              { value: '', label: '-- Aucun Responsable --' },
+                              ...responsablesList.map((s) => ({
+                                value: s.nom,
+                                label: s.nom,
+                                badge: s.id_operation,
+                                sublabel: s.template_label || s.template_id || s.type_profil,
+                              })),
+                            ]}
+                            placeholder="-- Responsable (RESP) --"
+                            onAddNew={onOpenAddChef}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-fields for AMELIORATIVE action */}
+                {form.action_id === 'AMELIORATIVE' && (
+                  <div className="p-3 bg-purple-50/70 rounded-xl border border-purple-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-purple-700" />
+                        <span>Paramètres d'Amélioration & Travaux Neufs :</span>
+                      </label>
+                      <span className="text-[9.5px] text-purple-800 font-semibold bg-purple-100/90 px-2 py-0.5 rounded border border-purple-300 flex items-center gap-1">
+                        <Sparkles className="w-2.5 h-2.5 text-purple-600" />
+                        Projet & Travaux Neufs
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {/* Zone & Machine */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Zone d'Implantation</span>
+                            <span className="text-[9px] text-purple-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.id_zone}
+                            onChange={(val) => {
+                              const machs = machines.filter((m) => m.id_zone_default === val);
+                              const sup = findSupervisorForZone(val);
+                              setForm((prev) => ({
+                                ...prev,
+                                id_zone: val,
+                                id_machine_registered: machs.some((m) => m.id_machine_registered === prev.id_machine_registered)
+                                  ? prev.id_machine_registered
+                                  : (machs[0]?.id_machine_registered || ''),
+                                operation: sup ? sup.nom : prev.operation,
+                                id_operation: sup ? sup.id_operation : prev.id_operation,
+                              }));
+                            }}
+                            options={zones.map((z) => ({
+                              value: z.id_zone,
+                              label: `${z.libelle} (${z.id_zone})`,
+                            }))}
+                            placeholder="-- Zone --"
+                            onAddNew={onOpenAddZone}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Machine ou Installation</span>
+                            <span className="text-[9px] text-purple-700 font-mono">Filtrée par Zone</span>
+                          </label>
+                          <CustomSelect
+                            value={form.id_machine_registered}
+                            onChange={(val) => {
+                              const m = machines.find((mach) => mach.id_machine_registered === val);
+                              const targetZone = m?.id_zone_default || form.id_zone;
+                              const sup = findSupervisorForZone(targetZone);
+                              setForm((prev) => ({
+                                ...prev,
+                                id_machine_registered: val,
+                                id_zone: targetZone,
+                                technicien: m?.technician || prev.technicien,
+                                operation: sup ? sup.nom : prev.operation,
+                                id_operation: sup ? sup.id_operation : prev.id_operation,
+                              }));
+                            }}
+                            options={[
+                              { value: '', label: '-- Installation Générale / Sans Machine --' },
+                              ...availableMachines.map((m) => ({
+                                value: m.id_machine_registered,
+                                label: `[${m.id_machine_registered}] ${m.designation}`,
+                                sublabel: m.technician ? `Tech assigné: ${m.technician}` : '',
+                              })),
+                            ]}
+                            placeholder="-- Machine --"
+                            onAddNew={onOpenAddMachine}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Technicien & Superviseur */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Technicien / Chargé de Travaux</span>
+                            <span className="text-[9px] text-purple-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.technicien}
+                            onChange={(val) => {
+                              const t = technicians.find((tech) => tech.nom === val);
+                              setForm({
+                                ...form,
+                                technicien: val,
+                                id_technician: t?.id_technician || '',
+                              });
+                            }}
+                            options={availableTechs.map((t) => ({
+                              value: t.nom,
+                              label: t.nom,
+                              badge: t.id_technician,
+                              sublabel: t.specialite ? `${t.id_zone || 'Usine'} • ${t.specialite}` : t.id_zone,
+                            }))}
+                            placeholder="-- Technicien --"
+                            onAddNew={onOpenAddTech}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Responsable (RESP)</span>
+                            <span className="text-[9px] font-bold text-purple-800 bg-purple-100 px-1.5 py-0.5 rounded border border-purple-200 flex items-center gap-1">
+                              <Crown className="w-2.5 h-2.5 text-purple-600" />
+                              Auto-déduit (Zone)
+                            </span>
+                          </label>
+                          <CustomSelect
+                            value={form.operation}
+                            onChange={(val) => {
+                              const s = responsablesList.find((sup) => sup.nom === val);
+                              setForm({
+                                ...form,
+                                operation: val,
+                                id_operation: s?.id_operation || '',
+                              });
+                            }}
+                            options={[
+                              { value: '', label: '-- Aucun Responsable --' },
+                              ...responsablesList.map((s) => ({
+                                value: s.nom,
+                                label: s.nom,
+                                badge: s.id_operation,
+                                sublabel: s.template_label || s.template_id || s.type_profil,
+                              })),
+                            ]}
+                            placeholder="-- Responsable (RESP) --"
+                            onAddNew={onOpenAddChef}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-fields for INVENTAIRE action */}
+                {form.action_id === 'INVENTAIRE' && (
+                  <div className="p-3 bg-rose-50/70 rounded-xl border border-rose-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10.5px] font-bold text-rose-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <ClipboardList className="w-3.5 h-3.5 text-rose-700" />
+                        <span>Régularisation & Déstockage pour Écart d'Inventaire :</span>
+                      </label>
+                      <span className="text-[9.5px] text-rose-800 font-semibold bg-rose-100/90 px-2 py-0.5 rounded border border-rose-300 flex items-center gap-1">
+                        <ClipboardList className="w-2.5 h-2.5 text-rose-600" />
+                        Ajustement Écart & Rebut
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {/* Zone & Motif */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-rose-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Zone / Magasin</span>
+                            <span className="text-[9px] text-rose-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.id_zone}
+                            onChange={(val) => {
+                              const sup = findSupervisorForZone(val);
+                              setForm((prev) => ({
+                                ...prev,
+                                id_zone: val,
+                                operation: sup ? sup.nom : prev.operation,
+                                id_operation: sup ? sup.id_operation : prev.id_operation,
+                              }));
+                            }}
+                            options={zones.map((z) => ({
+                              value: z.id_zone,
+                              label: `${z.libelle} (${z.id_zone})`,
+                            }))}
+                            placeholder="-- Zone --"
+                            onAddNew={onOpenAddZone}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-rose-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Motif de l'Écart / Rebut</span>
+                            <span className="text-[9px] text-rose-700 font-bold">*Requis</span>
                           </label>
                           <select
-                            value={form.commentaire || 'Écart d’inventaire'}
+                            value={form.commentaire || 'Écart d’inventaire physique'}
                             onChange={(e) => setForm({ ...form, commentaire: e.target.value })}
-                            className="w-full h-8 px-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800"
+                            className="w-full h-8 px-2.5 rounded-xl border border-rose-200 bg-white text-xs font-semibold text-slate-800"
                           >
                             <option value="Écart d’inventaire physique">Écart d’inventaire physique</option>
                             <option value="Casse / Détérioration en atelier">Casse / Détérioration en atelier</option>
@@ -2686,70 +3669,40 @@ export default function SortieRapideView({
                             <option value="Péremption ou Déclassement">Péremption ou Déclassement</option>
                           </select>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Technicien & Opération / Superviseur */}
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div>
-                        <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                          Technicien Intervenant
-                        </label>
-                        <CustomSelect
-                          value={form.technicien}
-                          onChange={(val) => {
-                            const t = technicians.find((tech) => tech.nom === val);
-                            setForm({
-                              ...form,
-                              technicien: val,
-                              id_technician: t?.id_technician || '',
-                            });
-                          }}
-                          options={availableTechs.map((t) => ({
-                            value: t.nom,
-                            label: t.nom,
-                            badge: t.id_technician,
-                          }))}
-                          placeholder="-- Technicien --"
-                          onAddNew={onOpenAddTech}
-                        />
                       </div>
 
-                      {/* Superviseur / Opération (Hidden in CORRECTIVE and INVENTAIRE as per GMAO spec) */}
-                      {form.action_id !== 'CORRECTIVE' && form.action_id !== 'INVENTAIRE' ? (
+                      {/* Technicien & Note */}
+                      <div className="grid grid-cols-2 gap-2.5">
                         <div>
-                          <label className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                            Superviseur / Chef (Opt.)
+                          <label className="text-[10.5px] font-bold text-rose-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Contrôleur / Technicien</span>
+                            <span className="text-[9px] text-rose-700 font-bold">*Requis</span>
                           </label>
                           <CustomSelect
-                            value={form.operation}
+                            value={form.technicien}
                             onChange={(val) => {
-                              const c = chefsList.find((ch) => ch.nom === val);
+                              const t = technicians.find((tech) => tech.nom === val);
                               setForm({
                                 ...form,
-                                operation: val,
-                                id_operation: c?.id_operation || '',
+                                technicien: val,
+                                id_technician: t?.id_technician || '',
                               });
                             }}
-                            options={[
-                              { value: '', label: '-- Aucun Superviseur --' },
-                              ...chefsList.map((c) => ({
-                                value: c.nom,
-                                label: c.nom,
-                                badge: c.id_operation,
-                              })),
-                            ]}
-                            placeholder="-- Superviseur --"
-                            onAddNew={onOpenAddChef}
+                            options={availableTechs.map((t) => ({
+                              value: t.nom,
+                              label: t.nom,
+                              badge: t.id_technician,
+                              sublabel: t.specialite ? `${t.id_zone || 'Usine'} • ${t.specialite}` : t.id_zone,
+                            }))}
+                            placeholder="-- Technicien --"
+                            onAddNew={onOpenAddTech}
                           />
                         </div>
-                      ) : (
-                        <div className="flex items-center text-[10.5px] text-slate-500 italic bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/70">
-                          {form.action_id === 'CORRECTIVE'
-                            ? 'ℹ️ Mode Correctif : Dépannage direct sans validation superviseur requise.'
-                            : 'ℹ️ Mode Inventaire : Régularisation du stock physique enregistrée.'}
+
+                        <div className="flex items-center text-[10.5px] text-rose-800 font-medium bg-rose-100/70 px-3 py-1.5 rounded-xl border border-rose-200/80">
+                          ℹ️ Mode Inventaire : La sortie sera comptabilisée comme régularisation immédiate du stock physique.
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2759,24 +3712,32 @@ export default function SortieRapideView({
             {/* CASE B: ENTRÉE INTERNE */}
             {isEntreeInterne && (
               <div className="space-y-3 pt-2 border-t border-slate-100">
-                {/* 5 Action Cards for Entrée Interne */}
+                {/* 6 Action Cards for Entrée Interne */}
                 <div>
                   <label className="text-[10.5px] font-bold text-cyan-950 uppercase tracking-wider block mb-1.5 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <RotateCcw className="w-3.5 h-3.5 text-cyan-700" />
                       <span>Motif de l'Entrée Interne (Action) :</span>
                     </span>
-                    <span className="text-[9.5px] font-mono text-cyan-600 font-normal">5 modes de réintégration</span>
+                    <span className="text-[9.5px] font-mono text-cyan-600 font-normal">6 modes de réintégration</span>
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
                     {[
                       {
                         id: 'RETOUR',
-                        label: 'Retour Pièce',
+                        label: 'Retour Atelier',
                         icon: RotateCcw,
                         desc: 'Non utilisé / Restant intervention',
                         color: 'border-cyan-400 bg-cyan-50 text-cyan-950',
                         activeRing: 'ring-2 ring-cyan-500/20 shadow-2xs',
+                      },
+                      {
+                        id: 'FABRICATION_INTERNE',
+                        label: 'Fabrication / Tournage',
+                        icon: Hammer,
+                        desc: 'Usinage & confection interne',
+                        color: 'border-indigo-400 bg-indigo-50 text-indigo-950',
+                        activeRing: 'ring-2 ring-indigo-500/20 shadow-2xs',
                       },
                       {
                         id: 'DEMONTAGE',
@@ -2787,20 +3748,20 @@ export default function SortieRapideView({
                         activeRing: 'ring-2 ring-purple-500/20 shadow-2xs',
                       },
                       {
-                        id: 'INVENTAIRE',
-                        label: 'Ajustement +',
-                        icon: ClipboardList,
-                        desc: 'Surplus constaté en inventaire',
-                        color: 'border-emerald-400 bg-emerald-50 text-emerald-950',
-                        activeRing: 'ring-2 ring-emerald-500/20 shadow-2xs',
-                      },
-                      {
                         id: 'REPARATION_INTERNE',
                         label: 'Réparation Interne',
                         icon: RefreshCw,
                         desc: 'Rénovation atelier terminée',
                         color: 'border-blue-400 bg-blue-50 text-blue-950',
                         activeRing: 'ring-2 ring-blue-500/20 shadow-2xs',
+                      },
+                      {
+                        id: 'INVENTAIRE',
+                        label: 'Ajustement +',
+                        icon: ClipboardList,
+                        desc: 'Surplus constaté en inventaire',
+                        color: 'border-emerald-400 bg-emerald-50 text-emerald-950',
+                        activeRing: 'ring-2 ring-emerald-500/20 shadow-2xs',
                       },
                       {
                         id: 'TRANSFERT',
@@ -2835,138 +3796,701 @@ export default function SortieRapideView({
                   </div>
                 </div>
 
-                {/* Conditional fields for DEMONTAGE / RETOUR */}
-                {(form.action_id === 'DEMONTAGE' || form.action_id === 'RETOUR') && (
-                  <div className="p-3 bg-cyan-50/40 rounded-xl border border-cyan-200 space-y-2.5">
-                    <div className="text-[10.5px] font-bold text-cyan-950 uppercase tracking-wider flex items-center gap-1">
-                      <Factory className="w-3.5 h-3.5 text-cyan-700" />
-                      <span>Origine du Matériel Rapatrié :</span>
+                {/* 1. RETOUR ATELIER CARD */}
+                {form.action_id === 'RETOUR' && (
+                  <div className="p-3 bg-cyan-50/70 rounded-xl border border-cyan-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10.5px] font-bold text-cyan-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <RotateCcw className="w-3.5 h-3.5 text-cyan-700" />
+                        <span>Paramètres de Retour Atelier (Pièce Non Utilisée / Surplus Chantier) :</span>
+                      </label>
+                      <span className="text-[9.5px] text-cyan-800 font-semibold bg-cyan-100/90 px-2 py-0.5 rounded border border-cyan-300 flex items-center gap-1">
+                        <RotateCcw className="w-2.5 h-2.5 text-cyan-600" />
+                        Restant Intervention & Réintégration
+                      </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-600 block mb-1">
-                          Machine d'Origine (Dépose)
-                        </label>
-                        <CustomSelect
-                          value={form.id_machine_registered}
-                          onChange={(val) => {
-                            const m = machines.find((mach) => mach.id_machine_registered === val);
-                            setForm({
-                              ...form,
-                              id_machine_registered: val,
-                              id_zone: m?.id_zone_default || form.id_zone,
-                            });
-                          }}
-                          options={[
-                            { value: '', label: '-- Non Spécifiée / Atelier --' },
-                            ...machines.map((m) => ({
-                              value: m.id_machine_registered,
-                              label: `[${m.id_machine_registered}] ${m.designation}`,
-                            })),
-                          ]}
-                          placeholder="-- Machine --"
-                        />
+
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-cyan-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Machine Concernée (Origine)</span>
+                            <span className="text-[9px] text-cyan-700 font-mono">Optionnel</span>
+                          </label>
+                          <CustomSelect
+                            value={form.id_machine_registered}
+                            onChange={(val) => {
+                              const m = machines.find((mach) => mach.id_machine_registered === val);
+                              setForm({
+                                ...form,
+                                id_machine_registered: val,
+                                id_zone: m?.id_zone_default || form.id_zone,
+                              });
+                            }}
+                            options={[
+                              { value: '', label: '-- Non Spécifiée / Chantier Général --' },
+                              ...machines.map((m) => ({
+                                value: m.id_machine_registered,
+                                label: `[${m.id_machine_registered}] ${m.designation}`,
+                              })),
+                            ]}
+                            placeholder="-- Machine --"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-cyan-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Technicien Rapporteur</span>
+                            <span className="text-[9px] text-cyan-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.technicien}
+                            onChange={(val) => {
+                              const t = technicians.find((tech) => tech.nom === val);
+                              setForm({
+                                ...form,
+                                technicien: val,
+                                id_technician: t?.id_technician || '',
+                              });
+                            }}
+                            options={availableTechs.map((t) => ({
+                              value: t.nom,
+                              label: t.nom,
+                              badge: t.id_technician,
+                              sublabel: t.specialite ? `${t.id_zone || 'Usine'} • ${t.specialite}` : t.id_zone,
+                            }))}
+                            placeholder="-- Technicien --"
+                            onAddNew={onOpenAddTech}
+                          />
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-600 block mb-1">
-                          Technicien Rapporteur
-                        </label>
-                        <CustomSelect
-                          value={form.technicien}
-                          onChange={(val) => {
-                            const t = technicians.find((tech) => tech.nom === val);
-                            setForm({
-                              ...form,
-                              technicien: val,
-                              id_technician: t?.id_technician || '',
-                            });
-                          }}
-                          options={technicians.map((t) => ({
-                            value: t.nom,
-                            label: t.nom,
-                            badge: t.id_technician,
-                          }))}
-                          placeholder="-- Technicien --"
-                        />
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-cyan-950 uppercase tracking-wider block mb-1">
+                            Emplacement de Rangement / Casier
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: R1-B04 ou Magasin Central"
+                            value={form.emplacement_reception}
+                            onChange={(e) => setForm({ ...form, emplacement_reception: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-cyan-200 bg-white text-xs font-mono text-slate-800"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-cyan-950 uppercase tracking-wider block mb-1">
+                            État du Matériel Rapatrié
+                          </label>
+                          <select
+                            value={form.entrepot_etat || 'Fonctionnel'}
+                            onChange={(e) => setForm({ ...form, entrepot_etat: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-cyan-200 bg-white text-xs font-semibold text-slate-800"
+                          >
+                            <option value="Fonctionnel">Fonctionnel (Prêt à l'emploi)</option>
+                            <option value="Neuf">Neuf (Emballage intact)</option>
+                            <option value="En révision">En révision / Contrôle</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Storage and Condition fields */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="text-[10.5px] font-bold text-cyan-900 uppercase tracking-wider block mb-1">
-                      Emplacement de Rangement
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Ex: R1-B04 ou Atelier Central"
-                      value={form.emplacement_reception}
-                      onChange={(e) => setForm({ ...form, emplacement_reception: e.target.value })}
-                      className="w-full h-8 px-2.5 rounded-xl border border-slate-200 bg-white text-xs font-mono text-slate-800"
-                    />
-                  </div>
+                {/* 2. FABRICATION INTERNE CARD */}
+                {form.action_id === 'FABRICATION_INTERNE' && (
+                  <div className="p-3 bg-indigo-50/70 rounded-xl border border-indigo-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10.5px] font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <Hammer className="w-3.5 h-3.5 text-indigo-700" />
+                        <span>Paramètres de Fabrication & Tournage / Usinage Interne :</span>
+                      </label>
+                      <span className="text-[9.5px] text-indigo-800 font-semibold bg-indigo-100/90 px-2 py-0.5 rounded border border-indigo-300 flex items-center gap-1">
+                        <Hammer className="w-2.5 h-2.5 text-indigo-600" />
+                        Usinage & Confection Atelier
+                      </span>
+                    </div>
 
-                  <div>
-                    <label className="text-[10.5px] font-bold text-cyan-900 uppercase tracking-wider block mb-1">
-                      État du Matériel Rapatrié
-                    </label>
-                    <select
-                      value={form.entrepot_etat}
-                      onChange={(e) => setForm({ ...form, entrepot_etat: e.target.value })}
-                      className="w-full h-8 px-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800"
-                    >
-                      <option value="Fonctionnel">Fonctionnel</option>
-                      <option value="En révision">En révision</option>
-                      <option value="Neuf">Neuf</option>
-                      <option value="En attente">En attente contrôle</option>
-                    </select>
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-indigo-950 uppercase tracking-wider block mb-1">
+                            Temps de Main d'Œuvre / Usinage (Heures)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            placeholder="Ex: 2.5 h"
+                            value={form.temps_fabrication || ''}
+                            onChange={(e) => setForm({ ...form, temps_fabrication: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-indigo-200 bg-white text-xs font-mono text-slate-800"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-indigo-950 uppercase tracking-wider block mb-1">
+                            Matière Première ou Ébauche Utilisée
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Barre Acier 40mm, Tôle Inox 3mm..."
+                            value={form.matiere_premiere || ''}
+                            onChange={(e) => setForm({ ...form, matiere_premiere: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-indigo-200 bg-white text-xs text-slate-800"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-indigo-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Technicien / Usineur</span>
+                            <span className="text-[9px] text-indigo-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.technicien}
+                            onChange={(val) => {
+                              const t = technicians.find((tech) => tech.nom === val);
+                              setForm({
+                                ...form,
+                                technicien: val,
+                                id_technician: t?.id_technician || '',
+                              });
+                            }}
+                            options={availableTechs.map((t) => ({
+                              value: t.nom,
+                              label: t.nom,
+                              badge: t.id_technician,
+                              sublabel: t.specialite ? `${t.id_zone || 'Usine'} • ${t.specialite}` : t.id_zone,
+                            }))}
+                            placeholder="-- Technicien --"
+                            onAddNew={onOpenAddTech}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-indigo-950 uppercase tracking-wider block mb-1">
+                            Emplacement de Stockage
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: R2-A01 ou Rayonnage PDR"
+                            value={form.emplacement_reception}
+                            onChange={(e) => setForm({ ...form, emplacement_reception: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-indigo-200 bg-white text-xs font-mono text-slate-800"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* 3. DÉMONTAGE MACHINE CARD */}
+                {form.action_id === 'DEMONTAGE' && (
+                  <div className="p-3 bg-purple-50/70 rounded-xl border border-purple-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <Wrench className="w-3.5 h-3.5 text-purple-700" />
+                        <span>Paramètres de Démontage & Récupération sur Machine :</span>
+                      </label>
+                      <span className="text-[9.5px] text-purple-800 font-semibold bg-purple-100/90 px-2 py-0.5 rounded border border-purple-300 flex items-center gap-1">
+                        <Wrench className="w-2.5 h-2.5 text-purple-600" />
+                        Organe Déposé & Revalorisé
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Machine d'Origine (Démontage)</span>
+                            <span className="text-[9px] text-purple-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.id_machine_registered}
+                            onChange={(val) => {
+                              const m = machines.find((mach) => mach.id_machine_registered === val);
+                              setForm({
+                                ...form,
+                                id_machine_registered: val,
+                                id_zone: m?.id_zone_default || form.id_zone,
+                              });
+                            }}
+                            options={[
+                              { value: '', label: '-- Sélectionner la Machine Déposée --' },
+                              ...machines.map((m) => ({
+                                value: m.id_machine_registered,
+                                label: `[${m.id_machine_registered}] ${m.designation}`,
+                              })),
+                            ]}
+                            placeholder="-- Machine --"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Technicien Démonteur</span>
+                            <span className="text-[9px] text-purple-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.technicien}
+                            onChange={(val) => {
+                              const t = technicians.find((tech) => tech.nom === val);
+                              setForm({
+                                ...form,
+                                technicien: val,
+                                id_technician: t?.id_technician || '',
+                              });
+                            }}
+                            options={availableTechs.map((t) => ({
+                              value: t.nom,
+                              label: t.nom,
+                              badge: t.id_technician,
+                              sublabel: t.specialite ? `${t.id_zone || 'Usine'} • ${t.specialite}` : t.id_zone,
+                            }))}
+                            placeholder="-- Technicien --"
+                            onAddNew={onOpenAddTech}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1">
+                            État de la Pièce Déposée
+                          </label>
+                          <select
+                            value={form.entrepot_etat || 'En révision'}
+                            onChange={(e) => setForm({ ...form, entrepot_etat: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-purple-200 bg-white text-xs font-semibold text-slate-800"
+                          >
+                            <option value="En révision">En révision / À réviser</option>
+                            <option value="Fonctionnel">Fonctionnel (Bon état)</option>
+                            <option value="En attente">En attente contrôle / Test</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1">
+                            Emplacement de Stockage / Dépôt
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Zone Dépôt ou R3-C02"
+                            value={form.emplacement_reception}
+                            onChange={(e) => setForm({ ...form, emplacement_reception: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-purple-200 bg-white text-xs font-mono text-slate-800"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. RÉPARATION INTERNE CARD */}
+                {form.action_id === 'REPARATION_INTERNE' && (
+                  <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <RefreshCw className="w-3.5 h-3.5 text-blue-700" />
+                        <span>Paramètres de Réparation & Reconditionnement en Atelier :</span>
+                      </label>
+                      <span className="text-[9.5px] text-blue-800 font-semibold bg-blue-100/90 px-2 py-0.5 rounded border border-blue-300 flex items-center gap-1">
+                        <RefreshCw className="w-2.5 h-2.5 text-blue-600" />
+                        Rénovation & Remise en État
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Technicien Rénovateur</span>
+                            <span className="text-[9px] text-blue-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.technicien}
+                            onChange={(val) => {
+                              const t = technicians.find((tech) => tech.nom === val);
+                              setForm({
+                                ...form,
+                                technicien: val,
+                                id_technician: t?.id_technician || '',
+                              });
+                            }}
+                            options={availableTechs.map((t) => ({
+                              value: t.nom,
+                              label: t.nom,
+                              badge: t.id_technician,
+                              sublabel: t.specialite ? `${t.id_zone || 'Usine'} • ${t.specialite}` : t.id_zone,
+                            }))}
+                            placeholder="-- Technicien --"
+                            onAddNew={onOpenAddTech}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider block mb-1">
+                            Organe ou Sous-Ensemble Rénové
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: Réducteur, Pompe hydraulique, Vérin..."
+                            value={form.commentaire || ''}
+                            onChange={(e) => setForm({ ...form, commentaire: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-blue-200 bg-white text-xs text-slate-800"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider block mb-1">
+                            État Après Réparation
+                          </label>
+                          <select
+                            value={form.entrepot_etat || 'Fonctionnel'}
+                            onChange={(e) => setForm({ ...form, entrepot_etat: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-blue-200 bg-white text-xs font-semibold text-slate-800"
+                          >
+                            <option value="Fonctionnel">Reconditionné (Fonctionnel / Testé OK)</option>
+                            <option value="En attente">En attente banc de test</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-blue-950 uppercase tracking-wider block mb-1">
+                            Emplacement de Réintégration
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: R1-A05 ou Stock Pièces Rénovées"
+                            value={form.emplacement_reception}
+                            onChange={(e) => setForm({ ...form, emplacement_reception: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-blue-200 bg-white text-xs font-mono text-slate-800"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. AJUSTEMENT + (INVENTAIRE) CARD */}
+                {form.action_id === 'INVENTAIRE' && (
+                  <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10.5px] font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <ClipboardList className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Régularisation & Ajustement Positif de Stock (Surplus d'Inventaire) :</span>
+                      </label>
+                      <span className="text-[9.5px] text-emerald-800 font-semibold bg-emerald-100/90 px-2 py-0.5 rounded border border-emerald-300 flex items-center gap-1">
+                        <ClipboardList className="w-2.5 h-2.5 text-emerald-600" />
+                        Surplus & Réajustement +
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-emerald-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Motif du Surplus / Constat</span>
+                            <span className="text-[9px] text-emerald-700 font-bold">*Requis</span>
+                          </label>
+                          <select
+                            value={form.commentaire || 'Surplus constaté en inventaire physique'}
+                            onChange={(e) => setForm({ ...form, commentaire: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-emerald-200 bg-white text-xs font-semibold text-slate-800"
+                          >
+                            <option value="Surplus constaté en inventaire physique">Surplus constaté en inventaire physique</option>
+                            <option value="Annulation sortie non consommée">Annulation sortie non consommée</option>
+                            <option value="Correction écart de saisie antérieure">Correction écart de saisie antérieure</option>
+                            <option value="Réintégration lot retrouvé">Réintégration lot retrouvé</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-emerald-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Contrôleur / Agent d'Inventaire</span>
+                            <span className="text-[9px] text-emerald-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.technicien}
+                            onChange={(val) => {
+                              const t = technicians.find((tech) => tech.nom === val);
+                              setForm({
+                                ...form,
+                                technicien: val,
+                                id_technician: t?.id_technician || '',
+                              });
+                            }}
+                            options={availableTechs.map((t) => ({
+                              value: t.nom,
+                              label: t.nom,
+                              badge: t.id_technician,
+                              sublabel: t.specialite ? `${t.id_zone || 'Usine'} • ${t.specialite}` : t.id_zone,
+                            }))}
+                            placeholder="-- Contrôleur --"
+                            onAddNew={onOpenAddTech}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-emerald-950 uppercase tracking-wider block mb-1">
+                            Emplacement Confirmé sur Rayon
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: R1-B04"
+                            value={form.emplacement_reception}
+                            onChange={(e) => setForm({ ...form, emplacement_reception: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-emerald-200 bg-white text-xs font-mono text-slate-800"
+                          />
+                        </div>
+
+                        <div className="flex items-center text-[10.5px] text-emerald-800 font-medium bg-emerald-100/70 px-3 py-1.5 rounded-xl border border-emerald-200/80">
+                          ℹ️ Mode Ajustement (+) : La quantité sera immédiatement créditée au stock physique sans fournisseur externe.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. TRANSFERT INTERNE CARD */}
+                {form.action_id === 'TRANSFERT' && (
+                  <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200/90 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <CornerDownRight className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Paramètres de Transfert Inter-Magasins ou Ateliers :</span>
+                      </label>
+                      <span className="text-[9.5px] text-amber-800 font-semibold bg-amber-100/90 px-2 py-0.5 rounded border border-amber-300 flex items-center gap-1">
+                        <CornerDownRight className="w-2.5 h-2.5 text-amber-600" />
+                        Mouvement Interne & Réaffectation
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Zone ou Magasin de Provenance</span>
+                            <span className="text-[9px] text-amber-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.id_zone}
+                            onChange={(val) => setForm({ ...form, id_zone: val })}
+                            options={zones.map((z) => ({
+                              value: z.id_zone,
+                              label: `${z.libelle} (${z.id_zone})`,
+                            }))}
+                            placeholder="-- Zone Source --"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                            <span>Agent Responsable du Transfert</span>
+                            <span className="text-[9px] text-amber-700 font-bold">*Requis</span>
+                          </label>
+                          <CustomSelect
+                            value={form.technicien}
+                            onChange={(val) => {
+                              const t = technicians.find((tech) => tech.nom === val);
+                              setForm({
+                                ...form,
+                                technicien: val,
+                                id_technician: t?.id_technician || '',
+                              });
+                            }}
+                            options={availableTechs.map((t) => ({
+                              value: t.nom,
+                              label: t.nom,
+                              badge: t.id_technician,
+                              sublabel: t.specialite ? `${t.id_zone || 'Usine'} • ${t.specialite}` : t.id_zone,
+                            }))}
+                            placeholder="-- Agent Transfert --"
+                            onAddNew={onOpenAddTech}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1">
+                            Emplacement de Destination / Arrivée
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ex: R4-B02 ou Magasin B"
+                            value={form.emplacement_reception}
+                            onChange={(e) => setForm({ ...form, emplacement_reception: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-amber-200 bg-white text-xs font-mono text-slate-800"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1">
+                            État à Réception
+                          </label>
+                          <select
+                            value={form.entrepot_etat || 'Fonctionnel'}
+                            onChange={(e) => setForm({ ...form, entrepot_etat: e.target.value })}
+                            className="w-full h-8 px-2.5 rounded-xl border border-amber-200 bg-white text-xs font-semibold text-slate-800"
+                          >
+                            <option value="Fonctionnel">Fonctionnel</option>
+                            <option value="En attente">En attente pointage</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* CASE C: BON DE SORTIE (RÉPARATION EXTERNE) */}
+            {/* CASE C: BON DE SORTIE (RÉPARATION EXTERNE / ÉTALONNAGE / GARANTIE) */}
             {isBonSortie && (
               <div className="space-y-3 pt-2 border-t border-slate-100 bg-purple-50/40 p-3 rounded-xl border border-purple-200">
+                {/* 3 Action Cards for Bon de Sortie */}
+                <div>
+                  <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-purple-700" />
+                      <span>Motif & Nature de la Sortie Externe (Action) :</span>
+                    </span>
+                    <span className="text-[10px] text-purple-700 font-semibold italic">
+                      3 Actions Disponibles
+                    </span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      {
+                        id: 'REPARATION_EXTERNE',
+                        label: 'Réparation Externe',
+                        desc: 'Moteur, bobinage, usinage...',
+                        icon: Truck,
+                        color: 'bg-purple-50 border-purple-400 text-purple-950 ring-2 ring-purple-500/20 shadow-2xs font-bold',
+                      },
+                      {
+                        id: 'ETALONNAGE_CONTROLE',
+                        label: 'Étalonnage / Contrôle',
+                        desc: 'Mesure, métrologie, capteurs...',
+                        icon: Gauge,
+                        color: 'bg-blue-50 border-blue-400 text-blue-950 ring-2 ring-blue-500/20 shadow-2xs font-bold',
+                      },
+                      {
+                        id: 'GARANTIE_ECHANGE',
+                        label: 'Garantie / Échange',
+                        desc: 'Retour constructeur, garantie...',
+                        icon: ShieldCheck,
+                        color: 'bg-emerald-50 border-emerald-400 text-emerald-950 ring-2 ring-emerald-500/20 shadow-2xs font-bold',
+                      },
+                    ].map((act) => {
+                      const IconComp = act.icon;
+                      const isActive = form.action_id === act.id;
+                      return (
+                        <button
+                          key={act.id}
+                          type="button"
+                          onClick={() => setForm({ ...form, action_id: act.id })}
+                          className={`p-2 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                            isActive
+                              ? act.color
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <IconComp className="w-3.5 h-3.5 text-purple-700 shrink-0" />
+                            <span className="text-xs font-bold truncate">{act.label}</span>
+                          </div>
+                          <div className="text-[9.5px] text-slate-500 leading-tight truncate">{act.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Prestataire Externe (Obligatoire) */}
                 <div>
                   <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1">
-                    Atelier / Prestataire Extérieur (Bobineur / Usineur)
+                    Atelier / Prestataire Extérieur (Bobineur / Usineur / Labo) <span className="text-rose-600 font-bold">*</span>
                   </label>
                   <CustomSelect
                     value={form.prestataire_externe}
                     onChange={(val) => setForm({ ...form, prestataire_externe: val })}
                     options={supplierOptions.map((s) => ({ value: s, label: s }))}
-                    placeholder="-- Sélectionner Prestataire --"
+                    placeholder="-- Sélectionner Prestataire Externe --"
+                    onAddNew={(val) => setForm({ ...form, prestataire_externe: val })}
                   />
                 </div>
 
+                {/* Machine d'Origine (Équipement Source) & Date de Retour Prévue */}
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1">
-                      Responsable de l'Envoi
+                      Machine d'Origine (Équipement Source)
                     </label>
                     <CustomSelect
-                      value={form.technicien}
-                      onChange={(val) => setForm({ ...form, technicien: val })}
-                      options={technicians.map((t) => ({ value: t.nom, label: t.nom }))}
-                      placeholder="-- Technicien --"
+                      value={form.id_machine_registered}
+                      onChange={(val) => {
+                        const m = machines.find((mach) => mach.id_machine_registered === val);
+                        setForm({
+                          ...form,
+                          id_machine_registered: val,
+                          id_zone: m?.id_zone_default || form.id_zone,
+                        });
+                      }}
+                      options={[
+                        { value: '', label: '-- Stock Équipement / Non affecté --' },
+                        ...machines.map((m) => ({
+                          value: m.id_machine_registered,
+                          label: `[${m.id_machine_registered}] ${m.designation}`,
+                        })),
+                      ]}
+                      placeholder="-- Machine d'origine --"
                     />
                   </div>
 
                   <div>
                     <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1">
-                      Date de Retour Estimée
+                      Date de Retour Estimée <span className="text-rose-600 font-bold">*</span>
                     </label>
                     <input
                       type="date"
                       value={form.date_retour_prevue}
                       onChange={(e) => setForm({ ...form, date_retour_prevue: e.target.value })}
                       className="w-full h-8 px-2.5 rounded-xl border border-purple-200 bg-white text-xs font-mono text-slate-800"
+                      required
                     />
                   </div>
+                </div>
+
+                {/* Technicien Émetteur (Responsable de la Sortie) */}
+                <div>
+                  <label className="text-[10.5px] font-bold text-purple-950 uppercase tracking-wider block mb-1">
+                    Technicien Émetteur (Demandeur de l'Envoi) <span className="text-rose-600 font-bold">*</span>
+                  </label>
+                  <CustomSelect
+                    value={form.technicien}
+                    onChange={(val) => {
+                      const t = technicians.find((tech) => tech.nom === val);
+                      setForm({
+                        ...form,
+                        technicien: val,
+                        id_technician: t?.id_technician || '',
+                      });
+                    }}
+                    options={technicians.map((t) => ({
+                      value: t.nom,
+                      label: t.nom,
+                      badge: t.id_technician,
+                    }))}
+                    placeholder="-- Technicien émetteur --"
+                  />
                 </div>
               </div>
             )}
@@ -2974,9 +4498,86 @@ export default function SortieRapideView({
             {/* CASE D: ENTRÉE EXTERNE */}
             {isEntreeExterne && (
               <div className="space-y-3 pt-2 border-t border-slate-100 bg-emerald-50/40 p-3 rounded-xl border border-emerald-200">
+                {/* 3 Action Cards for Entrée Externe */}
+                <div>
+                  <label className="text-[10.5px] font-bold text-emerald-950 uppercase tracking-wider block mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Inbox className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>Nature de la Réception Externe (Action) :</span>
+                    </span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      {
+                        id: 'REAPPRO',
+                        label: 'Réapprovisionnement',
+                        desc: 'Commande fournisseur / stock',
+                        icon: Truck,
+                      },
+                      {
+                        id: 'RETOUR_REPARATION',
+                        label: 'Retour Réparation',
+                        desc: 'Retour bobinage / usinage',
+                        icon: RefreshCw,
+                      },
+                      {
+                        id: 'INVENTAIRE',
+                        label: 'Régularisation +',
+                        desc: 'Ajustement inventaire',
+                        icon: ClipboardList,
+                      },
+                    ].map((act) => {
+                      const IconComp = act.icon;
+                      const isActive = form.action_id === act.id;
+                      return (
+                        <button
+                          key={act.id}
+                          type="button"
+                          onClick={() => setForm({ ...form, action_id: act.id })}
+                          className={`p-2 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                            isActive
+                              ? 'bg-emerald-50 border-emerald-400 text-emerald-950 ring-2 ring-emerald-500/20 shadow-2xs font-bold'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <IconComp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span className="text-xs font-bold truncate">{act.label}</span>
+                          </div>
+                          <div className="text-[9.5px] text-slate-500 leading-tight truncate">{act.desc}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Smart One-Click Autofill for RETOUR_REPARATION if active external repairs exist */}
+                {activeExternalRepairs.length > 0 && (
+                  <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-200 text-xs">
+                    <div className="font-bold text-purple-950 flex items-center gap-1 mb-1.5">
+                      <Truck className="w-3.5 h-3.5 text-purple-600" />
+                      <span>{activeExternalRepairs.length} Bon(s) de Sortie en Réparation Externe en attente :</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {activeExternalRepairs.slice(0, 3).map((rep, idx) => (
+                        <button
+                          key={`rep-btn-${idx}`}
+                          type="button"
+                          onClick={() => handleFulfillRepair(rep)}
+                          className="px-2 py-1 bg-white hover:bg-purple-100 border border-purple-300 text-purple-900 rounded-lg text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                        >
+                          <span>{rep.code_bon}</span>
+                          <span className="text-slate-500 font-normal">({rep.ref})</span>
+                          <span className="text-emerald-600">↳ Réceptionner</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-[10.5px] font-bold text-emerald-950 uppercase tracking-wider block mb-1">
-                    Fournisseur / Expéditeur
+                    Fournisseur / Prestataire Expéditeur
                   </label>
                   <CustomSelect
                     value={form.fournisseur}
@@ -3001,36 +4602,49 @@ export default function SortieRapideView({
               </div>
             )}
 
-            {/* CASE E: COMMANDE */}
+            {/* CASE E: COMMANDE (Demande d'Achat & Approvisionnement) */}
             {isCommandeFlow && (
               <div className="space-y-3 pt-2 border-t border-slate-100 bg-amber-50/40 p-3 rounded-xl border border-amber-200">
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, action_id: 'COMMANDE_ACHAT' })}
-                    className={`p-2 rounded-xl border text-left cursor-pointer transition ${
-                      form.action_id === 'COMMANDE_ACHAT'
-                        ? 'bg-white border-amber-500 shadow-sm ring-1 ring-amber-500'
-                        : 'bg-white/50 border-amber-200 hover:bg-white text-slate-500'
-                    }`}
-                  >
-                    <div className={`font-bold text-xs ${form.action_id === 'COMMANDE_ACHAT' ? 'text-amber-900' : 'text-slate-600'}`}>Demande d'Achat</div>
-                    <div className="text-[10px] mt-0.5 opacity-80">Achat de PDR / Composants</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, action_id: 'COMMANDE_SORTIE' })}
-                    className={`p-2 rounded-xl border text-left cursor-pointer transition ${
-                      form.action_id === 'COMMANDE_SORTIE'
-                        ? 'bg-white border-amber-500 shadow-sm ring-1 ring-amber-500'
-                        : 'bg-white/50 border-amber-200 hover:bg-white text-slate-500'
-                    }`}
-                  >
-                    <div className={`font-bold text-xs ${form.action_id === 'COMMANDE_SORTIE' ? 'text-amber-900' : 'text-slate-600'}`}>Demande de Sortie</div>
-                    <div className="text-[10px] mt-0.5 opacity-80">Sortie pour Maintenance</div>
-                  </button>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950">
+                    <ShoppingCart className="w-4 h-4 text-amber-600" />
+                    <span>Informations de la Demande d'Achat</span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-300">
+                    APPROVISIONNEMENT
+                  </span>
                 </div>
-                
+
+                {/* Priority Selector */}
+                <div>
+                  <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1">
+                    Niveau de Priorité :
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      { id: 'NORMALE', label: '🟢 Normale', color: 'border-emerald-300 text-emerald-900 bg-emerald-50' },
+                      { id: 'URGENTE', label: '🟡 Urgente', color: 'border-amber-300 text-amber-900 bg-amber-50' },
+                      { id: 'CRITIQUE', label: '🔴 Critique (Rupture)', color: 'border-rose-300 text-rose-900 bg-rose-50' },
+                    ].map((p) => {
+                      const isSel = (form.priorite || 'NORMALE') === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setForm({ ...form, priorite: p.id })}
+                          className={`py-1.5 px-2 rounded-xl border text-xs font-bold transition cursor-pointer text-center ${
+                            isSel
+                              ? `${p.color} ring-2 ring-amber-500/20 shadow-2xs`
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="text-[10.5px] font-bold text-amber-950 uppercase tracking-wider block mb-1">
@@ -3050,10 +4664,10 @@ export default function SortieRapideView({
                     </label>
                     <input
                       type="text"
-                      placeholder="Nom du fournisseur"
+                      placeholder="Nom du fournisseur ou prestataire"
                       value={form.fournisseur}
                       onChange={(e) => setForm({ ...form, fournisseur: e.target.value })}
-                      className="w-full h-8 px-2.5 rounded-xl border border-amber-200 bg-white text-xs text-slate-800"
+                      className="w-full h-8 px-2.5 rounded-xl border border-amber-200 bg-white text-xs text-slate-800 focus:outline-none focus:border-amber-500"
                     />
                   </div>
                 </div>

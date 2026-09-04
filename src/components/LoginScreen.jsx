@@ -11,6 +11,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { storageService } from '../utils/storageService';
+import { accessLogService } from '../utils/AccessLogService';
 
 export default function LoginScreen({ onLoginSuccess }) {
   // Load dynamic configuration from local storage
@@ -96,6 +97,12 @@ export default function LoginScreen({ onLoginSuccess }) {
     if (rememberMe) {
       storageService.setItem('gmao_user_session', userToSave);
     }
+
+    // Reset last active page on new login so user enters Dashboard
+    localStorage.removeItem('gmao_active_tab');
+
+    // Record login in access logs
+    accessLogService.recordLogin(userToSave);
 
     onLoginSuccess(userToSave);
   };

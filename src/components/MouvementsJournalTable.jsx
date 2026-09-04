@@ -45,6 +45,8 @@ import {
   Calendar,
   Clock,
   MessageSquare,
+  Gauge,
+  ShieldCheck,
 } from 'lucide-react';
 
 /**
@@ -71,7 +73,13 @@ export const getSmartFluxType = (m = {}) => {
   if (rawType === 'COMMANDE' || rawAction === 'ACHAT_DIRECT' || rawAction === 'COMMANDE') {
     return 'COMMANDE';
   }
-  if (rawType === 'Bon de Sortie' || rawAction === 'REPARATION_EXTERNE') {
+  if (
+    rawType === 'Bon de Sortie' ||
+    rawType === 'Sortie Externe' ||
+    rawAction === 'REPARATION_EXTERNE' ||
+    rawAction === 'ETALONNAGE_CONTROLE' ||
+    rawAction === 'GARANTIE_ECHANGE'
+  ) {
     return 'Bon de Sortie';
   }
   if (rawType.toLowerCase().includes('entrée') || rawType.toLowerCase().includes('entree')) {
@@ -334,13 +342,15 @@ export const resolveDestinationInfo = (
     };
   }
 
-  // 4. BON DE SORTIE (Réparation externe / Sous-traitant)
+  // 4. BON DE SORTIE (Réparation externe / Étalonnage / Garantie)
   if (flux === 'Bon de Sortie') {
-    const prest = m.fournisseur || m.prestataire || 'Atelier Externe';
+    const prest = m.prestataire_externe || m.fournisseur || m.prestataire || 'Atelier Externe';
+    const machOrig = m.id_machine_registered ? `Origine : [${m.id_machine_registered}]` : '';
+    const codeBon = m.code_bon ? `N° Bon : ${m.code_bon}` : 'EN RÉPARATION EXTERNE';
     return {
-      category: 'SOUS-TRAITANCE • RÉPARATION',
+      category: 'SOUS-TRAITANCE • SORTIE EXTERNE',
       title: `Prestataire : ${prest}`,
-      code: m.code_bon ? `N° Bon : ${m.code_bon}` : 'EN RÉPARATION EXTERNE',
+      code: machOrig ? `${machOrig} • ${codeBon}` : codeBon,
       isUnknown: false,
       badgeType: 'external',
     };
@@ -436,15 +446,21 @@ export const resolveIntervenantInfo = (
       };
     }
 
-    if (usageType === 'chef' || (!usageType && matchedOp?.type_profil === 'CHEF')) {
-      const chef = matchedOp;
-      const nom = chef ? chef.nom : rawOp || 'Superviseur / Chef';
-      const id = chef ? chef.id_operation : (rawOp.startsWith('CHEF-') ? rawOp : (m.id_operation || 'CHEF-01'));
+    if (
+      usageType === 'chef' ||
+      usageType === 'responsable' ||
+      (!usageType && (matchedOp?.type_profil === 'RESPONSABLE' || matchedOp?.type_profil === 'CHEF' || String(matchedOp?.id_operation).startsWith('RESP') || String(matchedOp?.id_operation).startsWith('CHEF')))
+    ) {
+      const resp = matchedOp;
+      const nom = resp ? resp.nom : rawOp || rawTech || 'Demandeur Responsable';
+      const id = resp
+        ? resp.id_operation
+        : (rawOp.startsWith('RESP-') || rawOp.startsWith('CHEF-') ? rawOp : (m.id_operation || 'RESP-01'));
       return {
-        role: 'SUPERVISEUR / CHEF (USAGE)',
+        role: 'DEMANDEUR RESPONSABLE (USAGE)',
         name: nom,
         id: id,
-        isUnknown: !rawOp && !chef,
+        isUnknown: !rawOp && !rawTech && !resp,
       };
     }
 
@@ -463,9 +479,9 @@ export const resolveIntervenantInfo = (
     const nom = rawTech || rawOp;
     if (nom) {
       return {
-        role: 'BÉNÉFICIAIRE (USAGE)',
+        role: 'DEMANDEUR (USAGE)',
         name: nom,
-        id: nom.startsWith('TECH-') || nom.startsWith('OP-') || nom.startsWith('CHEF-') ? nom : 'USAGE-PERSO',
+        id: nom.startsWith('TECH-') || nom.startsWith('OP-') || nom.startsWith('RESP-') || nom.startsWith('CHEF-') ? nom : 'USAGE-PERSO',
         isUnknown: false,
       };
     }
@@ -491,21 +507,26 @@ export const resolveIntervenantInfo = (
     }
   }
 
-  // 3. BON DE SORTIE (Sous-traitance / Réparation extérieure)
-  if (flux === 'Bon de Sortie' || action === 'REPARATION_EXTERNE') {
+  // 3. BON DE SORTIE (Sous-traitance / Réparation extérieure / Étalonnage / Garantie)
+  if (
+    flux === 'Bon de Sortie' ||
+    action === 'REPARATION_EXTERNE' ||
+    action === 'ETALONNAGE_CONTROLE' ||
+    action === 'GARANTIE_ECHANGE'
+  ) {
+    if (matchedTech || rawTech) {
+      return {
+        role: 'TECHNICIEN ÉMETTEUR',
+        name: matchedTech ? matchedTech.nom : rawTech,
+        id: matchedTech ? matchedTech.id_technician : (m.id_technician || 'TECH-EMETTEUR'),
+        isUnknown: false,
+      };
+    }
     if (rawFourn) {
       return {
         role: 'PRESTATAIRE EXTERNE',
         name: rawFourn,
         id: m.code_bon || 'SOUS-TRAITANT',
-        isUnknown: false,
-      };
-    }
-    if (matchedTech || rawTech) {
-      return {
-        role: 'TECHNICIEN ÉMETTEUR',
-        name: matchedTech ? matchedTech.nom : rawTech,
-        id: matchedTech ? matchedTech.id_technician : (m.id_technician || 'TECH-GMAO'),
         isUnknown: false,
       };
     }
@@ -544,10 +565,16 @@ export const resolveIntervenantInfo = (
   }
 
   // 6. STANDARD MAINTENANCE (CORRECTIVE, PREVENTIVE, AMELIORATIVE, RETOUR, DEMONTAGE)
-  // Both Tech and Supervisor / Chef present
-  if (matchedTech && matchedOp && matchedOp.type_profil === 'CHEF') {
+  // Both Tech and Responsable present
+  const isRespProfile =
+    matchedOp?.type_profil === 'RESPONSABLE' ||
+    matchedOp?.type_profil === 'CHEF' ||
+    String(matchedOp?.id_operation).startsWith('RESP') ||
+    String(matchedOp?.id_operation).startsWith('CHEF');
+
+  if (matchedTech && matchedOp && isRespProfile) {
     return {
-      role: `TECHNICIEN • SUPERVISEUR`,
+      role: `TECHNICIEN • RESPONSABLE`,
       name: `${matchedTech.nom}`,
       id: `${matchedTech.id_technician} • ${matchedOp.id_operation}`,
       supervisor: matchedOp.nom,
@@ -565,9 +592,8 @@ export const resolveIntervenantInfo = (
   }
 
   if (matchedOp) {
-    const isChef = matchedOp.type_profil === 'CHEF';
     return {
-      role: isChef ? 'SUPERVISEUR / CHEF' : 'OPÉRATEUR DE LIGNE',
+      role: isRespProfile ? 'RESPONSABLE (RESP)' : 'OPÉRATEUR DE LIGNE',
       name: matchedOp.nom,
       id: matchedOp.id_operation,
       isUnknown: false,
@@ -586,12 +612,12 @@ export const resolveIntervenantInfo = (
   }
 
   if (rawOp) {
-    const isChefCode = /^CHEF-\d+/i.test(rawOp);
+    const isRespCode = /^(?:RESP|CHEF)-\d+/i.test(rawOp);
     const isOpCode = /^OP-\d+/i.test(rawOp);
     return {
-      role: isChefCode ? 'SUPERVISEUR / CHEF' : isOpCode ? 'OPÉRATEUR' : 'DEMANDEUR',
+      role: isRespCode ? 'RESPONSABLE (RESP)' : isOpCode ? 'OPÉRATEUR' : 'DEMANDEUR',
       name: rawOp,
-      id: isChefCode || isOpCode ? rawOp : (m.id_operation || 'INTERV-01'),
+      id: isRespCode || isOpCode ? rawOp : (m.id_operation || 'INTERV-01'),
       isUnknown: false,
     };
   }
@@ -1120,6 +1146,22 @@ export default function MouvementsJournalTable({
         </span>
       );
     }
+    if (act === 'ETALONNAGE_CONTROLE' || act === 'ETALONNAGE' || act === 'CONTROLE') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+          <Gauge className="w-3 h-3 text-blue-600 shrink-0" />
+          <span>Étalonnage</span>
+        </span>
+      );
+    }
+    if (act === 'GARANTIE_ECHANGE' || act === 'GARANTIE' || act === 'ECHANGE') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+          <ShieldCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+          <span>Garantie/Échange</span>
+        </span>
+      );
+    }
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-semibold bg-slate-100 text-slate-700">
         {m.action_id || 'Autre'}
@@ -1308,6 +1350,8 @@ export default function MouvementsJournalTable({
                 { value: 'REAPPRO', label: '[F] Réapprovisionnement' },
                 { value: 'RETOUR', label: '[F] Retour Atelier' },
                 { value: 'REPARATION_EXTERNE', label: '[F] Réparation Extérieure' },
+                { value: 'ETALONNAGE_CONTROLE', label: '[F] Étalonnage / Contrôle' },
+                { value: 'GARANTIE_ECHANGE', label: '[F] Garantie / Échange' },
               ]}
             />
           </div>
@@ -2221,6 +2265,8 @@ export default function MouvementsJournalTable({
                   <option value="REAPPRO">Réapprovisionnement</option>
                   <option value="RETOUR">Retour Atelier</option>
                   <option value="REPARATION_EXTERNE">Réparation Extérieure</option>
+                  <option value="ETALONNAGE_CONTROLE">Étalonnage / Contrôle</option>
+                  <option value="GARANTIE_ECHANGE">Garantie / Échange</option>
                 </select>
               </div>
 

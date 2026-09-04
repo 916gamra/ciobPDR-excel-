@@ -3,6 +3,7 @@ import AnimatedPage from './AnimatedPage';
 import CustomSelect from './CustomSelect';
 import {
   Users,
+  User,
   Plus,
   Search,
   MapPin,
@@ -19,7 +20,18 @@ import {
   Wrench,
   ArrowDown,
   ArrowUp,
+  ShieldCheck,
+  Check,
+  Hash,
+  Globe,
+  Crown,
 } from 'lucide-react';
+import {
+  RESPONSABLE_TEMPLATES,
+  normalizeTemplateIds,
+  getTemplatesForUser,
+  formatTemplateLabels,
+} from '../data/responsableTemplates';
 
 export default function UtilisateursView({
   technicians,
@@ -44,7 +56,7 @@ export default function UtilisateursView({
     return () => clearTimeout(handler);
   }, [localSearch]);
 
-  const [profileFilter, setProfileFilter] = useState('ALL'); // ALL, TECHNICIEN, OPERATEUR, CHEF
+  const [profileFilter, setProfileFilter] = useState('ALL'); // ALL, TECHNICIEN, OPERATEUR, RESPONSABLE, RMT, RZN, RPD, RMG
   const [zoneFilter, setZoneFilter] = useState('ALL');
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -64,7 +76,7 @@ export default function UtilisateursView({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Auto-calculation of next ID respecting order
+  // Auto-calculation of next ID respecting order (TECH-xx, OP-xx, RESP-xx)
   const getNextId = (type) => {
     if (type === 'TECHNICIEN') {
       const nums = technicians
@@ -77,7 +89,12 @@ export default function UtilisateursView({
       return `TECH-${String(max + 1).padStart(2, '0')}`;
     } else if (type === 'OPERATEUR') {
       const nums = operations
-        .filter((o) => o.type_profil === 'OPERATEUR')
+        .filter(
+          (o) =>
+            o.type_profil === 'OPERATEUR' &&
+            !String(o.id_operation).startsWith('RESP') &&
+            !String(o.id_operation).startsWith('CHEF')
+        )
         .map((o) => {
           const m = String(o.id_operation || '').match(/OP-(\d+)/i);
           return m ? parseInt(m[1], 10) : 0;
@@ -85,29 +102,38 @@ export default function UtilisateursView({
         .filter((n) => !isNaN(n));
       const max = nums.length > 0 ? Math.max(...nums) : 0;
       return `OP-${String(max + 1).padStart(2, '0')}`;
-    } else if (type === 'CHEF') {
+    } else if (type === 'RESPONSABLE' || type === 'CHEF') {
       const nums = operations
-        .filter((o) => o.type_profil === 'CHEF')
+        .filter(
+          (o) =>
+            o.type_profil === 'RESPONSABLE' ||
+            o.type_profil === 'CHEF' ||
+            String(o.id_operation).startsWith('RESP') ||
+            String(o.id_operation).startsWith('CHEF')
+        )
         .map((o) => {
-          const m = String(o.id_operation || '').match(/CHEF-(\d+)/i);
+          const m = String(o.id_operation || '').match(/(?:RESP|CHEF)-(\d+)/i);
           return m ? parseInt(m[1], 10) : 0;
         })
         .filter((n) => !isNaN(n));
       const max = nums.length > 0 ? Math.max(...nums) : 0;
-      return `CHEF-${String(max + 1).padStart(2, '0')}`;
+      return `RESP-${String(max + 1).padStart(2, '0')}`;
     }
     return '';
   };
 
   // Form for Add/Edit
   const [form, setForm] = useState({
-    type: 'TECHNICIEN', // TECHNICIEN, OPERATEUR, CHEF
+    type: 'TECHNICIEN', // TECHNICIEN, OPERATEUR, RESPONSABLE
     nom: '',
     id_zone: zones[0]?.id_zone || '',
-    specialite: '', // used for Technicien
+    zones: ['ALL'],
+    templates: ['RMT'],
+    template_id: 'RMT',
+    specialite: '',
   });
 
-  // Calculate combined users list
+  // Calculate combined users list with full multi-template metadata
   const combinedUsers = useMemo(() => {
     const list = [];
 
@@ -117,38 +143,86 @@ export default function UtilisateursView({
         id: t.id_technician,
         nom: t.nom,
         id_zone: t.id_zone,
+        zones: [t.id_zone],
         type: 'TECHNICIEN',
         specialite: t.specialite || 'Spécialité Maintenance',
+        templates: [],
+        template_ids: [],
+        template_id: null,
+        template_label: null,
+        raw: t,
       });
     });
 
-    // Add operations
+    // Add operations (Operators and Responsables)
     operations.forEach((o) => {
+      const isResp =
+        o.type_profil === 'RESPONSABLE' ||
+        o.type_profil === 'CHEF' ||
+        String(o.id_operation).startsWith('RESP') ||
+        String(o.id_operation).startsWith('CHEF');
+
+      const opZones = Array.isArray(o.zones)
+        ? o.zones
+        : o.id_zone
+          ? o.id_zone.split(',').map((s) => s.trim())
+          : ['ALL'];
+
+      const userTemplates = isResp ? getTemplatesForUser(o) : [];
+      const userTemplateIds = userTemplates.map((t) => t.id);
+      const templateIdStr = userTemplateIds.join(', ');
+      const templateLabelStr = isResp
+        ? userTemplates.map((t) => t.label).join(', ')
+        : 'Opérateur Ligne de Production';
+
       list.push({
         id: o.id_operation,
         nom: o.nom,
-        id_zone: o.id_zone,
-        type: o.type_profil === 'CHEF' ? 'CHEF' : 'OPERATEUR',
-        specialite:
-          o.type_profil === 'CHEF'
-            ? "Superviseur / Responsable d'Atelier"
-            : 'Opérateur Ligne de Production',
+        id_zone: o.id_zone || (opZones.includes('ALL') ? 'ALL' : opZones.join(', ')),
+        zones: opZones,
+        type: isResp ? 'RESPONSABLE' : 'OPERATEUR',
+        templates: userTemplates,
+        template_ids: userTemplateIds,
+        template_id: templateIdStr,
+        template_label: templateLabelStr,
+        specialite: isResp
+          ? userTemplates.map((t) => t.description).join(' • ') || 'Responsabilité & Coordination'
+          : 'Opérateur Ligne de Production',
+        raw: o,
       });
     });
 
     return list;
   }, [technicians, operations]);
 
-  // Filters
+  // Filters with multi-template awareness
   const filtered = combinedUsers.filter((u) => {
-    if (profileFilter !== 'ALL' && u.type !== profileFilter) return false;
-    if (zoneFilter !== 'ALL' && u.id_zone !== zoneFilter) return false;
+    if (profileFilter !== 'ALL') {
+      if (profileFilter === 'TECHNICIEN' || profileFilter === 'OPERATEUR' || profileFilter === 'RESPONSABLE') {
+        if (u.type !== profileFilter) return false;
+      } else {
+        // Specific template filter: RMT, RZN, RPD, RMG
+        const hasTpl =
+          (Array.isArray(u.template_ids) && u.template_ids.includes(profileFilter)) ||
+          (Array.isArray(u.templates) && u.templates.some((t) => t.id === profileFilter)) ||
+          (typeof u.template_id === 'string' && u.template_id.includes(profileFilter));
+        if (!hasTpl) return false;
+      }
+    }
+    if (zoneFilter !== 'ALL') {
+      const hasAll = u.zones?.includes('ALL') || u.id_zone === 'ALL';
+      const hasZone = u.zones?.includes(zoneFilter) || u.id_zone === zoneFilter;
+      if (!hasAll && !hasZone) return false;
+    }
     if (!search) return true;
     const q = search.toLowerCase();
     return (
       String(u?.id || '').toLowerCase().includes(q) ||
       String(u?.nom || '').toLowerCase().includes(q) ||
       String(u?.id_zone || '').toLowerCase().includes(q) ||
+      String(u?.template_label || '').toLowerCase().includes(q) ||
+      String(u?.template_id || '').toLowerCase().includes(q) ||
+      (Array.isArray(u?.template_ids) && u.template_ids.some((tid) => tid.toLowerCase().includes(q))) ||
       String(u?.specialite || '').toLowerCase().includes(q)
     );
   });
@@ -158,10 +232,6 @@ export default function UtilisateursView({
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState('nom');
   const [sortOrder, setSortOrder] = useState('asc');
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, profileFilter, zoneFilter, sortField, sortOrder]);
 
   const sortedData = useMemo(() => {
     if (!sortField) return filtered;
@@ -208,11 +278,24 @@ export default function UtilisateursView({
           specialite: form.specialite,
         });
       } else {
+        const isResp = form.type === 'RESPONSABLE';
+        const isAll = (form.zones || []).includes('ALL');
+        const selectedTpls = isResp
+          ? form.templates && form.templates.length > 0
+            ? form.templates
+            : [form.template_id || 'RMT']
+          : [];
+        const tplLabel = isResp ? formatTemplateLabels(selectedTpls) : null;
         onUpdateOperation(userToEdit.id, {
           id_operation: userToEdit.id,
           nom: form.nom,
-          id_zone: form.id_zone,
-          type_profil: form.type === 'CHEF' ? 'CHEF' : 'OPERATEUR',
+          id_zone: isResp ? (isAll ? 'ALL' : form.zones.join(', ')) : form.id_zone,
+          zones: isResp ? form.zones : [form.id_zone],
+          type_profil: isResp ? 'RESPONSABLE' : 'OPERATEUR',
+          templates: isResp ? selectedTpls : null,
+          template_ids: isResp ? selectedTpls : null,
+          template_id: isResp ? selectedTpls.join(', ') : null,
+          template_label: tplLabel,
         });
       }
       setUserToEdit(null);
@@ -226,12 +309,30 @@ export default function UtilisateursView({
           id_zone: form.id_zone,
           specialite: form.specialite || 'Spécialité Maintenance',
         });
-      } else {
+      } else if (form.type === 'OPERATEUR') {
         onAddOperation({
           id_operation: nextId,
           nom: form.nom,
           id_zone: form.id_zone,
-          type_profil: form.type === 'CHEF' ? 'CHEF' : 'OPERATEUR',
+          type_profil: 'OPERATEUR',
+        });
+      } else {
+        const isAll = (form.zones || []).includes('ALL');
+        const selectedTpls =
+          form.templates && form.templates.length > 0
+            ? form.templates
+            : [form.template_id || 'RMT'];
+        const tplLabel = formatTemplateLabels(selectedTpls);
+        onAddOperation({
+          id_operation: nextId,
+          nom: form.nom,
+          id_zone: isAll ? 'ALL' : form.zones.join(', '),
+          zones: form.zones,
+          type_profil: 'RESPONSABLE',
+          templates: selectedTpls,
+          template_ids: selectedTpls,
+          template_id: selectedTpls.join(', '),
+          template_label: tplLabel,
         });
       }
       setShowAddModal(false);
@@ -242,6 +343,9 @@ export default function UtilisateursView({
       type: 'TECHNICIEN',
       nom: '',
       id_zone: zones[0]?.id_zone || '',
+      zones: ['ALL'],
+      templates: ['RMT'],
+      template_id: 'RMT',
       specialite: '',
     });
   };
@@ -282,7 +386,7 @@ export default function UtilisateursView({
               Registre des Utilisateurs & Membres
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Gérez les techniciens de maintenance, les opérateurs de ligne et les chefs d'équipe
+              Gérez les techniciens de maintenance, les opérateurs de ligne et les responsables (RESP)
               dans un répertoire unifié.
             </p>
           </div>
@@ -293,6 +397,9 @@ export default function UtilisateursView({
                 type: 'TECHNICIEN',
                 nom: '',
                 id_zone: zones[0]?.id_zone || '',
+                zones: ['ALL'],
+                templates: ['RMT'],
+                template_id: 'RMT',
                 specialite: '',
               });
               setUserToEdit(null);
@@ -355,19 +462,27 @@ export default function UtilisateursView({
             </div>
           </div>
 
-          {/* Card 4: Chefs d'équipe */}
+          {/* Card 4: Responsables */}
           <div className="bg-white border border-slate-200 rounded-2xl p-4 md:p-5 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">
-                Chefs d'équipe (CHEF)
+              <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block">
+                Responsables (RESP)
               </span>
               <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">
-                {operations.filter((o) => o.type_profil === 'CHEF').length}
+                {
+                  operations.filter(
+                    (o) =>
+                      o.type_profil === 'RESPONSABLE' ||
+                      o.type_profil === 'CHEF' ||
+                      String(o.id_operation).startsWith('RESP') ||
+                      String(o.id_operation).startsWith('CHEF')
+                  ).length
+                }
               </span>
-              <span className="text-[10px] text-emerald-500 mt-0.5 block">Superviseurs Ligne</span>
+              <span className="text-[10px] text-rose-500 mt-0.5 block">RMT • RZN • RPD • RMG</span>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
             </div>
           </div>
         </div>
@@ -414,9 +529,13 @@ export default function UtilisateursView({
                 label="Role / Profil (Col D)"
                 options={[
                   { value: 'ALL', label: 'Tous les Profils (D)' },
-                  { value: 'TECHNICIEN', label: '[D] Technicien' },
-                  { value: 'OPERATEUR', label: '[D] Opérateur' },
-                  { value: 'CHEF', label: "[D] Chef d'équipe / Responsable" },
+                  { value: 'TECHNICIEN', label: '[D] Techniciens (TECH)' },
+                  { value: 'OPERATEUR', label: '[D] Opérateurs (OP)' },
+                  { value: 'RESPONSABLE', label: '[D] Tous les Responsables (RESP)' },
+                  { value: 'RMT', label: '• [RMT] Responsable Maintenance' },
+                  { value: 'RZN', label: '• [RZN] Responsable Zone' },
+                  { value: 'RPD', label: '• [RPD] Responsable Production' },
+                  { value: 'RMG', label: '• [RMG] Responsable Magasin' },
                 ]}
                 value={profileFilter}
                 onChange={setProfileFilter}
@@ -560,7 +679,7 @@ export default function UtilisateursView({
                           : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      <span>Zone d'Affectation (E)</span>
+                      <span>Zone d&apos;Affectation (E)</span>
                       {sortField === 'id_zone' &&
                         (sortOrder === 'asc' ? (
                           <ArrowUp className="w-3 h-3 text-indigo-600 shrink-0" />
@@ -575,163 +694,279 @@ export default function UtilisateursView({
           </div>
         </div>
 
-        {/* Unified Table in Templates Style */}
+        {/* Unified Table in Excel Twin Style (like Journal des Mouvements) */}
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
           {/* Top Info Header Bar inside Card */}
-          <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
-            <div className="font-bold text-slate-800 text-[13px]">
-              Répertoire des Membres • Ordre Excel Row 3 : B→F
+          <div className="p-2.5 bg-slate-100/70 border-b border-slate-200 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 font-mono text-[11px] text-slate-600">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span className="font-bold text-slate-800">{filtered.length}</span> membres enregistrés
+              <span className="text-slate-300">|</span>
+              <span className="text-[11px] text-slate-500">Modèle Excel Twin Colonnes B→F • Répertoire Effectif</span>
             </div>
-            <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
-              id_user (B) | nom (C) | type_profil (D) | id_zone (E) | specialite (F)
+            <div className="text-[11px] text-slate-400 font-mono hidden md:block">
+              N° | ID_User (B) | Nom (C) | Profil & Rôle (D) | Zone(s) (E) | Spécialité (F) | •••
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-[800px] w-full text-left text-xs whitespace-nowrap border-collapse">
-              <thead className="bg-slate-100 text-[10.5px] font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200">
+            <table className="min-w-[850px] w-full text-left text-xs whitespace-nowrap border-collapse">
+              <thead className="bg-slate-100/90 text-[10.5px] font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 select-none">
                 <tr>
-                  <th className="py-2.5 px-3 text-center w-12 text-slate-500 font-mono text-[10px] bg-slate-200/60 border-r border-slate-200 shrink-0">
+                  <th className="py-2.5 px-3 text-center w-12 text-slate-500 font-mono text-[10px] bg-slate-200/50 border-r border-slate-200 shrink-0">
                     N°
                   </th>
+
+                  {/* IDENTIFIANT (B) */}
                   <th
                     onClick={() => handleSort('id')}
                     className="py-2.5 px-4 cursor-pointer select-none hover:bg-slate-200/80 transition group text-left"
-                    title="Cliquer pour trier par Identifiant"
+                    title="Cliquer pour trier par Identifiant Unique"
                   >
                     <div className="flex items-center gap-1.5">
+                      <Hash className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                       <span>IDENTIFIANT</span>{' '}
                       <span className="text-slate-400 font-normal text-[10px] font-mono">(B)</span>
                       {renderSortIcon('id')}
                     </div>
                   </th>
+
+                  {/* NOM COMPLET (C) */}
                   <th
                     onClick={() => handleSort('nom')}
                     className="py-2.5 px-4 cursor-pointer select-none hover:bg-slate-200/80 transition group text-left"
                     title="Cliquer pour trier par Nom Complet"
                   >
                     <div className="flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                       <span>NOM COMPLET</span>{' '}
                       <span className="text-slate-400 font-normal text-[10px] font-mono">(C)</span>
                       {renderSortIcon('nom')}
                     </div>
                   </th>
+
+                  {/* PROFIL & RÔLE (D) */}
                   <th
                     onClick={() => handleSort('type')}
                     className="py-2.5 px-4 cursor-pointer select-none hover:bg-slate-200/80 transition group text-left"
-                    title="Cliquer pour trier par Profil"
+                    title="Cliquer pour trier par Profil & Rôle"
                   >
                     <div className="flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />
                       <span>PROFIL & RÔLE</span>{' '}
                       <span className="text-slate-400 font-normal text-[10px] font-mono">(D)</span>
                       {renderSortIcon('type')}
                     </div>
                   </th>
+
+                  {/* ZONE(S) D'AFFECTATION (E) */}
                   <th
                     onClick={() => handleSort('id_zone')}
                     className="py-2.5 px-4 cursor-pointer select-none hover:bg-slate-200/80 transition group text-left"
                     title="Cliquer pour trier par Zone d'Affectation"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span>ZONE D'AFFECTATION</span>{' '}
+                      <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>ZONE(S) D&apos;AFFECTATION</span>{' '}
                       <span className="text-slate-400 font-normal text-[10px] font-mono">(E)</span>
                       {renderSortIcon('id_zone')}
                     </div>
                   </th>
-                  <th className="py-2.5 px-4 text-slate-500 font-bold">
-                    <span>SPÉCIALITÉ / DESCRIPTION</span>{' '}
-                    <span className="text-slate-400 font-normal text-[10px] font-mono">(F)</span>
+
+                  {/* SPÉCIALITÉ / DESCRIPTION (F) */}
+                  <th className="py-2.5 px-4 text-slate-700 font-bold select-none text-left">
+                    <div className="flex items-center gap-1.5">
+                      <Wrench className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>SPÉCIALITÉ / DOMAINE</span>{' '}
+                      <span className="text-slate-400 font-normal text-[10px] font-mono">(F)</span>
+                    </div>
                   </th>
-                  <th className="py-2.5 px-4 text-right pr-4 text-slate-500 font-bold">ACTIONS</th>
+
+                  {/* ACTIONS COLUMN: "•••" */}
+                  <th
+                    className="py-2.5 px-4 text-center w-20 select-none font-bold text-slate-400 tracking-widest"
+                    title="Actions (Modifier / Supprimer)"
+                  >
+                    •••
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200/80">
+              <tbody className="divide-y divide-slate-200">
                 {displayedData.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="p-8 text-center text-slate-400">
+                    <td colSpan={7} className="py-10 text-center text-slate-400 font-medium">
                       Aucun membre trouvé correspondant à vos critères de recherche.
                     </td>
                   </tr>
                 ) : (
                   displayedData.map((user, idx) => {
-                    const zoneObj = zones.find((z) => z.id_zone === user.id_zone);
-                    let badgeColor = 'bg-blue-50 text-blue-800 border-blue-200';
-                    let profileName = 'Technicien';
-                    if (user.type === 'OPERATEUR') {
-                      badgeColor = 'bg-indigo-50 text-indigo-800 border-indigo-200';
-                      profileName = 'Opérateur Ligne';
-                    } else if (user.type === 'CHEF') {
-                      badgeColor = 'bg-emerald-50 text-emerald-800 border-emerald-200';
-                      profileName = "Chef d'Équipe";
-                    }
+                    const realIndex = startIndex + idx;
+                    const isResp = user.type === 'RESPONSABLE';
+                    const isTech = user.type === 'TECHNICIEN';
+                    const isOp = user.type === 'OPERATEUR';
+
+                    const tpls = Array.isArray(user.templates) && user.templates.length > 0
+                      ? user.templates
+                      : getTemplatesForUser(user);
 
                     return (
                       <tr
-                        key={`user-row-${user.id ?? ''}-${user.type ?? ''}-${idx + startIndex}`}
-                        className="even:bg-slate-50/80 odd:bg-white hover:bg-slate-100/70 border-b border-slate-200/70 transition-colors"
+                        key={`user-row-${user.id ?? ''}-${user.type ?? ''}-${realIndex}`}
+                        className="even:bg-slate-50/70 odd:bg-white hover:bg-indigo-50/40 transition-colors border-b border-slate-100"
                       >
                         {/* Row N° Column */}
-                        <td className="py-3 px-3 text-center font-mono text-[11px] font-bold text-slate-400 bg-slate-100/40 border-r border-slate-200/80 shrink-0">
-                          {idx + 1 + startIndex}
+                        <td className="py-2.5 px-3 text-center font-mono text-[10.5px] font-bold text-slate-400 bg-slate-100/30 border-r border-slate-200/60 shrink-0">
+                          {realIndex + 1}
                         </td>
-                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                          <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
-                            {user.id}
+
+                        {/* IDENTIFIANT (B) */}
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono font-bold text-xs bg-slate-100 text-slate-900 border border-slate-200/90 shadow-2xs">
+                            <Hash className="w-3 h-3 text-indigo-600 shrink-0" />
+                            <span>{user.id}</span>
                           </span>
                         </td>
-                        <td className="py-3 px-4 font-semibold text-slate-800 text-[13px]">
-                          {user.nom}
+
+                        {/* NOM COMPLET (C) */}
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 border shadow-2xs ${
+                                isTech
+                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                  : isOp
+                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                    : 'bg-purple-50 text-purple-700 border-purple-200'
+                              }`}
+                            >
+                              {isTech ? (
+                                <Wrench className="w-3.5 h-3.5 text-blue-600" />
+                              ) : isOp ? (
+                                <ClipboardList className="w-3.5 h-3.5 text-indigo-600" />
+                              ) : (
+                                <Crown className="w-3.5 h-3.5 text-amber-600" />
+                              )}
+                            </div>
+                            <div>
+                              <span className="font-bold text-slate-900 text-xs sm:text-[12.5px] block leading-tight">
+                                {user.nom}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
+                                <User className="w-2.5 h-2.5 text-slate-400" />
+                                <span>{isResp ? 'Cadre / Supervision' : isTech ? 'Maintenance Industrielle' : 'Opérations & Lignes'}</span>
+                              </span>
+                            </div>
+                          </div>
                         </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`text-[11px] font-bold border px-2.5 py-0.5 rounded-full ${badgeColor}`}
-                          >
-                            {profileName}
-                          </span>
+
+                        {/* PROFIL & RÔLE (D) */}
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          {isOp ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
+                              <ClipboardList className="w-3 h-3 text-indigo-600 shrink-0" />
+                              <span>Opérateur Ligne (OP)</span>
+                            </span>
+                          ) : isResp ? (
+                            <div className="flex flex-wrap gap-1 items-center max-w-sm">
+                              {tpls.map((tpl) => (
+                                <span
+                                  key={tpl.id}
+                                  className={`inline-flex items-center gap-1 text-[10.5px] font-bold border px-2.5 py-0.5 rounded-full shadow-2xs ${tpl.badgeClass}`}
+                                  title={`${tpl.label} - ${tpl.description}`}
+                                >
+                                  <Crown className="w-2.5 h-2.5 shrink-0 opacity-80" />
+                                  <span>[{tpl.id}] {tpl.label}</span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+                              <Wrench className="w-3 h-3 text-blue-600 shrink-0" />
+                              <span>Technicien (TECH)</span>
+                            </span>
+                          )}
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span className="font-medium text-slate-700">
-                              {zoneObj ? zoneObj.libelle : user.id_zone}
+
+                        {/* ZONE(S) D'AFFECTATION (E) */}
+                        <td className="py-2.5 px-4 whitespace-nowrap">
+                          {user.zones && user.zones.includes('ALL') ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+                              <Globe className="w-3 h-3 text-purple-600 shrink-0" />
+                              <span>ALL (Toutes les zones)</span>
+                            </span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1 items-center max-w-xs">
+                              {(user.zones && user.zones.length > 0 ? user.zones : [user.id_zone]).map(
+                                (zid) => {
+                                  const zObj = zones.find((z) => z.id_zone === zid);
+                                  return (
+                                    <span
+                                      key={zid}
+                                      className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs"
+                                    >
+                                      <MapPin className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                                      <span className="font-semibold text-slate-800">{zObj ? zObj.libelle : zid}</span>
+                                      <span className="text-[10px] font-mono text-slate-400">({zid})</span>
+                                    </span>
+                                  );
+                                }
+                              )}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* SPÉCIALITÉ / DESCRIPTION (F) */}
+                        <td className="py-2.5 px-4 text-slate-600 max-w-xs truncate" title={user.specialite}>
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span className="font-medium text-slate-700 truncate">
+                              {user.specialite || '— Polyvalent / Affectation Générale —'}
                             </span>
                           </div>
                         </td>
-                        <td
-                          className="py-3 px-4 text-slate-500 italic max-w-xs truncate"
-                          title={user.specialite}
-                        >
-                          {user.specialite}
-                        </td>
-                        <td className="py-3 px-4 text-right pr-4">
-                          <div className="flex items-center justify-end gap-2">
+
+                        {/* ACTIONS (•••) */}
+                        <td className="py-2.5 px-4 text-center whitespace-nowrap">
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
+                              type="button"
                               onClick={() => {
+                                const userTpls = normalizeTemplateIds(
+                                  user.templates || user.template_ids || user.template_id
+                                );
                                 setUserToEdit(user);
                                 setForm({
                                   type: user.type,
                                   nom: user.nom,
                                   id_zone: user.id_zone,
+                                  zones:
+                                    user.zones && user.zones.length > 0
+                                      ? user.zones
+                                      : [user.id_zone || 'ALL'],
+                                  templates: userTpls.length > 0 ? userTpls : ['RMT'],
+                                  template_id: userTpls.join(', ') || 'RMT',
                                   specialite:
                                     user.specialite === 'Spécialité Maintenance' ||
-                                    user.specialite.includes('Opérateur') ||
-                                    user.specialite.includes('Superviseur')
+                                    user.specialite?.includes('Opérateur') ||
+                                    user.specialite?.includes('Supervision') ||
+                                    user.specialite?.includes('Responsabilité')
                                       ? ''
-                                      : user.specialite,
+                                      : user.specialite || '',
                                 });
                                 setShowAddModal(true);
                               }}
-                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 transition cursor-pointer shadow-2xs"
                               title="Modifier l'utilisateur"
                             >
-                              <Edit2 className="w-4 h-4" />
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => setUserToDelete(user)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition"
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition cursor-pointer shadow-2xs"
                               title="Supprimer l'utilisateur"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -805,8 +1040,8 @@ export default function UtilisateursView({
         {/* Manual Add / Edit Modal */}
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-              <div className="bg-slate-50 border-b border-slate-100 px-5 py-4 flex items-center justify-between">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="bg-slate-50 border-b border-slate-100 px-5 py-4 flex items-center justify-between shrink-0">
                 <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
                   <Users className="w-4 h-4 text-indigo-600" />
                   {userToEdit
@@ -815,7 +1050,7 @@ export default function UtilisateursView({
                 </h3>
               </div>
 
-              <form onSubmit={handleSave} className="p-5 space-y-4">
+              <form onSubmit={handleSave} className="p-5 space-y-4 overflow-y-auto">
                 {/* Mode Select (Enabled ONLY for creation, disabled for editing) */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
@@ -823,9 +1058,9 @@ export default function UtilisateursView({
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { key: 'TECHNICIEN', label: 'Technicien' },
-                      { key: 'OPERATEUR', label: 'Opérateur' },
-                      { key: 'CHEF', label: "Chef d'équipe" },
+                      { key: 'TECHNICIEN', label: 'Technicien (TECH)' },
+                      { key: 'OPERATEUR', label: 'Opérateur (OP)' },
+                      { key: 'RESPONSABLE', label: 'Responsable (RESP)' },
                     ].map((item) => (
                       <button
                         key={item.key}
@@ -857,6 +1092,80 @@ export default function UtilisateursView({
                   </p>
                 </div>
 
+                {/* Template Selection for RESPONSABLE (Multi-Select) */}
+                {form.type === 'RESPONSABLE' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        Templates & Domaines de Responsabilité (Multi-sélection)
+                      </label>
+                      <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                        {(form.templates || []).length} actif(s)
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {RESPONSABLE_TEMPLATES.map((tpl) => {
+                        const isSelected = (form.templates || []).includes(tpl.id);
+                        return (
+                          <button
+                            key={tpl.id}
+                            type="button"
+                            onClick={() => {
+                              const current = form.templates || [];
+                              let next;
+                              if (isSelected) {
+                                if (current.length > 1) {
+                                  next = current.filter((id) => id !== tpl.id);
+                                } else {
+                                  next = current; // Keep at least one selected
+                                }
+                              } else {
+                                next = [...current, tpl.id];
+                              }
+                              setForm({
+                                ...form,
+                                templates: next,
+                                template_id: next.join(', '),
+                              });
+                            }}
+                            className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between cursor-pointer ${
+                              isSelected
+                                ? 'bg-indigo-50/70 border-indigo-500 ring-2 ring-indigo-500/20 shadow-xs'
+                                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${tpl.badgeClass}`}
+                              >
+                                {tpl.id}
+                              </span>
+                              <div
+                                className={`w-4 h-4 rounded-md flex items-center justify-center border transition ${
+                                  isSelected
+                                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                                    : 'border-slate-300 bg-white'
+                                }`}
+                              >
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                            </div>
+                            <span className="text-xs font-bold text-slate-900 line-clamp-1">
+                              {tpl.label}
+                            </span>
+                            <span className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                              {tpl.description}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Un responsable peut cumuler plusieurs templates (ex: RMT + RZN).
+                    </p>
+                  </div>
+                )}
+
                 {/* Name */}
                 <div>
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
@@ -872,33 +1181,103 @@ export default function UtilisateursView({
                   />
                 </div>
 
-                {/* Zone Select */}
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
-                    <span>Affectation de Zone</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAddModal(false);
-                        onOpenAddZoneModal();
-                      }}
-                      className="text-[10px] text-indigo-600 hover:underline font-bold"
+                {/* Zones Selection */}
+                {form.type === 'RESPONSABLE' ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                          Zones sous Responsabilité
+                        </label>
+                        {onOpenAddZoneModal && (
+                          <button
+                            type="button"
+                            onClick={onOpenAddZoneModal}
+                            className="text-[10px] text-indigo-600 hover:text-indigo-800 hover:underline font-bold flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>+ Nouvelle zone</span>
+                          </button>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentZones = form.zones || [];
+                          if (currentZones.includes('ALL')) {
+                            setForm({ ...form, zones: [zones[0]?.id_zone || ''] });
+                          } else {
+                            setForm({ ...form, zones: ['ALL'] });
+                          }
+                        }}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded border transition cursor-pointer ${
+                          (form.zones || []).includes('ALL')
+                            ? 'bg-purple-600 border-purple-600 text-white'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        ALL (Toutes Zones)
+                      </button>
+                    </div>
+
+                    {!(form.zones || []).includes('ALL') && (
+                      <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                        {zones.map((z) => {
+                          const isChecked = (form.zones || []).includes(z.id_zone);
+                          return (
+                            <label
+                              key={z.id_zone}
+                              className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer p-1.5 rounded-lg hover:bg-white transition"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  const currentZones = (form.zones || []).filter((x) => x !== 'ALL');
+                                  if (e.target.checked) {
+                                    setForm({ ...form, zones: [...currentZones, z.id_zone] });
+                                  } else {
+                                    const next = currentZones.filter((x) => x !== z.id_zone);
+                                    setForm({ ...form, zones: next.length > 0 ? next : ['ALL'] });
+                                  }
+                                }}
+                                className="w-3.5 h-3.5 text-indigo-600 rounded border-slate-300"
+                              />
+                              <span className="truncate">{z.libelle}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+                      <span>Affectation de Zone</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddModal(false);
+                          onOpenAddZoneModal();
+                        }}
+                        className="text-[10px] text-indigo-600 hover:underline font-bold"
+                      >
+                        + Nouvelle zone
+                      </button>
+                    </label>
+                    <select
+                      value={form.id_zone}
+                      onChange={(e) => setForm({ ...form, id_zone: e.target.value })}
+                      className="w-full h-10 px-3 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
                     >
-                      + Nouvelle zone
-                    </button>
-                  </label>
-                  <select
-                    value={form.id_zone}
-                    onChange={(e) => setForm({ ...form, id_zone: e.target.value })}
-                    className="w-full h-10 px-3 text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white transition"
-                  >
-                    {zones.map((z) => (
-                      <option key={z.id_zone} value={z.id_zone}>
-                        {z.libelle}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                      {zones.map((z) => (
+                        <option key={z.id_zone} value={z.id_zone}>
+                          {z.libelle} ({z.id_zone})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Specialty (Shown ONLY for Technicians) */}
                 {form.type === 'TECHNICIEN' && (
@@ -944,7 +1323,7 @@ export default function UtilisateursView({
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <div className="text-center">
-                <h4 className="text-sm font-black text-slate-900">Supprimer l'Utilisateur ?</h4>
+                <h4 className="text-sm font-black text-slate-900">Supprimer l&apos;Utilisateur ?</h4>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
                   Confirmez-vous la suppression de <b>{userToDelete.nom}</b> ? Cette opération
                   supprimera définitivement sa fiche.

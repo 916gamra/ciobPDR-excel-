@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Plus, X, Wrench, ShieldCheck, ClipboardList } from 'lucide-react';
+import { UserCheck, Plus, X, Wrench, ShieldCheck, ClipboardList, Check, MapPin } from 'lucide-react';
 import CustomSelect from './CustomSelect';
+import {
+  RESPONSABLE_TEMPLATES,
+  getTemplateById,
+  formatTemplateLabels,
+} from '../data/responsableTemplates';
 
 export default function AddUserModal({
   isOpen,
@@ -10,10 +15,16 @@ export default function AddUserModal({
   operations = [],
   onAddTechnician,
   onAddOperation,
-  initialType = 'TECHNICIEN', // 'TECHNICIEN' | 'OPERATEUR' | 'CHEF'
+  initialType = 'TECHNICIEN', // 'TECHNICIEN' | 'OPERATEUR' | 'RESPONSABLE' | 'CHEF'
   onOpenAddZoneModal,
 }) {
-  const [profileType, setProfileType] = useState(initialType);
+  const normalizedInitialType =
+    initialType === 'CHEF' ? 'RESPONSABLE' : initialType || 'TECHNICIEN';
+
+  const [profileType, setProfileType] = useState(normalizedInitialType);
+  const [selectedTemplates, setSelectedTemplates] = useState(['RMT']);
+  const [selectedZones, setSelectedZones] = useState(['ALL']);
+
   const [form, setForm] = useState({
     nom: '',
     id_zone: zones[0]?.id_zone || '',
@@ -21,7 +32,7 @@ export default function AddUserModal({
   });
   const [error, setError] = useState('');
 
-  // Auto-calculation of next ID respecting prefix & count
+  // Auto-calculation of next sequential ID
   const getNextId = (type) => {
     if (type === 'TECHNICIEN') {
       const nums = technicians
@@ -34,7 +45,12 @@ export default function AddUserModal({
       return `TECH-${String(max + 1).padStart(2, '0')}`;
     } else if (type === 'OPERATEUR') {
       const nums = operations
-        .filter((o) => o.type_profil === 'OPERATEUR' || !String(o.id_operation).startsWith('CHEF'))
+        .filter(
+          (o) =>
+            o.type_profil === 'OPERATEUR' &&
+            !String(o.id_operation).startsWith('RESP') &&
+            !String(o.id_operation).startsWith('CHEF')
+        )
         .map((o) => {
           const m = String(o.id_operation || '').match(/OP-(\d+)/i);
           return m ? parseInt(m[1], 10) : 0;
@@ -42,36 +58,80 @@ export default function AddUserModal({
         .filter((n) => !isNaN(n));
       const max = nums.length > 0 ? Math.max(...nums) : 0;
       return `OP-${String(max + 1).padStart(2, '0')}`;
-    } else if (type === 'CHEF') {
+    } else if (type === 'RESPONSABLE' || type === 'CHEF') {
       const nums = operations
-        .filter((o) => o.type_profil === 'CHEF' || String(o.id_operation).startsWith('CHEF'))
+        .filter(
+          (o) =>
+            o.type_profil === 'RESPONSABLE' ||
+            o.type_profil === 'CHEF' ||
+            String(o.id_operation).startsWith('RESP') ||
+            String(o.id_operation).startsWith('CHEF')
+        )
         .map((o) => {
-          const m = String(o.id_operation || '').match(/CHEF-(\d+)/i);
+          const m = String(o.id_operation || '').match(/(?:RESP|CHEF)-(\d+)/i);
           return m ? parseInt(m[1], 10) : 0;
         })
         .filter((n) => !isNaN(n));
       const max = nums.length > 0 ? Math.max(...nums) : 0;
-      return `CHEF-${String(max + 1).padStart(2, '0')}`;
+      return `RESP-${String(max + 1).padStart(2, '0')}`;
     }
     return '';
   };
 
   useEffect(() => {
     if (isOpen) {
-      setProfileType(initialType);
+      const initP = initialType === 'CHEF' ? 'RESPONSABLE' : initialType || 'TECHNICIEN';
+      setProfileType(initP);
+      setSelectedTemplates(['RMT']);
+      setSelectedZones(['ALL']);
       setForm({
         nom: '',
         id_zone: zones[0]?.id_zone || '',
         specialite:
-          initialType === 'TECHNICIEN'
+          initP === 'TECHNICIEN'
             ? 'Mécanique / Électrique'
-            : initialType === 'CHEF'
-              ? 'Superviseur Atelier'
+            : initP === 'RESPONSABLE'
+              ? 'Responsable Maintenance'
               : 'Opérateur de Ligne',
       });
       setError('');
     }
   }, [isOpen, initialType, zones]);
+
+  // Handle template selection toggle (Multi-select)
+  const handleToggleTemplate = (tplId) => {
+    let next;
+    if (selectedTemplates.includes(tplId)) {
+      if (selectedTemplates.length > 1) {
+        next = selectedTemplates.filter((id) => id !== tplId);
+      } else {
+        next = selectedTemplates; // keep at least one
+      }
+    } else {
+      next = [...selectedTemplates, tplId];
+    }
+    setSelectedTemplates(next);
+  };
+
+  // Toggle zone in multi-select for Responsable
+  const handleToggleZone = (zoneId) => {
+    if (zoneId === 'ALL') {
+      if (selectedZones.includes('ALL')) {
+        setSelectedZones([]);
+      } else {
+        setSelectedZones(['ALL']);
+      }
+      return;
+    }
+
+    let next = selectedZones.filter((z) => z !== 'ALL');
+    if (next.includes(zoneId)) {
+      next = next.filter((z) => z !== zoneId);
+    } else {
+      next.push(zoneId);
+    }
+    setSelectedZones(next);
+  };
 
   if (!isOpen) return null;
 
@@ -80,7 +140,7 @@ export default function AddUserModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.nom.trim()) {
-      setError('Veuillez saisir le nom ou la désignation.');
+      setError('Veuillez renseigner le nom complet de l’utilisateur.');
       return;
     }
 
@@ -95,16 +155,43 @@ export default function AddUserModal({
         id_zone: form.id_zone,
         specialite: form.specialite.trim() || 'Spécialiste GMAO',
       });
-    } else {
+    } else if (profileType === 'OPERATEUR') {
       if (operations.some((o) => o.nom.toLowerCase().trim() === form.nom.toLowerCase().trim())) {
-        setError('Une opération ou un superviseur portant ce nom existe déjà.');
+        setError('Un opérateur portant ce nom existe déjà.');
         return;
       }
       onAddOperation({
         id_operation: currentId,
         nom: form.nom.trim(),
         id_zone: form.id_zone,
-        type_profil: profileType === 'CHEF' ? 'CHEF' : 'OPERATEUR',
+        type_profil: 'OPERATEUR',
+      });
+    } else {
+      // RESPONSABLE
+      if (operations.some((o) => o.nom.toLowerCase().trim() === form.nom.toLowerCase().trim())) {
+        setError('Un responsable portant ce nom existe déjà.');
+        return;
+      }
+      if (selectedZones.length === 0) {
+        setError('Veuillez affecter au moins une zone ou cocher "ALL (Toutes les zones)".');
+        return;
+      }
+
+      const activeTpls = selectedTemplates.length > 0 ? selectedTemplates : ['RMT'];
+      const tplLabel = formatTemplateLabels(activeTpls);
+      const isAll = selectedZones.includes('ALL');
+      const zoneString = isAll ? 'ALL' : selectedZones.join(', ');
+
+      onAddOperation({
+        id_operation: currentId,
+        nom: form.nom.trim(),
+        id_zone: zoneString,
+        zones: isAll ? ['ALL'] : selectedZones,
+        type_profil: 'RESPONSABLE',
+        templates: activeTpls,
+        template_ids: activeTpls,
+        template_id: activeTpls.join(', '),
+        template_label: tplLabel,
       });
     }
 
@@ -112,24 +199,24 @@ export default function AddUserModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-xs overflow-y-auto animate-fadeIn">
-      <div className="bg-white rounded-2xl max-w-md w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col">
-        {/* Header (BDR Light Excel UI) */}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+      <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col my-6">
+        {/* Header */}
         <div className="p-4 sm:p-5 bg-white border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 shadow-2xs font-bold">
-              <UserCheck className="w-4 h-4" />
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 shadow-2xs font-bold shrink-0">
+              <UserCheck className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-bold text-sm text-slate-900 leading-tight">
                 {profileType === 'TECHNICIEN'
                   ? 'Nouveau Technicien'
-                  : profileType === 'CHEF'
-                    ? "Nouveau Chef d'Équipe"
-                    : 'Nouvelle Opération / Opérateur'}
+                  : profileType === 'RESPONSABLE'
+                    ? 'Nouveau Responsable'
+                    : 'Nouvel Opérateur de Ligne'}
               </h3>
               <p className="text-[11.5px] text-slate-500 mt-0.5">
-                Création rapide liée aux zones et au workflow
+                Rôle & affectation avec génération d'identifiant séquentiel
               </p>
             </div>
           </div>
@@ -144,8 +231,8 @@ export default function AddUserModal({
 
         {/* Profile Switcher Tabs */}
         <div className="p-4 bg-slate-50 border-b border-slate-200">
-          <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
-            Type de Profil
+          <label className="text-[11px] font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
+            Famille de Profil (Prefix Code)
           </label>
           <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/70 rounded-xl border border-slate-200/80">
             <button
@@ -154,30 +241,14 @@ export default function AddUserModal({
                 setProfileType('TECHNICIEN');
                 setForm((prev) => ({ ...prev, specialite: 'Mécanique / Électrique' }));
               }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+              className={`py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 profileType === 'TECHNICIEN'
                   ? 'bg-white text-blue-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Wrench className="w-3.5 h-3.5 text-blue-600" />
-              <span>Technicien</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setProfileType('CHEF');
-                setForm((prev) => ({ ...prev, specialite: 'Superviseur Atelier' }));
-              }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                profileType === 'CHEF'
-                  ? 'bg-white text-indigo-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Chef Équipe</span>
+              <span>Technicien (TECH)</span>
             </button>
 
             <button
@@ -186,20 +257,36 @@ export default function AddUserModal({
                 setProfileType('OPERATEUR');
                 setForm((prev) => ({ ...prev, specialite: 'Opérateur de Ligne' }));
               }}
-              className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+              className={`py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 profileType === 'OPERATEUR'
-                  ? 'bg-white text-emerald-900 shadow-xs'
+                  ? 'bg-white text-indigo-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <ClipboardList className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Opérateur</span>
+              <ClipboardList className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Opérateur (OP)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setProfileType('RESPONSABLE');
+                setForm((prev) => ({ ...prev, specialite: 'Responsable' }));
+              }}
+              className={`py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
+                profileType === 'RESPONSABLE'
+                  ? 'bg-white text-rose-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
+              <span>Responsable (RESP)</span>
             </button>
           </div>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 text-xs overflow-y-auto max-h-[70vh]">
           {error && (
             <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
               {error}
@@ -207,22 +294,87 @@ export default function AddUserModal({
           )}
 
           {/* Generated ID */}
-          <div>
-            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-              ID Auto-Généré
-            </label>
-            <input
-              type="text"
-              readOnly
-              value={currentId}
-              className="w-full h-9 px-3 rounded-xl bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-700 cursor-not-allowed shadow-2xs"
-            />
+          <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center justify-between">
+            <div>
+              <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block">
+                Identifiant Auto-Généré
+              </span>
+              <span className="font-mono text-base font-black text-slate-900 mt-0.5 block">
+                {currentId}
+              </span>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                {profileType === 'RESPONSABLE'
+                  ? 'Code séquentiel RESP-xx selon l’ordre d’ajout global'
+                  : 'Généré automatiquement selon le profil choisi'}
+              </p>
+            </div>
+            <div className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-mono font-bold text-indigo-700 shadow-2xs">
+              {profileType}
+            </div>
           </div>
+
+          {/* SECTION: RESPONSABLE TEMPLATES (Fixed System Templates - Multi-Select) */}
+          {profileType === 'RESPONSABLE' && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-700 block uppercase tracking-wider">
+                  Sélection des Templates Responsable (Multi-sélection)
+                </label>
+                <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                  {selectedTemplates.length} actif(s)
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {RESPONSABLE_TEMPLATES.map((tpl) => {
+                  const isSelected = selectedTemplates.includes(tpl.id);
+                  return (
+                    <div
+                      key={tpl.id}
+                      onClick={() => handleToggleTemplate(tpl.id)}
+                      className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected
+                          ? `${tpl.cardBorder} ring-2 ring-indigo-500/20 shadow-xs bg-indigo-50/20`
+                          : 'border-slate-200 bg-white hover:bg-slate-50/80'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-md border ${tpl.badgeClass}`}
+                        >
+                          {tpl.badge}
+                        </span>
+                        <div
+                          className={`w-4 h-4 rounded-md flex items-center justify-center border transition ${
+                            isSelected
+                              ? 'bg-indigo-600 border-indigo-600 text-white'
+                              : 'border-slate-300 bg-white'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                      </div>
+                      <div className="mt-1.5">
+                        <h4 className="font-bold text-xs text-slate-900 leading-tight">
+                          {tpl.label}
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug">
+                          {tpl.description}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Vous pouvez cocher un ou plusieurs templates pour ce responsable (ex: RMT + RZN).
+              </p>
+            </div>
+          )}
 
           {/* Nom / Intitulé */}
           <div>
-            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-              Nom / Intitulé complet <span className="text-rose-500">*</span>
+            <label className="text-[11px] font-bold text-slate-700 block mb-1 uppercase tracking-wider">
+              Nom Complet du Membre <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -231,8 +383,8 @@ export default function AddUserModal({
               placeholder={
                 profileType === 'TECHNICIEN'
                   ? 'ex: Karim Bennani'
-                  : profileType === 'CHEF'
-                    ? 'ex: Chef Amine Tazi'
+                  : profileType === 'RESPONSABLE'
+                    ? 'ex: Nabile Ghazawi'
                     : 'ex: Nettoyage et Graissage Ligne 1'
               }
               value={form.nom}
@@ -241,41 +393,109 @@ export default function AddUserModal({
             />
           </div>
 
-          {/* Zone affectée */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-[11px] font-bold text-slate-700">
-                Zone / Atelier de Rattachement <span className="text-rose-500">*</span>
-              </label>
-              {onOpenAddZoneModal && (
+          {/* ZONE AFFECTATION FOR RESPONSABLE (Multi-Select with ALL option) */}
+          {profileType === 'RESPONSABLE' ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                  Affectation de Zone(s) <span className="text-rose-500">*</span>
+                </label>
+                {onOpenAddZoneModal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenAddZoneModal();
+                    }}
+                    className="text-[10.5px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer flex items-center gap-0.5"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Nouvelle Zone</span>
+                  </button>
+                )}
+              </div>
+
+              {/* ALL option chip */}
+              <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl border border-slate-200 bg-slate-50/60">
                 <button
                   type="button"
-                  onClick={() => {
-                    onClose();
-                    onOpenAddZoneModal();
-                  }}
-                  className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer flex items-center gap-0.5"
+                  onClick={() => handleToggleZone('ALL')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+                    selectedZones.includes('ALL')
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
                 >
-                  <Plus className="w-3 h-3" />
-                  <span>Nouvelle Zone</span>
+                  <MapPin className="w-3 h-3" />
+                  <span>ALL (Toutes les zones)</span>
+                  {selectedZones.includes('ALL') && <Check className="w-3 h-3 stroke-[3]" />}
                 </button>
-              )}
+
+                {/* Individual Zone Chips */}
+                {zones.map((z) => {
+                  const isChecked = !selectedZones.includes('ALL') && selectedZones.includes(z.id_zone);
+                  return (
+                    <button
+                      key={z.id_zone}
+                      type="button"
+                      disabled={selectedZones.includes('ALL')}
+                      onClick={() => handleToggleZone(z.id_zone)}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer border ${
+                        selectedZones.includes('ALL')
+                          ? 'opacity-40 bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                          : isChecked
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-2xs font-bold'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>{z.libelle}</span>
+                      <span className="text-[10px] font-mono opacity-80">({z.id_zone})</span>
+                      {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-slate-500">
+                {selectedZones.includes('ALL')
+                  ? 'Ce responsable a autorité sur toutes les zones (ex: Maintenance générale ou Magasin).'
+                  : `Zones sélectionnées : ${selectedZones.join(', ') || 'Aucune'}`}
+              </p>
             </div>
-            <CustomSelect
-              value={form.id_zone}
-              onChange={(val) => setForm({ ...form, id_zone: val })}
-              options={zones.map((z) => ({
-                value: z.id_zone,
-                label: `${z.libelle} (${z.id_zone})`,
-              }))}
-              placeholder="-- Choisir une Zone --"
-            />
-          </div>
+          ) : (
+            /* STANDARD ZONE SELECT FOR TECH AND OPERATEUR */
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                  Zone de Rattachement <span className="text-rose-500">*</span>
+                </label>
+                {onOpenAddZoneModal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onOpenAddZoneModal();
+                    }}
+                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer flex items-center gap-0.5"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Nouvelle Zone</span>
+                  </button>
+                )}
+              </div>
+              <CustomSelect
+                value={form.id_zone}
+                onChange={(val) => setForm({ ...form, id_zone: val })}
+                options={zones.map((z) => ({
+                  value: z.id_zone,
+                  label: `${z.libelle} (${z.id_zone})`,
+                }))}
+                placeholder="-- Choisir une Zone --"
+              />
+            </div>
+          )}
 
           {/* Spécialité (if Technicien) */}
           {profileType === 'TECHNICIEN' && (
             <div>
-              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+              <label className="text-[11px] font-bold text-slate-700 block mb-1 uppercase tracking-wider">
                 Spécialité / Compétence
               </label>
               <input

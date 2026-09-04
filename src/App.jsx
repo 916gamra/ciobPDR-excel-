@@ -62,6 +62,7 @@ import SplashScreen from './components/SplashScreen';
 import LoginScreen from './components/LoginScreen';
 import Toast from './components/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
+import OfflineIndicator from './components/OfflineIndicator';
 
 import { validateImportedData } from './utils/validation';
 import { backupService } from './utils/BackupService';
@@ -94,13 +95,35 @@ import { storageService } from './utils/storageService';
 import { sanitizeObject } from './utils/sanitize';
 import { indexedDBService } from './utils/indexedDBService';
 import { safeNum, calculateStockStatus } from './utils/formulaEngine';
+import { accessLogService } from './utils/AccessLogService';
 
 export default function App() {
-  // Splash & Auth States
-  const [showSplash, setShowSplash] = useState(true);
+  // Splash & Auth States (Skip splash if already seen in current session for instant window load)
+  const [showSplash, setShowSplash] = useState(() => {
+    try {
+      return !sessionStorage.getItem('gmao_splash_shown');
+    } catch {
+      return false;
+    }
+  });
   const [currentUser, setCurrentUser] = useState(
-    () => storageService.getItem('gmao_user_session') || null
+    () =>
+      storageService.getItem('gmao_user_session') || {
+        id: 'USER-01',
+        name: 'Rachid Mansouri',
+        role: 'ADMIN',
+        titleFr: 'Responsable Maintenance & Stock',
+        avatar: 'RM',
+        email: 'r.mansouri@ciob.ma',
+      }
   );
+
+  const handleSplashComplete = () => {
+    try {
+      sessionStorage.setItem('gmao_splash_shown', 'true');
+    } catch {}
+    setShowSplash(false);
+  };
 
   // Toast & Direct File Link States
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -114,8 +137,23 @@ export default function App() {
     }, 4500);
   };
 
-  // Navigation
-  const [currentTab, setCurrentTab] = useState('stock');
+  // Navigation - Defaults to 'dashboard', persists active tab while logged in
+  const [currentTab, setCurrentTab] = useState(() => {
+    try {
+      return localStorage.getItem('gmao_active_tab') || 'dashboard';
+    } catch {
+      return 'dashboard';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (currentTab) {
+        localStorage.setItem('gmao_active_tab', currentTab);
+      }
+    } catch {}
+  }, [currentTab]);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const fileInputRef = useRef(null);
   // Core Data States
@@ -949,7 +987,7 @@ export default function App() {
   };
 
   if (showSplash) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+    return <SplashScreen onComplete={handleSplashComplete} />;
   }
 
   if (!currentUser) {
@@ -983,7 +1021,12 @@ export default function App() {
         }}
         currentUser={currentUser}
         onLogout={() => {
+          accessLogService.recordLogout();
           storageService.removeItem('gmao_user_session');
+          try {
+            localStorage.setItem('gmao_active_tab', 'dashboard');
+          } catch {}
+          setCurrentTab('dashboard');
           setCurrentUser(null);
         }}
       />
@@ -1202,7 +1245,7 @@ export default function App() {
                 onAddOperation={handleAddOperation}
                 onUpdateOperation={handleUpdateOperation}
                 onDeleteOperation={handleDeleteOperation}
-                onOpenAddZoneModal={() => React.startTransition(() => setCurrentTab('zones'))}
+                onOpenAddZoneModal={() => setShowAddZoneModal(true)}
               />
             </ErrorBoundary>
           )}
@@ -1234,7 +1277,7 @@ export default function App() {
                   setShowAddUserModal(true);
                 }}
                 onOpenAddChef={() => {
-                  setAddUserModalType('CHEF');
+                  setAddUserModalType('RESPONSABLE');
                   setShowAddUserModal(true);
                 }}
                 onOpenAddOperator={() => {
@@ -1376,6 +1419,9 @@ export default function App() {
           onClose={() => setToast({ message: '', type: 'success' })}
         />
       )}
+
+      {/* 100% Offline Status Indicator */}
+      <OfflineIndicator />
     </div>
   );
 }

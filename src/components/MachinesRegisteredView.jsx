@@ -22,6 +22,7 @@ import {
   ArrowUpDown,
   ChevronDown,
   ArrowDown,
+  ArrowUp,
 } from 'lucide-react';
 
 export default function MachinesRegisteredView({

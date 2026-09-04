@@ -348,6 +348,35 @@ export function useGmaoState() {
     rawStock,
   ]);
 
+  // Real-time Multi-Window / Multi-Tab Synchronization
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'gmao_full_state_v1' && e.newValue) {
+        try {
+          const fresh = storageService.getItem('gmao_full_state_v1');
+          if (fresh) {
+            if (fresh.types) setTypes(fresh.types);
+            if (fresh.designations) setDesignations(fresh.designations);
+            if (fresh.families) setFamilies(fresh.families);
+            if (fresh.templates) setTemplates(fresh.templates);
+            if (fresh.machines) setMachines(fresh.machines);
+            if (fresh.warehouseItems) setWarehouseItems(fresh.warehouseItems);
+            if (fresh.zones) setZones(fresh.zones);
+            if (fresh.technicians) setTechnicians(fresh.technicians);
+            if (fresh.operations) setOperations(fresh.operations);
+            if (fresh.mouvements) setMouvements(fresh.mouvements);
+            if (fresh.rawStock) setRawStock(fresh.rawStock);
+          }
+        } catch (err) {
+          console.error('Failed to sync across tabs:', err);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   return {
     types,
     setTypes,

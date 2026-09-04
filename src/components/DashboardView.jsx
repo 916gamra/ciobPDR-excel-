@@ -36,6 +36,7 @@ import {
   Activity,
   Zap,
   Warehouse,
+  Inbox,
 } from 'lucide-react';
 
 export default function DashboardView({
@@ -123,6 +124,35 @@ export default function DashboardView({
     if (orderFilterTab === 'RECEIVED') return completedOrders;
     return allOrders;
   }, [orderFilterTab, pendingOrders, completedOrders, allOrders]);
+
+  // Track External Repairs (Bons de Sortie / Pièces chez les prestataires)
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  
+  const externalRepairs = useMemo(() => {
+    return mouvements.filter(
+      (m) =>
+        m.type === 'Sortie Externe' ||
+        m.is_bon_sortie === true ||
+        (Array.isArray(m.tags) && m.tags.includes('#BON_SORTIE')) ||
+        (Array.isArray(m.tags) && m.tags.includes('#SORTIE_EXTERNE')) ||
+        m.action_id === 'REPARATION_EXTERNE' ||
+        m.prestataire_externe
+    );
+  }, [mouvements]);
+
+  const pendingExternalRepairs = useMemo(() => {
+    return externalRepairs.filter(
+      (m) =>
+        !Array.isArray(m.tags) ||
+        (!m.tags.includes('#RETOUR_RECU') && !m.tags.includes('#RECEPTION_VALIDE'))
+    );
+  }, [externalRepairs]);
+
+  const overdueRepairs = useMemo(() => {
+    return pendingExternalRepairs.filter(
+      (m) => m.date_retour_prevue && m.date_retour_prevue < todayStr
+    );
+  }, [pendingExternalRepairs, todayStr]);
 
   // Calculate analytics for GMAO actions
   const actionStats = useMemo(() => {
@@ -707,6 +737,134 @@ export default function DashboardView({
               <Plus className="w-3.5 h-3.5" />
               <span>Créer une Commande d'Achat</span>
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* 3.5 External Repairs & Overdue Tracking Section (Bons de Sortie) */}
+      <div className="bg-white rounded-3xl border border-purple-200 shadow-xs p-5 md:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-purple-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center font-bold shadow-xs">
+              <Truck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-extrabold text-base text-slate-900">
+                  Matériels en Réparation Externe (Bons de Sortie)
+                </h2>
+                <span className="px-2 py-0.5 rounded-full text-xs font-mono font-extrabold bg-purple-100 text-purple-900 border border-purple-200">
+                  {pendingExternalRepairs.length} en cours
+                </span>
+                {overdueRepairs.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-xs font-mono font-extrabold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 animate-pulse">
+                    <AlertTriangle className="w-3 h-3 text-rose-600" />
+                    <span>{overdueRepairs.length} en retard</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                Suivi des moteurs, pompes et pièces envoyés en usinage/bobinage. Réceptionnez le retour pour réintégrer l'article.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onNavigateToSortie}
+            className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Nouveau Bon de Sortie</span>
+          </button>
+        </div>
+
+        {/* List of External Repairs */}
+        {pendingExternalRepairs.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {pendingExternalRepairs.map((rep, idx) => {
+              const isLate = rep.date_retour_prevue && rep.date_retour_prevue < todayStr;
+              return (
+                <div
+                  key={`dash-rep-${rep.id ?? ''}-${idx}`}
+                  className={`p-4 rounded-2xl border transition relative flex flex-col justify-between space-y-3 ${
+                    isLate
+                      ? 'bg-rose-50/40 border-rose-300 shadow-xs ring-1 ring-rose-400/20'
+                      : 'bg-white border-purple-200 hover:border-purple-300 shadow-xs'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-extrabold text-xs text-purple-950 bg-purple-100 px-2 py-0.5 rounded border border-purple-300">
+                          {rep.code_bon || 'BS-EXT'}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 font-mono">
+                          {rep.ref}
+                        </span>
+                      </div>
+                      {isLate ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                          <AlertTriangle className="w-3 h-3 text-rose-600" />
+                          <span>Délai Dépassé</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                          <Clock className="w-3 h-3 text-purple-600" />
+                          <span>Chez Prestataire</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="font-bold text-xs text-slate-900 line-clamp-1">
+                        {rep.designation || 'Pièce en réparation'}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-mono mt-1 flex items-center justify-between">
+                        <span>Qté : <b className="text-slate-900 font-extrabold">{rep.quantite} pcs</b></span>
+                        <span className={isLate ? 'text-rose-600 font-bold font-mono' : 'text-purple-900 font-medium'}>
+                          Retour : {rep.date_retour_prevue || 'Non fixé'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {(rep.prestataire_externe || rep.id_machine_registered) && (
+                      <div className="text-[10.5px] text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-200/70 font-mono space-y-0.5">
+                        {rep.prestataire_externe && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Prestataire:</span>
+                            <b className="text-purple-900">{rep.prestataire_externe}</b>
+                          </div>
+                        )}
+                        {rep.id_machine_registered && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400">Machine:</span>
+                            <b className="text-slate-800">{rep.id_machine_registered}</b>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100">
+                    <button
+                      onClick={onNavigateToSortie}
+                      className="w-full py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+                    >
+                      <Inbox className="w-3.5 h-3.5" />
+                      <span>Réceptionner le Retour (Entrée)</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-center space-y-1.5">
+            <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500" />
+            <div className="text-xs font-bold text-slate-800">Aucune pièce en réparation externe</div>
+            <p className="text-[11px] text-slate-500">
+              Tous les moteurs et équipements sont présents au sein du site.
+            </p>
           </div>
         )}
       </div>
