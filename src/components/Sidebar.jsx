@@ -6,7 +6,6 @@ import {
   Package,
   Tag,
   Boxes,
-  Cpu,
   Layers,
   MapPin,
   Users,

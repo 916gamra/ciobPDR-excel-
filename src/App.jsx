@@ -659,6 +659,22 @@ export default function App() {
     handleDelete: handleDeleteWarehouseItem,
   } = useGenericCRUD(setWarehouseItems, 'id');
 
+  const handleDirectAdjustStock = (article, newTargetStock) => {
+    // When directly adjusting real stock balance, calculate new stockInitial so that:
+    // stockActuel (stockInitial + entrees - sorties) equals newTargetStock
+    const entrees = Number(article.entrees || 0);
+    const sorties = Number(article.sorties || 0);
+    const newStockInitial = Math.max(0, Number(newTargetStock) - entrees + sorties);
+
+    setRawStock((prev) =>
+      prev.map((item) =>
+        item.id === article.id || item.ref === article.ref
+          ? { ...item, stockInitial: newStockInitial }
+          : item
+      )
+    );
+  };
+
   const handleQuickSortie = (article) => {
     // Navigate to Sortie Rapide tab
     React.startTransition(() => setCurrentTab('sortie'));
@@ -1087,8 +1103,15 @@ export default function App() {
                 stockAlertOnly={stockAlertOnly}
                 setStockAlertOnly={setStockAlertOnly}
                 types={types}
+                zones={zones}
+                machines={machines}
+                technicians={technicians}
+                operations={operations}
                 onOpenAddArticle={() => setShowAddArticleModal(true)}
                 onQuickSortie={handleQuickSortie}
+                onAddMouvement={handleAddMouvement}
+                onUpdateArticle={handleUpdateArticle}
+                onDirectAdjustStock={handleDirectAdjustStock}
                 stockKPIs={stockKPIs}
                 onNavigateToType={handleNavigateToStockFiltered}
               />
@@ -1161,6 +1184,8 @@ export default function App() {
                 onAddWarehouseItem={handleAddWarehouseItem}
                 onUpdateWarehouseItem={handleUpdateWarehouseItem}
                 onDeleteWarehouseItem={handleDeleteWarehouseItem}
+                onAddMouvement={handleAddMouvement}
+                mouvements={mouvements}
                 families={families}
                 templates={templates}
                 types={types}

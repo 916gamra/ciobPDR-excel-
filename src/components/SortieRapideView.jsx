@@ -15,7 +15,7 @@ import {
   ArrowRight,
   TrendingDown,
   TrendingUp,
-  Cpu, Settings,
+  Puzzle,
   MapPin,
   Users,
   Building2,
@@ -1893,7 +1893,7 @@ export default function SortieRapideView({
                         : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-purple-50/40 hover:border-purple-200 hover:text-purple-900'
                     }`}
                   >
-                    <Settings className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
+                    <Layers className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
                     <span>PARTIE (Entrepôt)</span>
                   </button>
 
@@ -1905,11 +1905,11 @@ export default function SortieRapideView({
                     }}
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.item_source === 'WAREHOUSE_COMPOSANT'
-                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-2xs'
-                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-blue-50/40 hover:border-blue-200 hover:text-blue-900'
+                        ? 'bg-indigo-50 border-indigo-400 text-indigo-950 font-bold ring-2 ring-indigo-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-indigo-50/40 hover:border-indigo-200 hover:text-indigo-900'
                     }`}
                   >
-                    <Wrench className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_COMPOSANT' ? 'text-blue-600' : 'text-blue-600/80'}`} />
+                    <Puzzle className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_COMPOSANT' ? 'text-indigo-600' : 'text-indigo-600/80'}`} />
                     <span>COMPOSANT</span>
                   </button>
                 </div>
@@ -1952,7 +1952,7 @@ export default function SortieRapideView({
                         : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-purple-50/40 hover:border-purple-200 hover:text-purple-900'
                     }`}
                   >
-                    <Settings className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
+                    <Layers className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
                     <span>Entrepôt: PARTIE</span>
                   </button>
 
@@ -1964,11 +1964,11 @@ export default function SortieRapideView({
                     }}
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.destination_type === 'WAREHOUSE_COMPOSANT'
-                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-2xs'
-                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-blue-50/40 hover:border-blue-200 hover:text-blue-900'
+                        ? 'bg-indigo-50 border-indigo-400 text-indigo-950 font-bold ring-2 ring-indigo-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-indigo-50/40 hover:border-indigo-200 hover:text-indigo-900'
                     }`}
                   >
-                    <Wrench className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_COMPOSANT' ? 'text-blue-600' : 'text-blue-600/80'}`} />
+                    <Puzzle className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_COMPOSANT' ? 'text-indigo-600' : 'text-indigo-600/80'}`} />
                     <span>Entrepôt: COMPOSANT</span>
                   </button>
                 </div>
@@ -2000,7 +2000,7 @@ export default function SortieRapideView({
                         : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-purple-50/40 hover:border-purple-200 hover:text-purple-900'
                     }`}
                   >
-                    <Settings className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
+                    <Layers className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
                     <span className="truncate">PARTIE (Organe)</span>
                   </button>
 
@@ -2012,11 +2012,11 @@ export default function SortieRapideView({
                     }}
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.item_source === 'WAREHOUSE_COMPOSANT'
-                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-2xs'
-                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-blue-50/40 hover:border-blue-200 hover:text-blue-900'
+                        ? 'bg-indigo-50 border-indigo-400 text-indigo-950 font-bold ring-2 ring-indigo-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-indigo-50/40 hover:border-indigo-200 hover:text-indigo-900'
                     }`}
                   >
-                    <Wrench className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_COMPOSANT' ? 'text-blue-600' : 'text-blue-600/80'}`} />
+                    <Puzzle className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_COMPOSANT' ? 'text-indigo-600' : 'text-indigo-600/80'}`} />
                     <span className="truncate">COMPOSANT (Moteur...)</span>
                   </button>
 
@@ -2076,7 +2076,7 @@ export default function SortieRapideView({
                         : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-purple-50/40 hover:border-purple-200 hover:text-purple-900'
                     }`}
                   >
-                    <Settings className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
+                    <Layers className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
                     <span>PARTIE (Entrepôt)</span>
                   </button>
 
@@ -2088,11 +2088,11 @@ export default function SortieRapideView({
                     }}
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.item_source === 'WAREHOUSE_COMPOSANT'
-                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-2xs'
-                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-blue-50/40 hover:border-blue-200 hover:text-blue-900'
+                        ? 'bg-indigo-50 border-indigo-400 text-indigo-950 font-bold ring-2 ring-indigo-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-indigo-50/40 hover:border-indigo-200 hover:text-indigo-900'
                     }`}
                   >
-                    <Wrench className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_COMPOSANT' ? 'text-blue-600' : 'text-blue-600/80'}`} />
+                    <Puzzle className={`w-3.5 h-3.5 ${form.item_source === 'WAREHOUSE_COMPOSANT' ? 'text-indigo-600' : 'text-indigo-600/80'}`} />
                     <span>COMPOSANT</span>
                   </button>
                 </div>
@@ -2135,7 +2135,7 @@ export default function SortieRapideView({
                         : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-purple-50/40 hover:border-purple-200 hover:text-purple-900'
                     }`}
                   >
-                    <Settings className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
+                    <Layers className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_PARTIE' ? 'text-purple-600' : 'text-purple-600/80'}`} />
                     <span>PARTIE (Entrepôt)</span>
                   </button>
 
@@ -2147,11 +2147,11 @@ export default function SortieRapideView({
                     }}
                     className={`py-2 px-2 rounded-xl text-xs font-bold transition border cursor-pointer flex items-center justify-center gap-1.5 ${
                       form.destination_type === 'WAREHOUSE_COMPOSANT'
-                        ? 'bg-blue-50 border-blue-400 text-blue-950 font-bold ring-2 ring-blue-500/20 shadow-2xs'
-                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-blue-50/40 hover:border-blue-200 hover:text-blue-900'
+                        ? 'bg-indigo-50 border-indigo-400 text-indigo-950 font-bold ring-2 ring-indigo-500/20 shadow-2xs'
+                        : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-indigo-50/40 hover:border-indigo-200 hover:text-indigo-900'
                     }`}
                   >
-                    <Wrench className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_COMPOSANT' ? 'text-blue-600' : 'text-blue-600/80'}`} />
+                    <Puzzle className={`w-3.5 h-3.5 ${form.destination_type === 'WAREHOUSE_COMPOSANT' ? 'text-indigo-600' : 'text-indigo-600/80'}`} />
                     <span>COMPOSANT</span>
                   </button>
                 </div>
@@ -4791,13 +4791,22 @@ export default function SortieRapideView({
                 <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
                   <span className="text-slate-400 font-bold text-[10.5px] uppercase shrink-0">Source Sélectionnée :</span>
                   {searchActiveTab === 'STOCK_PDR' && (
-                    <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg font-bold">📦 Catalogue PDR ({stockItems.length})</span>
+                    <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg font-bold inline-flex items-center gap-1.5">
+                      <Package className="w-3.5 h-3.5 text-emerald-700" />
+                      Catalogue PDR ({stockItems.length})
+                    </span>
                   )}
                   {searchActiveTab === 'WAREHOUSE_PARTIE' && (
-                    <span className="bg-purple-100 text-purple-800 border border-purple-200 px-2.5 py-1 rounded-lg font-bold">⚙️ Entrepôt: PARTIES ({warehouseItems.filter((w) => w.category === 'PARTIE' || w.nature === 'PARTIE').length})</span>
+                    <span className="bg-purple-100 text-purple-800 border border-purple-200 px-2.5 py-1 rounded-lg font-bold inline-flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-purple-700" />
+                      Entrepôt: PARTIES ({warehouseItems.filter((w) => w.category === 'PARTIE' || w.nature === 'PARTIE').length})
+                    </span>
                   )}
                   {searchActiveTab === 'WAREHOUSE_COMPOSANT' && (
-                    <span className="bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-1 rounded-lg font-bold">🔧 Entrepôt: COMPOSANTS ({warehouseItems.filter((w) => w.category === 'COMPOSANT' || w.nature === 'COMPOSANT').length})</span>
+                    <span className="bg-indigo-100 text-indigo-800 border border-indigo-200 px-2.5 py-1 rounded-lg font-bold inline-flex items-center gap-1.5">
+                      <Puzzle className="w-3.5 h-3.5 text-indigo-700" />
+                      Entrepôt: COMPOSANTS ({warehouseItems.filter((w) => w.category === 'COMPOSANT' || w.nature === 'COMPOSANT').length})
+                    </span>
                   )}
                 </div>
                 {searchActiveTab === 'STOCK_PDR' && onOpenAddArticle && (

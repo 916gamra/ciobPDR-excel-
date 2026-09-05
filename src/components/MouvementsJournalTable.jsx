@@ -47,6 +47,7 @@ import {
   MessageSquare,
   Gauge,
   ShieldCheck,
+  Puzzle,
 } from 'lucide-react';
 
 /**
@@ -1321,12 +1322,12 @@ export default function MouvementsJournalTable({
                 {
                   value: 'WAREHOUSE_PARTIE',
                   label: '[C] Machine Twin (Partie)',
-                  icon: <Settings className="w-3.5 h-3.5 text-purple-600" />,
+                  icon: <Layers className="w-3.5 h-3.5 text-purple-600" />,
                 },
                 {
                   value: 'WAREHOUSE_COMPOSANT',
                   label: '[C] Composant Révisé',
-                  icon: <Layers className="w-3.5 h-3.5 text-blue-600" />,
+                  icon: <Puzzle className="w-3.5 h-3.5 text-indigo-600" />,
                 },
               ]}
             />
@@ -1802,13 +1803,13 @@ export default function MouvementsJournalTable({
                       <td className="py-2 px-2.5 text-center whitespace-nowrap">
                         {sourceCat === 'WAREHOUSE_PARTIE' ? (
                           <div className="inline-flex items-center gap-1.5 text-purple-600" title="Machine Twin (Partie)">
-                            <Settings className="w-4 h-4 text-purple-600 shrink-0" />
+                            <Layers className="w-4 h-4 text-purple-600 shrink-0" />
                             <span className="text-[10.5px] font-semibold text-purple-700">Partie</span>
                           </div>
                         ) : sourceCat === 'WAREHOUSE_COMPOSANT' ? (
-                          <div className="inline-flex items-center gap-1.5 text-blue-600" title="Composant Révisé">
-                            <Layers className="w-4 h-4 text-blue-600 shrink-0" />
-                            <span className="text-[10.5px] font-semibold text-blue-700">Composant</span>
+                          <div className="inline-flex items-center gap-1.5 text-indigo-600" title="Composant Révisé">
+                            <Puzzle className="w-4 h-4 text-indigo-600 shrink-0" />
+                            <span className="text-[10.5px] font-semibold text-indigo-700">Composant</span>
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-1.5 text-emerald-600" title="Catalogue PDR (Stock)">
