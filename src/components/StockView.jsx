@@ -385,60 +385,64 @@ export default function StockView({
 
       {/* Excel Formula Preview Banner Cards (Excel Twin Model Formulas) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              FORMULE F : ENTRÉES
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <TrendingUp className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="truncate">Formule F : Entrées</span>
             </div>
-            <div className="font-mono text-xs text-blue-700 font-bold mt-0.5">
-              =SUMIFS(Mvt[Qté], Mvt[Type], "Entrée")
-            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+              Col. [F] (+)
+            </span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60">
-            Entrées +
-          </span>
+          <div className="font-mono text-xs text-blue-700 font-bold">
+            =SUMIFS(Mvt[Qté], Mvt[Type], "Entrée")
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              FORMULE G : SORTIES
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <TrendingDown className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+              <span className="truncate">Formule G : Sorties</span>
             </div>
-            <div className="font-mono text-xs text-rose-700 font-bold mt-0.5">
-              =SUMIFS(Mvt[Qté], Mvt[Type], "Sortie")
-            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 shrink-0">
+              Col. [G] (−)
+            </span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200/60">
-            Sorties -
-          </span>
+          <div className="font-mono text-xs text-rose-700 font-bold">
+            =SUMIFS(Mvt[Qté], Mvt[Type], "Sortie")
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              FORMULE H : STOCK ACTUEL
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <Package className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="truncate">Formule H : Stock Actuel</span>
             </div>
-            <div className="font-mono text-xs text-emerald-700 font-bold mt-0.5">
-              = E + F - G (Init + Ent - Sort)
-            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+              Col. [H] = E+F−G
+            </span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-            Solde =
-          </span>
+          <div className="font-mono text-xs text-emerald-700 font-bold">
+            = Initial (E) + Entrées (F) - Sorties (G)
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              FORMULE J : ALERTE
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <span className="truncate">Formule J : Alerte</span>
             </div>
-            <div className="font-mono text-xs text-amber-700 font-bold mt-0.5">
-              =IF(H&lt;=0, "RUPTURE", IF(H&lt;=I, "ALERTE", "OK"))
-            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+              Col. [J] Statut
+            </span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200/60">
-            Statut !
-          </span>
+          <div className="font-mono text-xs text-amber-700 font-bold">
+            =IF(H&lt;=0, "RUPTURE", IF(H&lt;=I, "ALERTE", "OK"))
+          </div>
         </div>
       </div>
 
@@ -470,8 +474,14 @@ export default function StockView({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 items-end">
           {/* Search */}
           <div className="w-full">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Recherche Article
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                Recherche Article
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                Col. B+C
+              </span>
             </label>
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -480,7 +490,7 @@ export default function StockView({
                 placeholder="Ref, désignation, emplacement..."
                 value={localSearch}
                 onChange={(e) => setLocalSearch(e.target.value)}
-                className="w-full h-9 pl-9 pr-3 rounded-xl border border-slate-200 bg-slate-50/70 text-xs font-semibold focus:bg-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                className="w-full h-9 pl-9 pr-8 rounded-xl border border-slate-200 bg-slate-50/70 text-xs font-semibold focus:bg-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
               />
               {localSearch && (
                 <button
@@ -496,20 +506,37 @@ export default function StockView({
 
           {/* Type Filter */}
           <div className="w-full">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Type de Pièce (D)
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Package className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                Type de Pièce
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-50 text-cyan-700 border border-cyan-200">
+                Col. D
+              </span>
             </label>
             <CustomSelect
               value={stockTypeFilter}
               onChange={(val) => setStockTypeFilter(val)}
               options={[
-                { value: 'ALL', label: `Tous les Types (${types.length})` },
+                {
+                  value: 'ALL',
+                  label: `Tous les Types (${types.length})`,
+                  badge: `[${stockItems.length}]`,
+                  badgeColor: 'bg-cyan-50 text-cyan-800',
+                },
                 ...types.map((t) => {
                   const val = typeof t === 'string' ? t : t.id_type || t.libelle;
                   const label = typeof t === 'string' ? t : t.libelle || t.id_type;
+                  const count = stockItems.filter(
+                    (s) =>
+                      String(s.id_type || s.type || '').toLowerCase() === String(val).toLowerCase()
+                  ).length;
                   return {
                     value: val,
                     label: `[D] ${label}`,
+                    badge: `[${count}]`,
+                    badgeColor: 'bg-cyan-50 text-cyan-800',
                   };
                 }),
               ]}
@@ -518,8 +545,14 @@ export default function StockView({
 
           {/* Alert / State Filter */}
           <div className="w-full">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Filtrer par Alerte / État
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                Filtrer par Alerte / État
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                Col. J
+              </span>
             </label>
             <button
               onClick={() => {
@@ -530,25 +563,36 @@ export default function StockView({
                   setActiveKpiFilter('ALL');
                 }
               }}
-              className={`w-full h-9 px-3 rounded-xl border text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`w-full h-9 px-3 rounded-xl border text-xs font-semibold transition flex items-center justify-between cursor-pointer ${
                 stockAlertOnly || activeKpiFilter !== 'ALL'
                   ? 'bg-amber-50 text-amber-900 border-amber-300 ring-1 ring-amber-200'
                   : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
               }`}
             >
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              <span>
-                {stockAlertOnly || activeKpiFilter !== 'ALL'
-                  ? `Filtre actif : ${activeKpiFilter !== 'ALL' ? activeKpiFilter : 'Alertes'}`
-                  : `Alertes & Ruptures (${(stockKPIs.ruptures || 0) + (stockKPIs.alertes || 0)})`}
+              <div className="flex items-center gap-1.5 truncate">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span className="truncate">
+                  {stockAlertOnly || activeKpiFilter !== 'ALL'
+                    ? `Actif : ${activeKpiFilter !== 'ALL' ? activeKpiFilter : 'Alertes'}`
+                    : 'Alertes & Ruptures'}
+                </span>
+              </div>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-100/70 text-amber-800 shrink-0">
+                {(stockKPIs.ruptures || 0) + (stockKPIs.alertes || 0)}
               </span>
             </button>
           </div>
 
           {/* Sort By Dropdown Menu Button */}
           <div className="w-full relative" ref={sortMenuRef}>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Tri & Ordre
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                Tri & Ordre
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                Col. B→K
+              </span>
             </label>
             <button
               onClick={() => setShowSortMenu(!showSortMenu)}
@@ -559,16 +603,20 @@ export default function StockView({
               }`}
               title="Options de tri par colonne"
             >
-              <div className="flex items-center gap-2 truncate">
+              <div className="flex items-center gap-1.5 truncate">
                 <ArrowUpDown className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
                 <span className="truncate">
-                  Tri : <b className="font-mono text-slate-900">{sortField.toUpperCase()}</b> (
-                  {sortOrder === 'asc' ? 'A→Z' : 'Z→A'})
+                  Tri : <b className="font-mono text-slate-900">{sortField.slice(0, 8).toUpperCase()}</b>
                 </span>
               </div>
-              <ChevronDown
-                className={`w-3 h-3 text-slate-400 transition-transform shrink-0 ${showSortMenu ? 'rotate-180' : ''}`}
-              />
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-100/70 text-cyan-800">
+                  {sortOrder === 'asc' ? 'A→Z' : 'Z→A'}
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${showSortMenu ? 'rotate-180' : ''}`}
+                />
+              </div>
             </button>
 
             {/* Sort Popover Menu */}

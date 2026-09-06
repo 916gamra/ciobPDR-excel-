@@ -21,6 +21,8 @@ import {
   ChevronDown,
   ArrowDown,
   ArrowUp,
+  TrendingUp,
+  X,
 } from 'lucide-react';
 
 const TYPE_STYLES = {
@@ -80,25 +82,25 @@ export default function DesignationView({
   // Filtered and sorted designations
   const filtered = designations
     .filter((d) => {
-      if (
-        desigTypeFilter !== 'ALL' &&
-        d.id_type !== desigTypeFilter &&
-        d.type !== desigTypeFilter
-      ) {
-        return false;
+      if (desigTypeFilter !== 'ALL') {
+        const targetType = String(desigTypeFilter).trim().toLowerCase();
+        const dType = String(d.id_type || d.type || '').trim().toLowerCase();
+        if (dType !== targetType) {
+          return false;
+        }
       }
       if (search) {
         const q = search.toLowerCase();
-        const r = String(d.ref || d.id_designation || '').toLowerCase();
-        const name = String(d.designation || '').toLowerCase();
+        const r = String(d.ref || d.id_designation || d.id_diag || '').toLowerCase();
+        const name = String(d.designation || d.libelle || d.nom || '').toLowerCase();
         const t = String(d.id_type || d.type || '').toLowerCase();
         return r.includes(q) || name.includes(q) || t.includes(q);
       }
       return true;
     })
     .sort((a, b) => {
-      const refA = String(a.ref || a.id_designation || '');
-      const refB = String(b.ref || b.id_designation || '');
+      const refA = String(a.ref || a.id_designation || a.id_diag || '');
+      const refB = String(b.ref || b.id_designation || b.id_diag || '');
       return refA.localeCompare(refB, undefined, { numeric: true, sensitivity: 'base' });
     });
 
@@ -161,9 +163,12 @@ export default function DesignationView({
 
   const sortMenuRef = useRef(null);
 
-  useEffect(() => {
+  const [prevFilterKey, setPrevFilterKey] = useState(() => `${search}_${desigTypeFilter}_${sortField}_${sortOrder}`);
+  const currentFilterKey = `${search}_${desigTypeFilter}_${sortField}_${sortOrder}`;
+  if (prevFilterKey !== currentFilterKey) {
+    setPrevFilterKey(currentFilterKey);
     setCurrentPage(1);
-  }, [search, desigTypeFilter, sortField, sortOrder]);
+  }
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -243,11 +248,10 @@ export default function DesignationView({
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-              Désignations d'Articles
+              Désignations d&apos;Articles
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Équivalent des <b className="text-indigo-600">Templates</b> pour les machines: chaque
-              Désignation est rattachée à un <b className="text-cyan-600">Type (Family)</b>.
+              Catalogue d&apos;articles de stock et pièces de rechange rattachés à un <b className="text-cyan-600">Type parent</b> (ex: Foret Beton Ø12 → Foret).
             </p>
           </div>
         </div>
@@ -270,45 +274,48 @@ export default function DesignationView({
 
       {/* Excel Formula Guidance Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
-              Formule C (Type Parente)
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <Layers className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+              <span className="truncate">Formule Type Parente</span>
             </div>
-            <div className="font-mono text-xs text-cyan-700 font-semibold mt-0.5">
-              =[@id_type] (Clé Type)
-            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-cyan-50 text-cyan-700 border border-cyan-200 shrink-0">
+              Col. [C]
+            </span>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center font-bold text-xs">
-            C
-          </div>
-        </div>
-
-        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
-              Formule D (Nb Articles Stock)
-            </div>
-            <div className="font-mono text-xs text-indigo-700 font-semibold mt-0.5">
-              =COUNTIF(Stock_Actuel!C:C, [@designation])
-            </div>
-          </div>
-          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold text-xs">
-            D
+          <div className="font-mono text-xs text-cyan-700 font-bold">
+            =[@id_type] (Clé Type)
           </div>
         </div>
 
-        <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
-              Formule E (Quantité en Stock)
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <Package className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span className="truncate">Nb Articles Stock</span>
             </div>
-            <div className="font-mono text-xs text-emerald-700 font-semibold mt-0.5">
-              =SUMIF(Stock!C:C, [@designation], Stock!H:H)
-            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+              Col. [D]
+            </span>
           </div>
-          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
-            E
+          <div className="font-mono text-xs text-indigo-700 font-bold">
+            =COUNTIF(Stock_Actuel!C:C, [@designation])
+          </div>
+        </div>
+
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="truncate">Quantité Totale en Stock</span>
+            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+              Col. [E]
+            </span>
+          </div>
+          <div className="font-mono text-xs text-emerald-700 font-bold">
+            =SUMIF(Stock!C:C, [@designation], Stock!H:H)
           </div>
         </div>
       </div>
@@ -343,8 +350,14 @@ export default function DesignationView({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
           {/* Search */}
           <div className="w-full">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-              Recherche
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                Recherche
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                Col. A+B
+              </span>
             </label>
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -360,18 +373,38 @@ export default function DesignationView({
 
           {/* Type Filter Select */}
           <div className="w-full">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                Type Parente
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-cyan-50 text-cyan-700 border border-cyan-200">
+                Col. C
+              </span>
+            </label>
             <CustomSelect
-              label="Type Parente (Col C)"
               value={desigTypeFilter}
               onChange={(val) => setDesigTypeFilter(val)}
               options={[
-                { value: 'ALL', label: `Tous les Types (${types.length})` },
+                {
+                  value: 'ALL',
+                  label: `Tous les Types (${types.length})`,
+                  badge: `${designations.length}`,
+                  badgeColor: 'bg-slate-100 text-slate-700 font-bold',
+                },
                 ...types.map((t) => {
                   const val = typeof t === 'string' ? t : t.id_type || t.libelle;
                   const label = typeof t === 'string' ? t : t.libelle || t.id_type;
+                  const targetValLower = String(val).trim().toLowerCase();
+                  const count = designations.filter((d) => {
+                    const dt = String(d.id_type || d.type || '').trim().toLowerCase();
+                    return dt === targetValLower;
+                  }).length;
                   return {
                     value: val,
-                    label: `[C] ${label}`,
+                    label: label,
+                    badge: `${count}`,
+                    badgeColor: 'bg-cyan-50 text-cyan-800 font-bold',
                   };
                 }),
               ]}
@@ -380,8 +413,14 @@ export default function DesignationView({
 
           {/* Sort Dropdown */}
           <div className="w-full relative" ref={sortMenuRef}>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-              Tri des enregistrements
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                Tri des enregistrements
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                Col. A→E
+              </span>
             </label>
             <button
               onClick={() => setShowSortMenu(!showSortMenu)}
@@ -540,13 +579,18 @@ export default function DesignationView({
             </thead>
             <tbody className="divide-y divide-slate-200/80">
               {displayedData.map((item, idx) => {
-                const stockMatch = stockItems.find(
-                  (s) =>
-                    s.ref === item.ref ||
-                    (s.designation && String(s.designation).toLowerCase() === String(item.designation || '').toLowerCase())
-                );
+                const itemRefKey = String(item.ref || item.id_designation || item.id_diag || '').trim().toLowerCase();
+                const itemDesigKey = String(item.designation || item.libelle || item.nom || '').trim().toLowerCase();
 
-                const currentStock = stockMatch ? stockMatch.stockActuel : item.stockInitial || 0;
+                const stockMatch = stockItems.find((s) => {
+                  const sRef = String(s.ref || '').trim().toLowerCase();
+                  const sDesig = String(s.designation || '').trim().toLowerCase();
+                  if (itemRefKey && sRef === itemRefKey) return true;
+                  if (itemDesigKey && sDesig === itemDesigKey) return true;
+                  return false;
+                });
+
+                const currentStock = stockMatch ? stockMatch.stockActuel : (item.stockActuel != null ? item.stockActuel : item.stockInitial || 0);
                 const threshold = stockMatch ? stockMatch.seuil : item.seuil || 3;
                 const alertStatus = stockMatch
                   ? stockMatch.alerte
@@ -556,11 +600,13 @@ export default function DesignationView({
                       ? 'ALERTE'
                       : 'OK';
                 const location = stockMatch ? stockMatch.emplacement : item.emplacement || 'A1-R1';
-                const typeName = item.id_type || item.type || 'Standard';
+                const typeName = item.id_type || item.type || (stockMatch ? stockMatch.type || stockMatch.id_type : 'Standard');
+                const refDisplay = item.ref || item.id_designation || item.id_diag || (stockMatch ? stockMatch.ref : 'N/A');
+                const desigDisplay = item.designation || item.libelle || item.nom || (stockMatch ? stockMatch.designation : 'Sans désignation');
 
                 return (
                   <tr
-                    key={item.ref || item.id_designation || idx}
+                    key={item.id || item.ref || item.id_designation || item.id_diag || idx}
                     className="even:bg-slate-50/80 odd:bg-white hover:bg-slate-100/70 border-b border-slate-200/70 transition-colors"
                   >
                     {/* Row N° Column */}
@@ -569,11 +615,11 @@ export default function DesignationView({
                     </td>
                     <td className="py-3 px-4 font-mono font-bold text-slate-900">
                       <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[11.5px]">
-                        {item.ref || item.id_designation}
+                        {refDisplay}
                       </span>
                     </td>
                     <td className="py-3 px-4 font-semibold text-slate-900 text-[13px]">
-                      {item.designation}
+                      {desigDisplay}
                     </td>
                     <td className="py-3 px-4">
                       <button
@@ -708,10 +754,10 @@ export default function DesignationView({
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200">
             <h3 className="font-bold text-base text-slate-900 mb-1">
-              + Nouvelle Désignation (Template)
+              + Nouvelle Désignation d&apos;Article
             </h3>
             <p className="text-xs text-slate-500 mb-4">
-              Désignation d'article associée à un Type parent (ex: FORET001 → Foret Beton Ø12).
+              Désignation d&apos;article associée à un Type parent (ex: FORET001 → Foret Beton Ø12).
             </p>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
@@ -761,7 +807,7 @@ export default function DesignationView({
 
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Désignation d'Article
+                  Désignation d&apos;Article
                 </label>
                 <input
                   type="text"

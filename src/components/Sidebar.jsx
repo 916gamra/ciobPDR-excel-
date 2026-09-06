@@ -22,7 +22,13 @@ import {
   Sun,
   Moon,
   LogOut,
+  FileText,
+  Boxes as BoxesIcon,
+  SwatchBook,
 } from 'lucide-react';
+import { Engine } from './icons/Engine';
+import { PlayingCardsFan } from './icons/PlayingCardsFan';
+import { RoboticHand } from './icons/RoboticHand';
 
 export default function Sidebar({
   currentTab,
@@ -292,14 +298,14 @@ export default function Sidebar({
             </div>
           </div>
 
-          {/* GROUPE 2: PARC MACHINES & ENTREPÔT */}
+          {/* GROUPE 2: PARC MACHINES */}
           <div>
             <div className="px-3 mb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
               <Factory className="w-3.5 h-3.5 text-slate-400" />
-              <span>Parc Machines & Entrepôt</span>
+              <span>Parc Machines</span>
             </div>
             <div className="space-y-1">
-              {/* Machines Registered - Updated with Factory icon */}
+              {/* Machines Registered */}
               <button onClick={() => navTo('machines')} className={getTabClass('machines')}>
                 <span className="flex items-center gap-2.5">
                   <Factory
@@ -310,42 +316,115 @@ export default function Sidebar({
                 <span className={getBadgeClass('machines')}>{counts.machines || 0}</span>
               </button>
 
-              {/* Entrepôt (Éléments & Composants) - Twin of Machines */}
-              <button onClick={() => navTo('entrepot')} className={getTabClass('entrepot')}>
-                <span className="flex items-center gap-2.5">
-                  <Warehouse
-                    className={`w-4 h-4 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}
-                  />
-                  <span>Entrepôt (Éléments)</span>
-                </span>
-                <span className={getBadgeClass('entrepot')}>{counts.warehouse || 0}</span>
-              </button>
-
-              {/* Families - Updated with Boxes icon */}
+              {/* Families (Machines) */}
               <button onClick={() => navTo('families')} className={getTabClass('families', true)}>
                 <span className="flex items-center gap-2">
-                  <Boxes
+                  <RoboticHand
                     className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}
                   />
-                  <span>Familles</span>
+                  <span>Familles Machines</span>
                 </span>
                 <span className={getBadgeClass('families')}>{counts.families || 0}</span>
               </button>
 
-              {/* Templates */}
+              {/* Templates (Machines) */}
               <button onClick={() => navTo('templates')} className={getTabClass('templates', true)}>
                 <span className="flex items-center gap-2">
                   <Layers
                     className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}
                   />
-                  <span>Templates</span>
+                  <span>Templates Machines</span>
                 </span>
                 <span className={getBadgeClass('templates')}>{counts.templates || 0}</span>
               </button>
             </div>
           </div>
 
-          {/* GROUPE 3: ZONES & ÉQUIPES */}
+          {/* GROUPE 3: GROUPE ENTREPÔT (COMPONENTS & PARTS) */}
+          <div>
+            <div className="px-3 mb-1.5 text-[10px] font-bold tracking-wider text-teal-500 uppercase flex items-center gap-1.5">
+              <Warehouse className="w-3.5 h-3.5 text-teal-500" />
+              <span>Groupe Entrepôt</span>
+            </div>
+            <div className="space-y-1">
+              {/* Entrepôt Principal (Éléments, Composants & Parts) */}
+              <button onClick={() => navTo('entrepot')} className={getTabClass('entrepot')}>
+                <span className="flex items-center gap-2.5">
+                  <Warehouse
+                    className={`w-4 h-4 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}
+                  />
+                  <span>Entrepôt (Inventaire)</span>
+                </span>
+                <span className={getBadgeClass('entrepot')}>
+                  {counts.warehouse || counts.entrepot || 0}
+                </span>
+              </button>
+
+              {/* Components section header/sub-item */}
+              <button
+                onClick={() => navTo('comp_families')}
+                className={getTabClass('comp_families', true)}
+              >
+                <span className="flex items-center gap-2">
+                  <Engine
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}
+                  />
+                  <span>Familles (Composants)</span>
+                </span>
+                <span className={getBadgeClass('comp_families')}>
+                  {counts.compFamilies || 0}
+                </span>
+              </button>
+
+              <button
+                onClick={() => navTo('comp_templates')}
+                className={getTabClass('comp_templates', true)}
+              >
+                <span className="flex items-center gap-2">
+                  <Layers
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-teal-300' : 'text-teal-500'}`}
+                  />
+                  <span>Templates (Composants)</span>
+                </span>
+                <span className={getBadgeClass('comp_templates')}>
+                  {counts.compTemplates || 0}
+                </span>
+              </button>
+
+              {/* Parts section sub-items */}
+              <button
+                onClick={() => navTo('part_types')}
+                className={getTabClass('part_types', true)}
+              >
+                <span className="flex items-center gap-2">
+                  <SwatchBook
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}
+                  />
+                  <span>Types (Parts PDR)</span>
+                </span>
+                <span className={getBadgeClass('part_types')}>
+                  {counts.partTypes || 0}
+                </span>
+              </button>
+
+              <button
+                onClick={() => navTo('part_designations')}
+                className={getTabClass('part_designations', true)}
+              >
+                <span className="flex items-center gap-2">
+                  <PlayingCardsFan
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-emerald-300' : 'text-emerald-500'}`}
+                  />
+                  <span>Désignations (Parts PDR)</span>
+                </span>
+                <span className={getBadgeClass('part_designations')}>
+                  {counts.partDesignations || 0}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* GROUPE 4: ZONES & ÉQUIPES */}
           <div>
             <div className="px-3 mb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-slate-400" />
@@ -381,7 +460,7 @@ export default function Sidebar({
             </div>
           </div>
 
-          {/* GROUPE 4: OUTILS & RÉFÉRENTIEL */}
+          {/* GROUPE 5: OUTILS & RÉFÉRENTIEL */}
           <div
             className={`space-y-1 pt-2 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}
           >

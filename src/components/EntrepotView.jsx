@@ -3,6 +3,7 @@ import AnimatedPage from './AnimatedPage';
 import CustomSelect from './CustomSelect';
 import QuickMovementModal from './QuickMovementModal';
 import { generateWarehouseItemCode } from '../data/seedData';
+import { storageService } from '../utils/storageService';
 import {
   Boxes,
   Plus,
@@ -47,14 +48,20 @@ import {
   Activity,
   TrendingUp,
   Puzzle,
+  SwatchBook,
 } from 'lucide-react';
+import { Engine } from './icons/Engine';
 
 export default function EntrepotView({
   warehouseItems = [],
-  families = [],
-  templates = [],
-  types = [],
-  diagnostics = [],
+  families: propFamilies = [],
+  templates: propTemplates = [],
+  types: propTypes = [],
+  diagnostics: propDiagnostics = [],
+  compFamilies = [],
+  compTemplates = [],
+  partTypes = [],
+  partDesignations = [],
   stockItems = [],
   zones = [],
   machines = [],
@@ -86,6 +93,10 @@ export default function EntrepotView({
   onNavigateToZone,
   onNavigateToMachine,
 }) {
+  const families = compFamilies && compFamilies.length > 0 ? compFamilies : propFamilies;
+  const templates = compTemplates && compTemplates.length > 0 ? compTemplates : propTemplates;
+  const types = partTypes && partTypes.length > 0 ? partTypes : propTypes;
+  const diagnostics = partDesignations && partDesignations.length > 0 ? partDesignations : propDiagnostics;
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [toEdit, setToEdit] = useState(null);
@@ -158,15 +169,25 @@ export default function EntrepotView({
       }
     });
 
-    // 2. From saved localStorage
+    // 2. From saved storage (handles plain object, JSON string, or storageService cache)
     try {
-      const saved = localStorage.getItem('gmao_family_component_codes_v1');
+      const saved = storageService.getItem('gmao_family_component_codes_v1');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        Object.assign(initialMap, parsed);
+        if (typeof saved === 'object' && saved !== null) {
+          Object.assign(initialMap, saved);
+        } else if (typeof saved === 'string' && !saved.startsWith('WC:')) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed && typeof parsed === 'object') {
+              Object.assign(initialMap, parsed);
+            }
+          } catch {
+            // Ignore non-JSON strings
+          }
+        }
       }
     } catch (e) {
-      console.error(e);
+      // Ignore storage errors gracefully
     }
 
     // 3. From existing items in warehouseItems
@@ -193,12 +214,12 @@ export default function EntrepotView({
     return initialMap;
   });
 
-  // Persist familyComponentCodes to localStorage
+  // Persist familyComponentCodes via storageService
   useEffect(() => {
     try {
-      localStorage.setItem('gmao_family_component_codes_v1', JSON.stringify(familyComponentCodes));
+      storageService.setItem('gmao_family_component_codes_v1', familyComponentCodes);
     } catch (e) {
-      console.error(e);
+      // Ignore storage errors gracefully
     }
   }, [familyComponentCodes]);
 
@@ -956,7 +977,7 @@ export default function EntrepotView({
             </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-200/60">
-            <Layers className="w-5 h-5 text-blue-700" />
+            <Engine className="w-5 h-5 text-blue-700" />
           </div>
         </div>
 
@@ -984,7 +1005,7 @@ export default function EntrepotView({
             </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 border border-indigo-200/60">
-            <Puzzle className="w-5 h-5 text-indigo-700" />
+            <SwatchBook className="w-5 h-5 text-indigo-700" />
           </div>
         </div>
 
@@ -1018,62 +1039,64 @@ export default function EntrepotView({
 
       {/* 3. Excel Twin Formulas & Logic Reference Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Layers className="w-3 h-3 text-blue-600" />
-              <span>FORMULE TWIN : COMPONENT</span>
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <Engine className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="truncate">Formule Twin Component</span>
             </div>
-            <div className="font-mono text-xs text-blue-700 font-bold mt-0.5">
-              Code = Auto(Famille, Template)
-            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
+              Col. [D] + [E]
+            </span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/60">
-            [D] + [E]
-          </span>
+          <div className="font-mono text-xs text-blue-700 font-bold">
+            Code = Auto(Famille, Template)
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Puzzle className="w-3 h-3 text-indigo-600" />
-              <span>FORMULE TWIN : PART</span>
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <SwatchBook className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span className="truncate">Formule Twin Part</span>
             </div>
-            <div className="font-mono text-xs text-indigo-700 font-bold mt-0.5">
-              Code = Auto(Type, Désignation)
-            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+              Col. [B] + [C]
+            </span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-            [B] + [C]
-          </span>
+          <div className="font-mono text-xs text-indigo-700 font-bold">
+            Code = Auto(Type, Désignation)
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              CALCUL SOLDE STOCK
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="truncate">Calcul Solde Stock</span>
             </div>
-            <div className="font-mono text-xs text-emerald-700 font-bold mt-0.5">
-              Solde = Initial + Entrées - Sorties
-            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+              Col. [H] = E+F−G
+            </span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-            Solde =
-          </span>
+          <div className="font-mono text-xs text-emerald-700 font-bold">
+            Solde = Initial + Entrées - Sorties
+          </div>
         </div>
 
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              RATTACHEMENT DYNAMIQUE
+        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
+              <Boxes className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+              <span className="truncate">Rattachement Dynamique</span>
             </div>
-            <div className="font-mono text-xs text-purple-700 font-bold mt-0.5">
-              Machine ⟷ Zone ⟷ Entrepôt
-            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+              Col. [E] + [F]
+            </span>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200/60">
-            Flux PDR
-          </span>
+          <div className="font-mono text-xs text-purple-700 font-bold">
+            Machine ⟷ Zone ⟷ Entrepôt
+          </div>
         </div>
       </div>
 
@@ -1194,8 +1217,14 @@ export default function EntrepotView({
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
           {/* Field 1: Search Box */}
           <div className="space-y-1">
-            <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
-              Recherche Rapide
+            <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Search className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                Recherche Rapide
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                Col. A+C
+              </span>
             </label>
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1221,8 +1250,14 @@ export default function EntrepotView({
 
           {/* Field 2: Nature Twin Filter (Dual-Twin Switch) */}
           <div className="space-y-1">
-            <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
-              Nature (Dual Twin) (B)
+            <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                Nature (Dual Twin)
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-teal-50 text-teal-700 border border-teal-200">
+                Col. B
+              </span>
             </label>
             <CustomSelect
               value={currentNatureFilter}
@@ -1240,18 +1275,21 @@ export default function EntrepotView({
 
           {/* Field 3: Smart Classification Filter: Family for COMPONENT or Type for PART */}
           <div className="space-y-1">
-            <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
+            <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
               {isPartNature(currentNatureFilter) ? (
                 <span className="inline-flex items-center gap-1.5 text-indigo-700">
-                  <Puzzle className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                  Type de Part (B)
+                  <SwatchBook className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  Type de Part
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 text-blue-700">
-                  <Layers className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  Famille de Component (D)
+                  <Engine className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  Famille de Component
                 </span>
               )}
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                {isPartNature(currentNatureFilter) ? 'Col. B' : 'Col. D'}
+              </span>
             </label>
             {isPartNature(currentNatureFilter) ? (
               <CustomSelect
@@ -1297,8 +1335,14 @@ export default function EntrepotView({
 
           {/* Field 4: Rattachement Filter */}
           <div className="space-y-1">
-            <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
-              Rattachement & Emplacement (E)
+            <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                Rattachement & Emplacement
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200">
+                Col. E
+              </span>
             </label>
             <CustomSelect
               value={currentRattachementFilter}
@@ -1314,8 +1358,14 @@ export default function EntrepotView({
 
           {/* Field 5: Status Filter */}
           <div className="space-y-1">
-            <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
-              Statut Opérationnel (G)
+            <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                Statut Opérationnel
+              </span>
+              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Col. G
+              </span>
             </label>
             <CustomSelect
               value={currentStatusFilter}
@@ -1649,7 +1699,7 @@ export default function EntrepotView({
                         {isCompItem ? (
                           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs">
                             <div className="w-6 h-6 rounded-lg bg-blue-100/80 flex items-center justify-center shrink-0">
-                              <Layers className="w-3.5 h-3.5 text-blue-600" />
+                              <Engine className="w-3.5 h-3.5 text-blue-600" />
                             </div>
                             <div>
                               <span className="font-extrabold text-[11px] block leading-tight">COMPONENT</span>
@@ -1659,7 +1709,7 @@ export default function EntrepotView({
                         ) : (
                           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs">
                             <div className="w-6 h-6 rounded-lg bg-indigo-100/80 flex items-center justify-center shrink-0">
-                              <Puzzle className="w-3.5 h-3.5 text-indigo-600" />
+                              <SwatchBook className="w-3.5 h-3.5 text-indigo-600" />
                             </div>
                             <div>
                               <span className="font-extrabold text-[11px] block leading-tight">PART</span>
@@ -1710,7 +1760,7 @@ export default function EntrepotView({
                               className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-50/80 hover:bg-blue-100 text-blue-700 border border-blue-200/70 font-semibold text-[11px] transition cursor-pointer max-w-[190px] truncate"
                               title={`Famille: ${famObj?.libelle || item.id_family}`}
                             >
-                              <Boxes className="w-3 h-3 text-blue-600 shrink-0" />
+                              <Engine className="w-3 h-3 text-blue-600 shrink-0" />
                               <span className="truncate">{famObj?.libelle || item.id_family || 'Famille'}</span>
                             </button>
                             {tplObj && (
@@ -1735,7 +1785,7 @@ export default function EntrepotView({
                               className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 font-semibold text-[11px] transition cursor-pointer max-w-[190px] truncate"
                               title={`Type: ${typeObj?.libelle || item.id_type}`}
                             >
-                              <Puzzle className="w-3 h-3 text-indigo-600 shrink-0" />
+                              <SwatchBook className="w-3 h-3 text-indigo-600 shrink-0" />
                               <span className="truncate">{typeObj?.libelle || item.id_type || 'Type'}</span>
                             </button>
                             {diagObj && (
@@ -2101,7 +2151,7 @@ export default function EntrepotView({
                         : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <Layers className="w-3.5 h-3.5" />
+                    <Engine className="w-3.5 h-3.5" />
                     <span>Component (Twin Machine)</span>
                   </button>
                   <button
@@ -2113,7 +2163,7 @@ export default function EntrepotView({
                         : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <Puzzle className="w-3.5 h-3.5" />
+                    <SwatchBook className="w-3.5 h-3.5" />
                     <span>Part (Twin Stock)</span>
                   </button>
                 </div>

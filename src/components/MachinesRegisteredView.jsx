@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import AnimatedPage from './AnimatedPage';
 import CustomSelect from './CustomSelect';
+import { RoboticHand } from './icons/RoboticHand';
 import {
   Factory,
   Plus,
@@ -21,7 +22,6 @@ import {
   ChevronDown,
   ArrowDown,
   ArrowUp,
-  Boxes,
   Activity,
   Cpu,
   Sparkles,
@@ -80,15 +80,14 @@ export default function MachinesRegisteredView({
     return families.filter((f) => usedFamilyIds.has(f.id_family));
   }, [families, machines]);
 
-  // Cascading templates based on selected family and existing registered machines
+  // Cascading templates based on selected family
   const availableTemplates = useMemo(() => {
     let relTemplates = templates;
     if (mchFamilyFilter !== 'ALL') {
       relTemplates = templates.filter((t) => t.id_family === mchFamilyFilter);
     }
-    const usedTemplateIds = new Set(machines.map((m) => m.id_templates).filter(Boolean));
-    return relTemplates.filter((t) => usedTemplateIds.has(t.id_templates));
-  }, [templates, mchFamilyFilter, machines]);
+    return relTemplates;
+  }, [templates, mchFamilyFilter]);
 
   // Calculate Interventions Count Map per Machine for high efficiency
   const sortiesCountMap = useMemo(() => {
@@ -663,7 +662,7 @@ export default function MachinesRegisteredView({
                   title="Cliquer pour trier par Famille"
                 >
                   <div className="flex items-center gap-1.5">
-                    <Boxes className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                    <RoboticHand className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
                     <span>FAMILLE</span>
                     <span className="text-slate-400 font-normal text-[10px]">(D)</span>
                     {renderSortIcon('id_family')}
@@ -809,7 +808,7 @@ export default function MachinesRegisteredView({
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-800 border border-cyan-200 text-[11px] font-mono font-bold hover:bg-cyan-100 hover:border-cyan-300 transition cursor-pointer shadow-2xs"
                           title="Filtrer par cette Famille"
                         >
-                          <Boxes className="w-3 h-3 text-cyan-600" />
+                          <RoboticHand className="w-3 h-3 text-cyan-600" />
                           <span>{m.id_family}</span>
                         </button>
                       </td>

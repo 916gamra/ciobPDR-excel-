@@ -403,7 +403,7 @@ export default function TypeView({
                         onNavigateToDesignationsFiltered(typeVal)
                       }
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 text-xs font-semibold transition group shadow-2xs"
-                      title="Voir les Désignations (Templates) liées à ce Type"
+                      title="Voir les Désignations d'Articles liées à ce Type"
                     >
                       <BadgeCheck className="w-3.5 h-3.5 text-indigo-600" />
                       <span>{desigCount} désignations</span>

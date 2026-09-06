@@ -24,13 +24,13 @@ export default function Header({
         return "Types d'Articles • Nomenclature Parent";
       case 'designations':
       case 'diagnostics':
-        return "Désignations d'Articles • Catalogue (Templates)";
+        return "Désignations d'Articles • Catalogue Pièces & PDR";
       case 'machines':
         return 'Machines Registered • Twin Principal';
       case 'families':
         return 'Familles de Machines • Nomenclature';
       case 'templates':
-        return 'Templates & Modèles • Nomenclature';
+        return 'Templates de Machines • Modèles Rattachés aux Familles';
       case 'zones':
         return 'Zones & Ateliers • Cartographie';
       case 'technicians':
@@ -39,6 +39,14 @@ export default function Header({
         return "Opérations & Chefs d'Équipe • Répertoire & Rôles";
       case 'entrepot':
         return 'Entrepôt : Éléments & Composants • Inventaire Physical & Twin';
+      case 'comp_families':
+        return 'Familles de Composants • Groupe Entrepôt';
+      case 'comp_templates':
+        return 'Templates de Composants • Groupe Entrepôt';
+      case 'part_types':
+        return 'Types de Parts • Groupe Entrepôt';
+      case 'part_designations':
+        return 'Désignations de Parts • Groupe Entrepôt';
       case 'nexus':
         return 'Nexus Matrix • Matrice Relationnelle';
       case 'guide':
@@ -116,7 +124,27 @@ export default function Header({
       case 'entrepot':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Warehouse_Items (Entrepot)',
-          desc: "Inventaire physique et réconciliation de l'entrepôt pour parties machines et composants de rechange",
+          desc: "Inventaire physique et réconciliation de l'entrepôt pour composants et pièces détachées",
+        };
+      case 'comp_families':
+        return {
+          source: '/mnt/data/gmao_light_data.json • Feuille: Comp_Families',
+          desc: "Familles d'ensembles et sous-systèmes stockés en entrepôt (Moteurs, Pompes, Réducteurs...)",
+        };
+      case 'comp_templates':
+        return {
+          source: '/mnt/data/gmao_light_data.json • Feuille: Comp_Templates',
+          desc: "Modèles et spécifications standardisés des sous-systèmes stockés en entrepôt",
+        };
+      case 'part_types':
+        return {
+          source: '/mnt/data/gmao_light_data.json • Feuille: Part_Types',
+          desc: "Nomenclature des catégories de pièces détachées (PDR) gérées en entrepôt",
+        };
+      case 'part_designations':
+        return {
+          source: '/mnt/data/gmao_light_data.json • Feuille: Part_Designations',
+          desc: "Catalogue des références et désignations de pièces détachées rattachées aux types de parts",
         };
       case 'nexus':
         return {

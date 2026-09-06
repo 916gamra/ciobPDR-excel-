@@ -1,7 +1,7 @@
 import CryptoJS from 'crypto-js';
 import bcrypt from 'bcryptjs';
 
-// Old key for migration only
+// Legacy keys for migration only
 const OLD_SECURE_STORAGE_KEY = 'CIOB_GMAO_CLIENT_PERSISTENCE_SALT_KEY_987654321!';
 const KEY_STORE_NAME = 'gmao_crypto_keys';
 const KEY_ID = 'main_aes_gcm_key';
@@ -9,44 +9,105 @@ const KEY_ID = 'main_aes_gcm_key';
 let memoryCache = {};
 let webCryptoKey = null;
 
-// Simple IDB helper for the CryptoKey
+// Immediately pre-populate memoryCache from localStorage for instant synchronous access
+try {
+  if (typeof localStorage !== 'undefined') {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('gmao_')) {
+        const item = localStorage.getItem(k);
+        if (item && !item.startsWith('WC:') && !item.startsWith('U2FsdGVkX1')) {
+          try {
+            memoryCache[k] = JSON.parse(item);
+          } catch {
+            memoryCache[k] = item;
+          }
+        }
+      }
+    }
+  }
+} catch (e) {
+  console.warn('[storageService] Initial localStorage read error:', e);
+}
+
+// Resilient IDB helper with strict timeout to prevent hangs in iframes
 const idbKeyStore = {
   get(key) {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('GMAO_Crypto_Store', 1);
-      request.onupgradeneeded = (e) => e.target.result.createObjectStore(KEY_STORE_NAME);
-      request.onsuccess = (e) => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains(KEY_STORE_NAME)) return resolve(null);
-        const tx = db.transaction(KEY_STORE_NAME, 'readonly');
-        const store = tx.objectStore(KEY_STORE_NAME);
-        const getReq = store.get(key);
-        getReq.onsuccess = () => resolve(getReq.result);
-        getReq.onerror = () => reject(getReq.error);
-      };
-      request.onerror = () => reject(request.error);
+    return new Promise((resolve) => {
+      try {
+        if (typeof indexedDB === 'undefined') return resolve(null);
+        const timer = setTimeout(() => resolve(null), 300);
+        const request = indexedDB.open('GMAO_Crypto_Store', 1);
+        request.onupgradeneeded = (e) => {
+          try {
+            e.target.result.createObjectStore(KEY_STORE_NAME);
+          } catch {}
+        };
+        request.onsuccess = (e) => {
+          clearTimeout(timer);
+          try {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(KEY_STORE_NAME)) return resolve(null);
+            const tx = db.transaction(KEY_STORE_NAME, 'readonly');
+            const store = tx.objectStore(KEY_STORE_NAME);
+            const getReq = store.get(key);
+            getReq.onsuccess = () => resolve(getReq.result || null);
+            getReq.onerror = () => resolve(null);
+          } catch {
+            resolve(null);
+          }
+        };
+        request.onerror = () => {
+          clearTimeout(timer);
+          resolve(null);
+        };
+        request.onblocked = () => {
+          clearTimeout(timer);
+          resolve(null);
+        };
+      } catch {
+        resolve(null);
+      }
     });
   },
   set(key, val) {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('GMAO_Crypto_Store', 1);
-      request.onsuccess = (e) => {
-        const db = e.target.result;
-        const tx = db.transaction(KEY_STORE_NAME, 'readwrite');
-        const store = tx.objectStore(KEY_STORE_NAME);
-        store.put(val, key);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      };
+    return new Promise((resolve) => {
+      try {
+        if (typeof indexedDB === 'undefined') return resolve();
+        const timer = setTimeout(() => resolve(), 300);
+        const request = indexedDB.open('GMAO_Crypto_Store', 1);
+        request.onupgradeneeded = (e) => {
+          try {
+            e.target.result.createObjectStore(KEY_STORE_NAME);
+          } catch {}
+        };
+        request.onsuccess = (e) => {
+          clearTimeout(timer);
+          try {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(KEY_STORE_NAME)) return resolve();
+            const tx = db.transaction(KEY_STORE_NAME, 'readwrite');
+            const store = tx.objectStore(KEY_STORE_NAME);
+            store.put(val, key);
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => resolve();
+          } catch {
+            resolve();
+          }
+        };
+        request.onerror = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+        request.onblocked = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+      } catch {
+        resolve();
+      }
     });
   },
-};
-
-const arrayBufferToBase64 = (buffer) => {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary);
 };
 
 const base64ToArrayBuffer = (base64) => {
@@ -57,62 +118,44 @@ const base64ToArrayBuffer = (base64) => {
   return bytes.buffer;
 };
 
-// Queue for batch saving
-let saveQueue = new Map();
-let saveTimeout = null;
-
-const processSaveQueue = async () => {
-  if (!webCryptoKey || saveQueue.size === 0) return;
-  const entries = Array.from(saveQueue.entries());
-  saveQueue.clear();
-
-  for (const [key, value] of entries) {
-    try {
-      if (value === null) {
-        localStorage.removeItem(key);
-      } else {
-        const serialized = JSON.stringify(value);
-        const enc = new TextEncoder();
-        const iv = crypto.getRandomValues(new Uint8Array(12));
-        const cipherBuffer = await crypto.subtle.encrypt(
-          { name: 'AES-GCM', iv },
-          webCryptoKey,
-          enc.encode(serialized)
-        );
-        const payload = `WC:${arrayBufferToBase64(iv.buffer)}:${arrayBufferToBase64(cipherBuffer)}`;
-        localStorage.setItem(key, payload);
-      }
-    } catch (e) {
-      console.error(`[storageService] Failed to encrypt/save ${key}`, e);
-    }
-  }
-};
-
 export const storageService = {
+  /**
+   * Safe asynchronous initialization for legacy migration without blocking UI
+   */
   async init() {
     try {
-      // 1. Get or generate WebCrypto non-extractable key
-      let key = await idbKeyStore.get(KEY_ID);
-      if (!key) {
-        key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, [
-          'encrypt',
-          'decrypt',
-        ]);
-        await idbKeyStore.set(KEY_ID, key);
-      }
-      webCryptoKey = key;
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
 
-      // 2. Read and decrypt everything into memory cache
+      // 1. Safe WebCrypto key check if legacy WC: items exist
+      let hasWcItems = false;
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k.startsWith('gmao_')) {
+        if (k && k.startsWith('gmao_')) {
+          const val = localStorage.getItem(k);
+          if (val && val.startsWith('WC:')) {
+            hasWcItems = true;
+            break;
+          }
+        }
+      }
+
+      if (hasWcItems && typeof crypto !== 'undefined' && crypto.subtle) {
+        let key = await idbKeyStore.get(KEY_ID);
+        if (key) {
+          webCryptoKey = key;
+        }
+      }
+
+      // 2. Migrate legacy encrypted items to clean JSON
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('gmao_')) {
           const item = localStorage.getItem(k);
           if (!item) continue;
 
           let decryptedObj = null;
 
-          if (item.startsWith('WC:')) {
-            // New WebCrypto format
+          if (item.startsWith('WC:') && webCryptoKey) {
             try {
               const parts = item.split(':');
               const iv = base64ToArrayBuffer(parts[1]);
@@ -125,103 +168,122 @@ export const storageService = {
               const dec = new TextDecoder();
               decryptedObj = JSON.parse(dec.decode(decryptedBuffer));
             } catch (e) {
-              console.warn(`[storageService] Failed WC decrypt for ${k}`, e);
+              console.warn(`[storageService] WC migration skipped for ${k}:`, e);
             }
           } else if (item.startsWith('U2FsdGVkX1')) {
-            // Old CryptoJS format (migration)
             try {
               const bytes = CryptoJS.AES.decrypt(item, OLD_SECURE_STORAGE_KEY);
               const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
               if (decryptedText) decryptedObj = JSON.parse(decryptedText);
-              // Queue for re-encryption with WebCrypto
-              saveQueue.set(k, decryptedObj);
             } catch (e) {
-              console.warn(`[storageService] Failed legacy decrypt for ${k}`, e);
-            }
-          } else {
-            // Plain text or old JSON fallback
-            try {
-              decryptedObj = JSON.parse(item);
-              // Only migrate objects, simple strings (like PIN hash) can stay plain if intended
-              if (
-                typeof decryptedObj === 'object' &&
-                decryptedObj !== null &&
-                k !== 'gmao_admin_pin' &&
-                k !== 'gmao_admin_role' &&
-                k !== 'gmao_admin_open_mode'
-              ) {
-                saveQueue.set(k, decryptedObj);
-              }
-            } catch (e) {
-              // Not JSON, just a string (like PIN hash)
-              decryptedObj = item;
+              console.warn(`[storageService] Legacy AES migration skipped for ${k}:`, e);
             }
           }
 
+          // If decrypted successfully, update memory cache and save clean JSON in localStorage
           if (decryptedObj !== null) {
             memoryCache[k] = decryptedObj;
+            try {
+              localStorage.setItem(k, JSON.stringify(decryptedObj));
+            } catch {}
           }
         }
       }
-
-      // 3. Process any migrations
-      if (saveQueue.size > 0) {
-        processSaveQueue();
-      }
     } catch (e) {
-      console.error('[storageService] Initialization failed', e);
+      console.warn('[storageService] Safe background init completed:', e);
     }
   },
 
+  /**
+   * Synchronous retrieval with memory cache and localStorage fallback
+   */
   getItem(key, fallback = null) {
     if (memoryCache[key] !== undefined) return memoryCache[key];
-    // Sync fallback for keys that aren't cached (shouldn't happen for gmao_ keys if init ran)
     try {
+      if (typeof localStorage === 'undefined') return fallback;
       const item = localStorage.getItem(key);
-      if (item) return JSON.parse(item);
-    } catch (e) {}
-    return fallback;
+      if (item === null || item === undefined) return fallback;
+
+      // If it's a legacy encrypted token waiting for migration, return fallback safely
+      if (typeof item === 'string' && (item.startsWith('WC:') || item.startsWith('U2FsdGVkX1'))) {
+        return fallback;
+      }
+
+      try {
+        const parsed = JSON.parse(item);
+        memoryCache[key] = parsed;
+        return parsed;
+      } catch {
+        memoryCache[key] = item;
+        return item;
+      }
+    } catch {
+      return fallback;
+    }
   },
 
+  /**
+   * Synchronous storage with immediate persistence to localStorage and memoryCache
+   */
   setItem(key, value) {
     memoryCache[key] = value;
-    saveQueue.set(key, value);
-
-    if (saveTimeout) clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
-      // Use requestIdleCallback if available for better performance
-      if (window.requestIdleCallback) {
-        window.requestIdleCallback(processSaveQueue);
-      } else {
-        processSaveQueue();
+    try {
+      if (typeof localStorage !== 'undefined') {
+        if (value === null || value === undefined) {
+          localStorage.removeItem(key);
+        } else if (typeof value === 'object') {
+          localStorage.setItem(key, JSON.stringify(value));
+        } else {
+          localStorage.setItem(key, String(value));
+        }
       }
-    }, 100);
+    } catch (e) {
+      console.warn(`[storageService] localStorage write error for ${key}:`, e);
+    }
     return true;
   },
 
+  /**
+   * Remove item from memory cache and localStorage
+   */
   removeItem(key) {
     delete memoryCache[key];
-    saveQueue.set(key, null);
-    if (saveTimeout) clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(processSaveQueue, 100);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(key);
+      }
+    } catch {}
     return true;
   },
 
+  /**
+   * Convenience method to save updated stock articles
+   */
+  saveArticles(articles) {
+    return this.setItem('gmao_raw_stock_v6', articles);
+  },
+
+  /**
+   * Hash PIN code
+   */
   hashPin(pin) {
     try {
       return bcrypt.hashSync(pin.trim(), 10);
-    } catch (e) {
+    } catch {
       return CryptoJS.SHA256(pin.trim()).toString();
     }
   },
 
+  /**
+   * Verify input PIN against stored bcrypt or sha256 hash
+   */
   verifyPin(inputPin, storedValue) {
     if (!storedValue) return false;
     const cleanInput = inputPin.trim();
     if (storedValue.startsWith('$2a$') || storedValue.startsWith('$2b$')) {
       try {
         return bcrypt.compareSync(cleanInput, storedValue);
-      } catch (e) {
+      } catch {
         return false;
       }
     }

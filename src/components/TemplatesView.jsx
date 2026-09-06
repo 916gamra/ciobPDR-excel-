@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import AnimatedPage from './AnimatedPage';
 import CustomSelect from './CustomSelect';
+import { RoboticHand } from './icons/RoboticHand';
 import {
   Layers,
   Plus,
@@ -271,7 +272,7 @@ export default function TemplatesView({
                 { value: 'ALL', label: `Toutes les Familles (${families.length})` },
                 ...families.map((f) => ({
                   value: f.id_family,
-                  label: `[C] ${f.libelle} (${f.id_family})`,
+                  label: `${f.libelle} (${f.id_family})`,
                 })),
               ]}
             />
@@ -455,8 +456,8 @@ export default function TemplatesView({
                       className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200 text-xs font-mono font-bold hover:bg-cyan-100 transition"
                       title="Voir cette Famille Parente"
                     >
-                      <FolderTree className="w-3 h-3 text-cyan-600" />
-                      <span>{t.id_family}</span>
+                      <RoboticHand className="w-3 h-3 text-cyan-600" />
+                      <span>{fam?.libelle ? `${fam.libelle} (${t.id_family})` : t.id_family}</span>
                     </button>
                   </td>
                   <td className="py-3 px-4">

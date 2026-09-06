@@ -77,6 +77,10 @@ const TypeView = lazy(() => import('./components/TypeView'));
 const DesignationView = lazy(() => import('./components/DesignationView'));
 const MachinesRegisteredView = lazy(() => import('./components/MachinesRegisteredView'));
 const EntrepotView = lazy(() => import('./components/EntrepotView'));
+const CompFamilyView = lazy(() => import('./components/CompFamilyView'));
+const CompTemplateView = lazy(() => import('./components/CompTemplateView'));
+const PartTypeView = lazy(() => import('./components/PartTypeView'));
+const PartDesignationView = lazy(() => import('./components/PartDesignationView'));
 const FamilyView = lazy(() => import('./components/FamilyView'));
 const TemplatesView = lazy(() => import('./components/TemplatesView'));
 const ZonesView = lazy(() => import('./components/ZonesView'));
@@ -121,7 +125,9 @@ export default function App() {
   const handleSplashComplete = () => {
     try {
       sessionStorage.setItem('gmao_splash_shown', 'true');
-    } catch {}
+    } catch (_e) {
+      /* ignore storage error */
+    }
     setShowSplash(false);
   };
 
@@ -151,7 +157,9 @@ export default function App() {
       if (currentTab) {
         localStorage.setItem('gmao_active_tab', currentTab);
       }
-    } catch {}
+    } catch (_e) {
+      /* ignore storage error */
+    }
   }, [currentTab]);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -180,6 +188,14 @@ export default function App() {
     setMouvements,
     rawStock,
     setRawStock,
+    compFamilies,
+    setCompFamilies,
+    compTemplates,
+    setCompTemplates,
+    partTypes,
+    setPartTypes,
+    partDesignations,
+    setPartDesignations,
   } = useGmaoState();
 
   // Auto Backup and Performance Monitor Initialization
@@ -221,8 +237,6 @@ export default function App() {
     technicians,
     operations,
   ]);
-
-  const diagnostics = designations;
 
   // Compute Full Stock with Dynamic Live Calculations (Formula F, G, H, J)
   const stockItems = useMemo(() => {
@@ -273,6 +287,55 @@ export default function App() {
       };
     });
   }, [rawStock, mouvements]);
+
+  const effectiveDesignations = useMemo(() => {
+    if (
+      Array.isArray(designations) &&
+      designations.length > 0 &&
+      designations.some((d) => (d.ref || d.id_designation) && (d.designation || d.libelle))
+    ) {
+      return designations;
+    }
+    if (Array.isArray(stockItems) && stockItems.length > 0) {
+      return stockItems.map((s) => ({
+        id: s.id,
+        ref: s.ref,
+        designation: s.designation,
+        id_type: s.id_type || s.type || 'Standard',
+        type: s.type || s.id_type || 'Standard',
+        stockInitial: s.stockInitial || 0,
+        seuil: s.seuil || 3,
+        emplacement: s.emplacement || 'A1-R1',
+      }));
+    }
+    return designations || [];
+  }, [designations, stockItems]);
+
+  const effectiveFamilies = useMemo(() => {
+    if (
+      Array.isArray(families) &&
+      families.length > 0 &&
+      !families.some((f) => f.ref || f.stockInitial !== undefined || f.stockActuel !== undefined) &&
+      families.some((f) => f.id_family || f.componentCode)
+    ) {
+      return families;
+    }
+    return INITIAL_FAMILIES;
+  }, [families]);
+
+  const effectiveTemplates = useMemo(() => {
+    if (
+      Array.isArray(templates) &&
+      templates.length > 0 &&
+      !templates.some((t) => t.ref || t.stockInitial !== undefined || t.stockActuel !== undefined) &&
+      templates.some((t) => t.id_templates && (t.id_family || t.libelle))
+    ) {
+      return templates;
+    }
+    return INITIAL_TEMPLATES;
+  }, [templates]);
+
+  const diagnostics = effectiveDesignations;
 
   const warehouseItemsComputed = useMemo(() => {
     const mvtSummary = {};
@@ -333,6 +396,15 @@ export default function App() {
   const [opZoneFilter, setOpZoneFilter] = useState('ALL');
   const [techZoneFilter, setTechZoneFilter] = useState('ALL');
   const [templateFamilyFilter, setTemplateFamilyFilter] = useState('ALL');
+
+  // Groupe Entrepôt Filter States
+  const [whFamilyFilter, setWhFamilyFilter] = useState('ALL');
+  const [whTemplateFilter, setWhTemplateFilter] = useState('ALL');
+  const [whTypeFilter, setWhTypeFilter] = useState('ALL');
+  const [whNatureFilter, setWhNatureFilter] = useState('ALL');
+  const [whSearch, setWhSearch] = useState('');
+  const [compTemplateFamilyFilter, setCompTemplateFamilyFilter] = useState('');
+  const [partDesignationTypeFilter, setPartDesignationTypeFilter] = useState('');
 
   // Modal States
   const [showAddArticleModal, setShowAddArticleModal] = useState(false);
@@ -444,25 +516,78 @@ export default function App() {
     React.startTransition(() => setCurrentTab('machines'));
   };
 
+  // GROUPE ENTREPÔT NAVIGATION HANDLERS
+  const handleNavigateToCompTemplates = (familyId) => {
+    setCompTemplateFamilyFilter(familyId || '');
+    React.startTransition(() => setCurrentTab('comp_templates'));
+  };
+
+  const handleNavigateToCompFamilies = () => {
+    React.startTransition(() => setCurrentTab('comp_families'));
+  };
+
+  const handleNavigateToPartDesignations = (typeId) => {
+    setPartDesignationTypeFilter(typeId || '');
+    React.startTransition(() => setCurrentTab('part_designations'));
+  };
+
+  const handleNavigateToPartTypes = () => {
+    React.startTransition(() => setCurrentTab('part_types'));
+  };
+
+  const handleNavigateToEntrepotByComp = (familyId, templateId) => {
+    setWhFamilyFilter(familyId || 'ALL');
+    setWhTemplateFilter(templateId || 'ALL');
+    setWhNatureFilter('COMPONENT');
+    React.startTransition(() => setCurrentTab('entrepot'));
+  };
+
+  const handleNavigateToEntrepotByType = (typeId) => {
+    setWhTypeFilter(typeId || 'ALL');
+    setWhNatureFilter('PART');
+    React.startTransition(() => setCurrentTab('entrepot'));
+  };
+
+  const handleNavigateToEntrepotByPart = (refOrPart, typeId) => {
+    if (typeId) setWhTypeFilter(typeId);
+    setWhSearch(refOrPart || '');
+    setWhNatureFilter('PART');
+    React.startTransition(() => setCurrentTab('entrepot'));
+  };
+
   // ADD ENTITY HANDLERS
+  const handleAddCompFamily = (newFam) => {
+    setCompFamilies((prev) => [...prev, newFam]);
+  };
+
+  const handleAddCompTemplate = (newTpl) => {
+    setCompTemplates((prev) => [...prev, newTpl]);
+  };
+
+  const handleAddPartType = (newType) => {
+    setPartTypes((prev) => [...prev, newType]);
+  };
+
+  const handleAddPartDesignation = (newDesig) => {
+    setPartDesignations((prev) => [...prev, newDesig]);
+  };
   const handleAddType = (newType) => {
     setTypes((prev) => [...prev, newType]);
   };
 
   const handleAddDesignation = (newDesig) => {
-    setRawStock((prev) => [
-      {
-        id: crypto.randomUUID(),
-        ref: newDesig.ref,
-        designation: newDesig.designation,
-        type: newDesig.id_type,
-        id_type: newDesig.id_type,
-        stockInitial: Number(newDesig.stockInitial) || 0,
-        seuil: Number(newDesig.seuil) || 3,
-        emplacement: newDesig.emplacement || 'A1-R1',
-      },
-      ...prev,
-    ]);
+    const newItem = {
+      id: crypto.randomUUID(),
+      ref: newDesig.ref,
+      designation: newDesig.designation,
+      type: newDesig.id_type,
+      id_type: newDesig.id_type,
+      stockInitial: Number(newDesig.stockInitial) || 0,
+      seuil: Number(newDesig.seuil) || 3,
+      emplacement: newDesig.emplacement || 'A1-R1',
+    };
+    setRawStock((prev) => [newItem, ...prev]);
+    setDesignations((prev) => [newItem, ...(prev || [])]);
   };
 
   const handleAddDiagnostic = handleAddDesignation;
@@ -544,24 +669,26 @@ export default function App() {
   const handleDeleteType = (id) => setTypes((prev) => prev.filter((t) => t.id_type !== id));
 
   const handleUpdateDesignation = (id, updatedDesig) => {
-    setRawStock((prev) =>
-      prev.map((s) =>
-        s.ref === id
-          ? {
-              ...s,
-              ref: updatedDesig.ref,
-              designation: updatedDesig.designation,
-              type: updatedDesig.id_type,
-              id_type: updatedDesig.id_type,
-              stockInitial: Number(updatedDesig.stockInitial),
-              seuil: Number(updatedDesig.seuil),
-              emplacement: updatedDesig.emplacement,
-            }
-          : s
-      )
-    );
+    const updater = (s) =>
+      (s.ref === id || s.id_designation === id || s.id === id)
+        ? {
+            ...s,
+            ref: updatedDesig.ref,
+            designation: updatedDesig.designation,
+            type: updatedDesig.id_type,
+            id_type: updatedDesig.id_type,
+            stockInitial: Number(updatedDesig.stockInitial),
+            seuil: Number(updatedDesig.seuil),
+            emplacement: updatedDesig.emplacement,
+          }
+        : s;
+    setRawStock((prev) => prev.map(updater));
+    setDesignations((prev) => (prev || []).map(updater));
   };
-  const handleDeleteDesignation = (id) => setRawStock((prev) => prev.filter((s) => s.ref !== id));
+  const handleDeleteDesignation = (id) => {
+    setRawStock((prev) => prev.filter((s) => s.ref !== id && s.id_designation !== id && s.id !== id));
+    setDesignations((prev) => (prev || []).filter((d) => d.ref !== id && d.id_designation !== id && d.id !== id));
+  };
   const handleUpdateDiagnostic = handleUpdateDesignation;
   const handleDeleteDiagnostic = handleDeleteDesignation;
 
@@ -577,6 +704,63 @@ export default function App() {
     }
   };
   const handleDeleteFamily = (id) => setFamilies((prev) => prev.filter((f) => f.id_family !== id));
+
+  // COMPONENT FAMILIES & TEMPLATES CRUD
+  const handleUpdateCompFamily = (id, updatedFam) => {
+    setCompFamilies((prev) => prev.map((f) => (f.id_family === id ? updatedFam : f)));
+    if (id !== updatedFam.id_family) {
+      setCompTemplates((prev) =>
+        prev.map((t) => (t.id_family === id ? { ...t, id_family: updatedFam.id_family } : t))
+      );
+      setWarehouseItems((prev) =>
+        prev.map((w) => (w.id_family === id ? { ...w, id_family: updatedFam.id_family } : w))
+      );
+    }
+  };
+  const handleDeleteCompFamily = (id) => {
+    setCompFamilies((prev) => prev.filter((f) => f.id_family !== id));
+  };
+
+  const handleUpdateCompTemplate = (id, updatedTpl) => {
+    setCompTemplates((prev) => prev.map((t) => (t.id_templates === id ? updatedTpl : t)));
+    if (id !== updatedTpl.id_templates) {
+      setWarehouseItems((prev) =>
+        prev.map((w) =>
+          w.id_templates === id ? { ...w, id_templates: updatedTpl.id_templates } : w
+        )
+      );
+    }
+  };
+  const handleDeleteCompTemplate = (id) => {
+    setCompTemplates((prev) => prev.filter((t) => t.id_templates !== id));
+  };
+
+  // PART TYPES & DESIGNATIONS CRUD
+  const handleUpdatePartType = (id, updatedType) => {
+    setPartTypes((prev) => prev.map((t) => (t.id_type === id ? updatedType : t)));
+    if (id !== updatedType.id_type) {
+      setPartDesignations((prev) =>
+        prev.map((d) => (d.id_type === id ? { ...d, id_type: updatedType.id_type } : d))
+      );
+      setWarehouseItems((prev) =>
+        prev.map((w) => (w.id_type === id ? { ...w, id_type: updatedType.id_type } : w))
+      );
+    }
+  };
+  const handleDeletePartType = (id) => {
+    setPartTypes((prev) => prev.filter((t) => t.id_type !== id));
+  };
+
+  const handleUpdatePartDesignation = (refId, updatedDesig) => {
+    setPartDesignations((prev) =>
+      prev.map((d) => (d.ref === refId || d.id_part === refId ? updatedDesig : d))
+    );
+  };
+  const handleDeletePartDesignation = (refId) => {
+    setPartDesignations((prev) =>
+      prev.filter((d) => d.ref !== refId && d.id_part !== refId)
+    );
+  };
 
   const handleUpdateTemplate = (id, updatedTemplate) => {
     setTemplates((prev) => prev.map((t) => (t.id_templates === id ? updatedTemplate : t)));
@@ -822,6 +1006,26 @@ export default function App() {
     // 11. Operations
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(operations), 'Operations');
 
+    // 12. Comp_Families
+    if (compFamilies && compFamilies.length > 0) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(compFamilies), 'Comp_Families');
+    }
+
+    // 13. Comp_Templates
+    if (compTemplates && compTemplates.length > 0) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(compTemplates), 'Comp_Templates');
+    }
+
+    // 14. Part_Types
+    if (partTypes && partTypes.length > 0) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(partTypes), 'Part_Types');
+    }
+
+    // 15. Part_Designations
+    if (partDesignations && partDesignations.length > 0) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(partDesignations), 'Part_Designations');
+    }
+
     return wb;
   };
 
@@ -887,6 +1091,18 @@ export default function App() {
               workbook.Sheets['Entrepot']
             );
           }
+          if (workbook.SheetNames.includes('Comp_Families')) {
+            importedData.Comp_Families = XLSX.utils.sheet_to_json(workbook.Sheets['Comp_Families']);
+          }
+          if (workbook.SheetNames.includes('Comp_Templates')) {
+            importedData.Comp_Templates = XLSX.utils.sheet_to_json(workbook.Sheets['Comp_Templates']);
+          }
+          if (workbook.SheetNames.includes('Part_Types')) {
+            importedData.Part_Types = XLSX.utils.sheet_to_json(workbook.Sheets['Part_Types']);
+          }
+          if (workbook.SheetNames.includes('Part_Designations')) {
+            importedData.Part_Designations = XLSX.utils.sheet_to_json(workbook.Sheets['Part_Designations']);
+          }
         }
 
         const validation = validateImportedData(importedData);
@@ -921,6 +1137,14 @@ export default function App() {
           setTechnicians(sanitizeObject(importedData.Technicians));
         if (importedData.Operations && importedData.Operations.length > 0)
           setOperations(sanitizeObject(importedData.Operations));
+        if (importedData.Comp_Families && importedData.Comp_Families.length > 0)
+          setCompFamilies(sanitizeObject(importedData.Comp_Families));
+        if (importedData.Comp_Templates && importedData.Comp_Templates.length > 0)
+          setCompTemplates(sanitizeObject(importedData.Comp_Templates));
+        if (importedData.Part_Types && importedData.Part_Types.length > 0)
+          setPartTypes(sanitizeObject(importedData.Part_Types));
+        if (importedData.Part_Designations && importedData.Part_Designations.length > 0)
+          setPartDesignations(sanitizeObject(importedData.Part_Designations));
 
         showToast('Import réussi ! (Backup daté du ' + backupDate + ')', 'success');
         logger.info('File imported successfully', { file: file.name });
@@ -1045,11 +1269,17 @@ export default function App() {
         counts={{
           stock: stockItems.length,
           types: types.length,
-          designations: designations.length,
-          diagnostics: designations.length,
+          designations: effectiveDesignations.length,
+          diagnostics: effectiveDesignations.length,
           machines: machines.length,
-          families: families.length,
-          templates: templates.length,
+          families: effectiveFamilies.length,
+          templates: effectiveTemplates.length,
+          warehouse: warehouseItemsComputed.length,
+          entrepot: warehouseItemsComputed.length,
+          compFamilies: (compFamilies || []).length,
+          compTemplates: (compTemplates || []).length,
+          partTypes: (partTypes || []).length,
+          partDesignations: (partDesignations || []).length,
           zones: zones.length,
           technicians: technicians.length,
           operations: operations.length,
@@ -1060,7 +1290,9 @@ export default function App() {
           storageService.removeItem('gmao_user_session');
           try {
             localStorage.setItem('gmao_active_tab', 'dashboard');
-          } catch {}
+          } catch (_e) {
+            /* ignore storage error */
+          }
           setCurrentTab('dashboard');
           setCurrentUser(null);
         }}
@@ -1141,7 +1373,7 @@ export default function App() {
             <ErrorBoundary>
               <TypeView
                 types={types}
-                designations={designations}
+                designations={effectiveDesignations}
                 stockItems={stockItems}
                 onAddType={handleAddType}
                 onUpdateType={handleUpdateType}
@@ -1155,7 +1387,7 @@ export default function App() {
           {(currentTab === 'designations' || currentTab === 'diagnostics') && (
             <ErrorBoundary>
               <DesignationView
-                designations={designations}
+                designations={effectiveDesignations}
                 types={types}
                 stockItems={stockItems}
                 desigTypeFilter={diagTypeFilter}
@@ -1175,8 +1407,8 @@ export default function App() {
                 machines={machines}
                 onUpdateMachine={handleUpdateMachine}
                 onDeleteMachine={handleDeleteMachine}
-                families={families}
-                templates={templates}
+                families={effectiveFamilies}
+                templates={effectiveTemplates}
                 zones={zones}
                 technicians={technicians}
                 mouvements={mouvements}
@@ -1205,19 +1437,23 @@ export default function App() {
                 onDeleteWarehouseItem={handleDeleteWarehouseItem}
                 onAddMouvement={handleAddMouvement}
                 mouvements={mouvements}
-                families={families}
-                templates={templates}
-                types={types}
-                diagnostics={diagnostics}
+                families={compFamilies}
+                templates={compTemplates}
+                types={partTypes}
+                diagnostics={partDesignations}
+                compFamilies={compFamilies}
+                compTemplates={compTemplates}
+                partTypes={partTypes}
+                partDesignations={partDesignations}
                 stockItems={stockItems}
                 zones={zones}
                 machines={machines}
                 technicians={technicians}
-                onUpdateFamily={handleUpdateFamily}
-                onNavigateToFamily={handleNavigateToMachinesByFamily}
-                onNavigateToTemplate={handleNavigateToMachinesByTemplate}
-                onNavigateToType={handleNavigateToStockFiltered}
-                onNavigateToDiag={handleNavigateToDesignationsFiltered}
+                onUpdateFamily={handleUpdateCompFamily}
+                onNavigateToFamily={handleNavigateToCompTemplates}
+                onNavigateToTemplate={handleNavigateToCompFamilies}
+                onNavigateToType={handleNavigateToPartDesignations}
+                onNavigateToDiag={handleNavigateToPartTypes}
                 onNavigateToZone={handleNavigateToMachinesByZone}
                 onNavigateToMachine={(mchId) => {
                   setMchSearch(mchId);
@@ -1227,11 +1463,79 @@ export default function App() {
             </ErrorBoundary>
           )}
 
+          {currentTab === 'comp_families' && (
+            <ErrorBoundary>
+              <CompFamilyView
+                compFamilies={compFamilies}
+                compTemplates={compTemplates}
+                warehouseItems={warehouseItemsComputed}
+                onAddCompFamily={handleAddCompFamily}
+                onUpdateCompFamily={handleUpdateCompFamily}
+                onDeleteCompFamily={handleDeleteCompFamily}
+                onNavigateToCompTemplates={handleNavigateToCompTemplates}
+                onNavigateToEntrepotByFamily={(familyId) => {
+                  handleNavigateToEntrepotByComp(familyId, 'ALL');
+                }}
+              />
+            </ErrorBoundary>
+          )}
+
+          {currentTab === 'comp_templates' && (
+            <ErrorBoundary>
+              <CompTemplateView
+                compTemplates={compTemplates}
+                compFamilies={compFamilies}
+                warehouseItems={warehouseItemsComputed}
+                compTemplateFamilyFilter={compTemplateFamilyFilter}
+                setCompTemplateFamilyFilter={setCompTemplateFamilyFilter}
+                onAddCompTemplate={handleAddCompTemplate}
+                onUpdateCompTemplate={handleUpdateCompTemplate}
+                onDeleteCompTemplate={handleDeleteCompTemplate}
+                onNavigateToCompFamilies={handleNavigateToCompFamilies}
+                onNavigateToEntrepotByTemplate={(familyId, templateId) => {
+                  handleNavigateToEntrepotByComp(familyId, templateId);
+                }}
+              />
+            </ErrorBoundary>
+          )}
+
+          {currentTab === 'part_types' && (
+            <ErrorBoundary>
+              <PartTypeView
+                partTypes={partTypes}
+                partDesignations={partDesignations}
+                warehouseItems={warehouseItemsComputed}
+                onAddPartType={handleAddPartType}
+                onUpdatePartType={handleUpdatePartType}
+                onDeletePartType={handleDeletePartType}
+                onNavigateToPartDesignations={handleNavigateToPartDesignations}
+                onNavigateToEntrepotByType={handleNavigateToEntrepotByType}
+              />
+            </ErrorBoundary>
+          )}
+
+          {currentTab === 'part_designations' && (
+            <ErrorBoundary>
+              <PartDesignationView
+                partDesignations={partDesignations}
+                partTypes={partTypes}
+                warehouseItems={warehouseItemsComputed}
+                partDesignationTypeFilter={partDesignationTypeFilter}
+                setPartDesignationTypeFilter={setPartDesignationTypeFilter}
+                onAddPartDesignation={handleAddPartDesignation}
+                onUpdatePartDesignation={handleUpdatePartDesignation}
+                onDeletePartDesignation={handleDeletePartDesignation}
+                onNavigateToPartTypes={handleNavigateToPartTypes}
+                onNavigateToEntrepotByPart={handleNavigateToEntrepotByPart}
+              />
+            </ErrorBoundary>
+          )}
+
           {currentTab === 'families' && (
             <ErrorBoundary>
               <FamilyView
-                families={families}
-                templates={templates}
+                families={effectiveFamilies}
+                templates={effectiveTemplates}
                 machines={machines}
                 onAddFamily={handleAddFamily}
                 onUpdateFamily={handleUpdateFamily}
@@ -1245,8 +1549,8 @@ export default function App() {
           {currentTab === 'templates' && (
             <ErrorBoundary>
               <TemplatesView
-                templates={templates}
-                families={families}
+                templates={effectiveTemplates}
+                families={effectiveFamilies}
                 machines={machines}
                 templateFamilyFilter={templateFamilyFilter}
                 setTemplateFamilyFilter={setTemplateFamilyFilter}
@@ -1365,9 +1669,9 @@ export default function App() {
                 setMouvements={setMouvements}
                 machines={machines}
                 setMachines={setMachines}
-                families={families}
+                families={effectiveFamilies}
                 setFamilies={setFamilies}
-                templates={templates}
+                templates={effectiveTemplates}
                 setTemplates={setTemplates}
                 zones={zones}
                 setZones={setZones}
@@ -1406,8 +1710,8 @@ export default function App() {
         <AddMachineModal
           isOpen={showAddMachineModal}
           onClose={() => setShowAddMachineModal(false)}
-          families={families}
-          templates={templates}
+          families={effectiveFamilies}
+          templates={effectiveTemplates}
           zones={zones}
           technicians={technicians}
           machines={machines}

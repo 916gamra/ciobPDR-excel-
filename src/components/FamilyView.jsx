@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import AnimatedPage from './AnimatedPage';
+import { RoboticHand } from './icons/RoboticHand';
 import {
-  Boxes,
   Plus,
   Search,
   ArrowRight,
@@ -78,8 +78,8 @@ export default function FamilyView({
   const sortedData = useMemo(() => {
     if (!sortField) return filtered;
     return [...filtered].sort((a, b) => {
-      let valA = a[sortField] || '';
-      let valB = b[sortField] || '';
+      let valA = a[sortField] || (sortField === 'libelle' ? a.designation : '') || '';
+      let valB = b[sortField] || (sortField === 'libelle' ? b.designation : '') || '';
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
@@ -131,7 +131,7 @@ export default function FamilyView({
       <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 sm:gap-4 w-full">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
-            <Boxes className="w-5 h-5 text-teal-700" />
+            <RoboticHand className="w-5 h-5 text-teal-700" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 tracking-tight">
@@ -296,21 +296,21 @@ export default function FamilyView({
 
                   <button
                     onClick={() => {
-                      if (sortField === 'designation') {
+                      if (sortField === 'libelle') {
                         setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
                       } else {
-                        setSortField('designation');
+                        setSortField('libelle');
                         setSortOrder('asc');
                       }
                     }}
                     className={`flex items-center justify-between px-3 py-2 rounded-lg font-medium transition ${
-                      sortField === 'designation'
+                      sortField === 'libelle'
                         ? 'bg-cyan-50 text-cyan-800'
                         : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <span>Désignation / Libellé</span>
-                    {sortField === 'designation' &&
+                    <span>Libellé Famille</span>
+                    {sortField === 'libelle' &&
                       (sortOrder === 'asc' ? (
                         <ArrowUp className="w-3 h-3 text-cyan-600 shrink-0" />
                       ) : (

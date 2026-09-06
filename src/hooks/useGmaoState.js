@@ -7,6 +7,10 @@ import {
   INITIAL_DIAGNOSTICS,
   INITIAL_FAMILIES,
   INITIAL_TEMPLATES,
+  INITIAL_COMP_FAMILIES,
+  INITIAL_COMP_TEMPLATES,
+  INITIAL_PART_TYPES,
+  INITIAL_PART_DESIGNATIONS,
   INITIAL_MACHINES_REGISTERED,
   INITIAL_WAREHOUSE_ITEMS,
   INITIAL_ZONES,
@@ -80,20 +84,53 @@ export function useGmaoState() {
     return Array.from(set).map((t) => ({ id_type: t, libelle: t }));
   });
 
-  const [families, setFamilies] = useState(() => {
+  const isStockCorrupted = (arr) => {
+    if (!Array.isArray(arr) || arr.length === 0) return false;
     return (
-      groupedState.families ||
-      storageService.getItem('gmao_families') ||
-      (initialData.Families?.length ? initialData.Families : INITIAL_FAMILIES)
+      arr.length > 100 ||
+      arr.some(
+        (item) =>
+          item &&
+          (item.ref || item.stockActuel !== undefined || item.stockInitial !== undefined)
+      )
     );
+  };
+
+  const isValidMachineTemplates = (arr) => {
+    if (!Array.isArray(arr) || arr.length === 0) return false;
+    if (isStockCorrupted(arr)) return false;
+    return arr.every(
+      (item) => item && (item.id_templates || item.id) && (item.id_family || item.libelle)
+    );
+  };
+
+  const isValidMachineFamilies = (arr) => {
+    if (!Array.isArray(arr) || arr.length === 0) return false;
+    if (isStockCorrupted(arr)) return false;
+    return arr.every((item) => item && (item.id_family || item.id) && (item.libelle || item.nom));
+  };
+
+  const [families, setFamilies] = useState(() => {
+    const candidate = groupedState.families || storageService.getItem('gmao_families');
+    if (isValidMachineFamilies(candidate)) {
+      return candidate;
+    }
+    return initialData.Families?.length && isValidMachineFamilies(initialData.Families)
+      ? initialData.Families
+      : INITIAL_FAMILIES;
   });
 
   const [templates, setTemplates] = useState(() => {
-    return (
-      groupedState.templates ||
-      storageService.getItem('gmao_templates') ||
-      (initialData.Templates?.length ? initialData.Templates : INITIAL_TEMPLATES)
-    );
+    const candidate = groupedState.templates || storageService.getItem('gmao_templates');
+    if (isValidMachineTemplates(candidate)) {
+      return candidate;
+    }
+    if (isStockCorrupted(candidate)) {
+      storageService.removeItem('gmao_templates');
+    }
+    return initialData.Templates?.length && isValidMachineTemplates(initialData.Templates)
+      ? initialData.Templates
+      : INITIAL_TEMPLATES;
   });
 
   const [machines, setMachines] = useState(() => {
@@ -113,6 +150,39 @@ export function useGmaoState() {
       (initialData.Warehouse_Items?.length
         ? initialData.Warehouse_Items
         : INITIAL_WAREHOUSE_ITEMS)
+    );
+  });
+
+  // Dedicated Entrepôt State: Component Families & Templates, Part Types & Designations
+  const [compFamilies, setCompFamilies] = useState(() => {
+    return (
+      groupedState.compFamilies ||
+      storageService.getItem('gmao_comp_families_v1') ||
+      INITIAL_COMP_FAMILIES
+    );
+  });
+
+  const [compTemplates, setCompTemplates] = useState(() => {
+    return (
+      groupedState.compTemplates ||
+      storageService.getItem('gmao_comp_templates_v1') ||
+      INITIAL_COMP_TEMPLATES
+    );
+  });
+
+  const [partTypes, setPartTypes] = useState(() => {
+    return (
+      groupedState.partTypes ||
+      storageService.getItem('gmao_part_types_v1') ||
+      INITIAL_PART_TYPES
+    );
+  });
+
+  const [partDesignations, setPartDesignations] = useState(() => {
+    return (
+      groupedState.partDesignations ||
+      storageService.getItem('gmao_part_designations_v1') ||
+      INITIAL_PART_DESIGNATIONS
     );
   });
 
@@ -299,11 +369,63 @@ export function useGmaoState() {
   });
 
   const [designations, setDesignations] = useState(() => {
-    return (
-      groupedState.designations ||
-      storageService.getItem('gmao_designations_v2') ||
-      (initialData.Diagnostics?.length ? initialData.Diagnostics : INITIAL_DIAGNOSTICS)
-    );
+    const saved = groupedState.designations || storageService.getItem('gmao_designations_v2');
+    if (Array.isArray(saved) && saved.length > 0) {
+      const hasValid = saved.some(
+        (d) => (d.ref || d.id_designation) && (d.designation || d.libelle)
+      );
+      if (hasValid) return saved;
+    }
+
+    if (Array.isArray(initialData.Stock_Actuel) && initialData.Stock_Actuel.length > 0) {
+      return initialData.Stock_Actuel.map((s, idx) => {
+        const itemRef = String(s.Ref || s.ref || s['Référence'] || s['Reference'] || '').trim();
+        const itemDesig = String(s['Désignation'] || s.designation || '').trim();
+        const refKey = itemRef.toLowerCase();
+        const desigKey = itemDesig.toLowerCase();
+        const baseline = INITIAL_STOCK_LOOKUP.get(refKey) || INITIAL_STOCK_LOOKUP.get(desigKey);
+
+        const finalRef = itemRef || (baseline ? baseline.ref : `ART${String(idx + 1).padStart(3, '0')}`);
+        let finalDesignation = itemDesig;
+        let finalType = s.type || s.id_type || s['Désignation'];
+        if (baseline) {
+          finalDesignation = baseline.designation;
+          finalType = baseline.type;
+        } else {
+          finalDesignation = finalDesignation || finalRef;
+          finalType = finalType || 'Divers';
+        }
+
+        let stockInitial = 0;
+        if (s.stockInitial != null && !isNaN(Number(s.stockInitial))) {
+          stockInitial = Number(s.stockInitial);
+        } else if (s['Stock Initial'] != null && !isNaN(Number(s['Stock Initial']))) {
+          stockInitial = Number(s['Stock Initial']);
+        } else if (s['Stock Actuel'] != null && !isNaN(Number(s['Stock Actuel']))) {
+          stockInitial = Number(s['Stock Actuel']);
+        } else if (typeof s.Type === 'number' && !isNaN(s.Type)) {
+          stockInitial = s.Type;
+        } else if (baseline && baseline.qty > 0) {
+          stockInitial = baseline.qty;
+        }
+
+        const seuil = Number(s.seuil || s["Seuil d'Alerte"] || (baseline ? baseline.seuil : 3)) || 3;
+        const emplacement = s.emplacement || s.Emplacement || (baseline ? baseline.emplacement : `A${(idx % 8) + 1}-R${(idx % 6) + 1}`);
+
+        return {
+          id: s.id || `desig-${idx + 1}`,
+          ref: finalRef,
+          designation: finalDesignation,
+          id_type: s.id_type || finalType,
+          type: finalType,
+          stockInitial,
+          seuil,
+          emplacement,
+        };
+      });
+    }
+
+    return (initialData.Diagnostics?.length ? initialData.Diagnostics : INITIAL_DIAGNOSTICS);
   });
 
   // Save to LocalStorage and IndexedDB (Debounced to avoid I/O bottlenecks during fast updates)
@@ -314,6 +436,10 @@ export function useGmaoState() {
         designations,
         families,
         templates,
+        compFamilies,
+        compTemplates,
+        partTypes,
+        partDesignations,
         machines,
         warehouseItems,
         zones,
@@ -324,6 +450,12 @@ export function useGmaoState() {
       };
       // Grouped state save (Task 10)
       storageService.setItem('gmao_full_state_v1', fullState);
+
+      // Dedicated keys for Entrepôt isolation
+      storageService.setItem('gmao_comp_families_v1', compFamilies);
+      storageService.setItem('gmao_comp_templates_v1', compTemplates);
+      storageService.setItem('gmao_part_types_v1', partTypes);
+      storageService.setItem('gmao_part_designations_v1', partDesignations);
 
       // High capacity IndexedDB backup
       indexedDBService.setItem('gmao_full_state_v1', fullState);
@@ -339,6 +471,10 @@ export function useGmaoState() {
     designations,
     families,
     templates,
+    compFamilies,
+    compTemplates,
+    partTypes,
+    partDesignations,
     machines,
     warehouseItems,
     zones,
@@ -357,8 +493,12 @@ export function useGmaoState() {
           if (fresh) {
             if (fresh.types) setTypes(fresh.types);
             if (fresh.designations) setDesignations(fresh.designations);
-            if (fresh.families) setFamilies(fresh.families);
-            if (fresh.templates) setTemplates(fresh.templates);
+            if (fresh.families && isValidMachineFamilies(fresh.families)) setFamilies(fresh.families);
+            if (fresh.templates && isValidMachineTemplates(fresh.templates)) setTemplates(fresh.templates);
+            if (fresh.compFamilies) setCompFamilies(fresh.compFamilies);
+            if (fresh.compTemplates) setCompTemplates(fresh.compTemplates);
+            if (fresh.partTypes) setPartTypes(fresh.partTypes);
+            if (fresh.partDesignations) setPartDesignations(fresh.partDesignations);
             if (fresh.machines) setMachines(fresh.machines);
             if (fresh.warehouseItems) setWarehouseItems(fresh.warehouseItems);
             if (fresh.zones) setZones(fresh.zones);
@@ -375,7 +515,7 @@ export function useGmaoState() {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [isValidMachineFamilies, isValidMachineTemplates]);
 
   return {
     types,
@@ -386,6 +526,14 @@ export function useGmaoState() {
     setFamilies,
     templates,
     setTemplates,
+    compFamilies,
+    setCompFamilies,
+    compTemplates,
+    setCompTemplates,
+    partTypes,
+    setPartTypes,
+    partDesignations,
+    setPartDesignations,
     machines,
     setMachines,
     warehouseItems,
