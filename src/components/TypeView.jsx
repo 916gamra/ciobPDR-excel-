@@ -3,6 +3,7 @@ import AnimatedPage from './AnimatedPage';
 import {
   Tag,
   Plus,
+  BadgeCheck,
   Search,
   ArrowRight,
   Package,
@@ -127,24 +128,28 @@ export default function TypeView({
   return (
     <AnimatedPage className="space-y-4">
       {/* Top Banner */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
-            <Tag className="w-5 h-5 text-cyan-600 shrink-0" />
-            <span>Types d'Articles (Types & Catégories)</span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Équivalent des <b className="text-cyan-600">Families</b> pour les machines (ex: Foret,
-            Vis, Roulement). Cliquez sur <b className="text-indigo-600">Nb Désignations</b> pour
-            voir les modèles ou <b className="text-cyan-600">Nb Articles</b> pour le Stock.
-          </p>
+      <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 sm:gap-4 w-full">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-cyan-50 border border-cyan-200 text-cyan-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
+            <Tag className="w-5 h-5 text-cyan-700" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+              Types d'Articles (Types & Catégories)
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Équivalent des <b className="text-cyan-600">Families</b> pour les machines (ex: Foret,
+              Vis, Roulement). Cliquez sur <b className="text-indigo-600">Nb Désignations</b> pour
+              voir les modèles ou <b className="text-cyan-600">Nb Articles</b> pour le Stock.
+            </p>
+          </div>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-black transition shadow-xs shrink-0 cursor-pointer"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-4 h-4" />
           <span>Nouveau Type</span>
         </button>
       </div>
@@ -323,11 +328,12 @@ export default function TypeView({
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
         {/* Top Info Header Bar inside Card */}
         <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
-          <div className="font-bold text-slate-800 text-[13px]">
-            Types • Ordre Excel Row 3 : B→E
+          <div className="font-bold text-slate-800 text-[13px] flex items-center gap-2">
+            <Tag className="w-4 h-4 text-cyan-600" />
+            <span>Tableau Types • Colonnes B → E</span>
           </div>
           <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
-            id_type | libelle | nb_designations | nb_articles
+            id_type (B) | libelle (C) | nb_designations (D) | nb_articles (E)
           </div>
         </div>
 
@@ -399,7 +405,7 @@ export default function TypeView({
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 text-xs font-semibold transition group shadow-2xs"
                       title="Voir les Désignations (Templates) liées à ce Type"
                     >
-                      <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                      <BadgeCheck className="w-3.5 h-3.5 text-indigo-600" />
                       <span>{desigCount} désignations</span>
                       <ArrowRight className="w-3 h-3 text-indigo-600 group-hover:translate-x-0.5 transition-transform" />
                     </button>

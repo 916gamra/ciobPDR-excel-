@@ -379,16 +379,20 @@ export default function UtilisateursView({
     <AnimatedPage>
       <div className="space-y-6">
         {/* Header section with Stats - Wrapped inside elegant card */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-              <Users className="w-5 h-5 text-indigo-600 shrink-0" />
-              Registre des Utilisateurs & Membres
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Gérez les techniciens de maintenance, les opérateurs de ligne et les responsables (RESP)
-              dans un répertoire unifié.
-            </p>
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 md:p-6 shadow-xs flex items-center justify-between gap-3 sm:gap-4 w-full">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
+              <Users className="w-5 h-5 text-indigo-700" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                Registre des Utilisateurs & Membres
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Gérez les techniciens de maintenance, les opérateurs de ligne et les responsables (RESP)
+                dans un répertoire unifié.
+              </p>
+            </div>
           </div>
 
           <button
@@ -405,10 +409,10 @@ export default function UtilisateursView({
               setUserToEdit(null);
               setShowAddModal(true);
             }}
-            className="w-full md:w-auto px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-xs transition shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Ajouter un utilisateur
+            <span>Ajouter un utilisateur</span>
           </button>
         </div>
 
@@ -697,15 +701,13 @@ export default function UtilisateursView({
         {/* Unified Table in Excel Twin Style (like Journal des Mouvements) */}
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
           {/* Top Info Header Bar inside Card */}
-          <div className="p-2.5 bg-slate-100/70 border-b border-slate-200 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 font-mono text-[11px] text-slate-600">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span className="font-bold text-slate-800">{filtered.length}</span> membres enregistrés
-              <span className="text-slate-300">|</span>
-              <span className="text-[11px] text-slate-500">Modèle Excel Twin Colonnes B→F • Répertoire Effectif</span>
+          <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+            <div className="font-bold text-slate-800 text-[13px] flex items-center gap-2">
+              <Users className="w-4 h-4 text-indigo-600" />
+              <span>Tableau Utilisateurs • Colonnes B → F</span>
             </div>
-            <div className="text-[11px] text-slate-400 font-mono hidden md:block">
-              N° | ID_User (B) | Nom (C) | Profil & Rôle (D) | Zone(s) (E) | Spécialité (F) | •••
+            <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
+              id_user (B) | nom (C) | type_profil (D) | id_zone (E) | specialite (F)
             </div>
           </div>
 

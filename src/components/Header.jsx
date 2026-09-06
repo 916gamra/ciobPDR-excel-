@@ -37,6 +37,8 @@ export default function Header({
         return 'Techniciens • Équipe de Maintenance';
       case 'operations':
         return "Opérations & Chefs d'Équipe • Répertoire & Rôles";
+      case 'entrepot':
+        return 'Entrepôt : Éléments & Composants • Inventaire Physical & Twin';
       case 'nexus':
         return 'Nexus Matrix • Matrice Relationnelle';
       case 'guide':
@@ -110,6 +112,11 @@ export default function Header({
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Operations',
           desc: "Double Auto-ID : OP-xx (Opérateurs) & CHEF-xx (Chefs d'Équipe) • Traçabilité par zone",
+        };
+      case 'entrepot':
+        return {
+          source: '/mnt/data/gmao_light_data.json • Feuille: Warehouse_Items (Entrepot)',
+          desc: "Inventaire physique et réconciliation de l'entrepôt pour parties machines et composants de rechange",
         };
       case 'nexus':
         return {

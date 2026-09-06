@@ -128,24 +128,28 @@ export default function FamilyView({
   return (
     <AnimatedPage className="space-y-4">
       {/* Top Banner */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
-            <Boxes className="w-5 h-5 text-teal-600 shrink-0" />
-            <span>Familles de Machines (Catégories d'Équipements)</span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Cliquez sur <b className="text-cyan-600">Nb Templates</b> pour voir les modèles de la
-            famille, ou sur <b className="text-emerald-600">Nb Machines</b> pour filtrer le parc
-            (Family = sélectionnée, Template = Tous).
-          </p>
+      <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 sm:gap-4 w-full">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
+            <Boxes className="w-5 h-5 text-teal-700" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+              Familles de Machines (Catégories d'Équipements)
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Cliquez sur <b className="text-cyan-600">Nb Templates</b> pour voir les modèles de la
+              famille, ou sur <b className="text-emerald-600">Nb Machines</b> pour filtrer le parc
+              (Family = sélectionnée, Template = Tous).
+            </p>
+          </div>
         </div>
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-black transition shadow-xs shrink-0 cursor-pointer"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-4 h-4" />
           <span>Nouvelle Famille</span>
         </button>
       </div>
@@ -324,11 +328,12 @@ export default function FamilyView({
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
         {/* Top Info Header Bar inside Card */}
         <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
-          <div className="font-bold text-slate-800 text-[13px]">
-            Families • Ordre Excel Row 3 : B→E
+          <div className="font-bold text-slate-800 text-[13px] flex items-center gap-2">
+            <Boxes className="w-4 h-4 text-cyan-600" />
+            <span>Tableau Families • Colonnes B → E</span>
           </div>
           <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
-            id_family | libelle | nb_templates | nb_machines
+            id_family (B) | libelle (C) | nb_templates (D) | nb_machines (E)
           </div>
         </div>
 

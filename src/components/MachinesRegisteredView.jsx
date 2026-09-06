@@ -249,24 +249,28 @@ export default function MachinesRegisteredView({
   return (
     <AnimatedPage className="space-y-5">
       {/* Top Banner with Refined Excel Layout */}
-      <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Factory className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span>Parc Machines & Équipements Enregistrés</span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
-            Répertoire central des équipements de production et lignes industrielles. Lié dynamiquement avec{' '}
-            <b className="text-cyan-700 font-semibold">Familles (D)</b>,{' '}
-            <b className="text-amber-700 font-semibold">Templates (E)</b>,{' '}
-            <b className="text-purple-700 font-semibold">Zones (F)</b> et{' '}
-            <b className="text-blue-700 font-semibold">Techniciens (G)</b>.
-          </p>
+      <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 sm:gap-4 w-full">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
+            <Factory className="w-5 h-5 text-emerald-700" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight">
+              Parc Machines & Équipements Enregistrés
+            </h2>
+            <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
+              Répertoire central des équipements de production et lignes industrielles. Lié dynamiquement avec{' '}
+              <b className="text-cyan-700 font-semibold">Familles (D)</b>,{' '}
+              <b className="text-amber-700 font-semibold">Templates (E)</b>,{' '}
+              <b className="text-purple-700 font-semibold">Zones (F)</b> et{' '}
+              <b className="text-blue-700 font-semibold">Techniciens (G)</b>.
+            </p>
+          </div>
         </div>
 
         <button
           onClick={onOpenAddMachine}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0 cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-black transition shadow-xs shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Nouvelle Machine</span>

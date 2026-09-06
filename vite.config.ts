@@ -5,7 +5,14 @@ export default defineConfig({
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['apple-touch-icon.png', 'icon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: [
+        'apple-touch-icon.png',
+        'icon.svg',
+        'pwa-192x192.png',
+        'pwa-512x512.png',
+        'offline.html',
+        'manifest.json',
+      ],
       manifest: {
         id: '/',
         name: 'CIOB GMAO Light UI Excel',

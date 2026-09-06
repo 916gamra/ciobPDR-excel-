@@ -78,6 +78,7 @@ export default function EntrepotView({
   onUpdateWarehouseItem,
   onDeleteWarehouseItem,
   onAddMouvement,
+  onUpdateFamily,
   onNavigateToFamily,
   onNavigateToTemplate,
   onNavigateToType,
@@ -107,7 +108,11 @@ export default function EntrepotView({
   const [internalNatureFilter, setInternalNatureFilter] = useState('ALL');
   const [internalRattachementFilter, setInternalRattachementFilter] = useState('ALL');
   const [internalStatusFilter, setInternalStatusFilter] = useState('ALL');
-  const [activeKpiFilter, setActiveKpiFilter] = useState('ALL'); // ALL | 'PARTIE' | 'COMPOSANT' | 'SERVICE' | 'RESERVE'
+  const [activeKpiFilter, setActiveKpiFilter] = useState('ALL'); // ALL | 'COMPONENT' | 'PART' | 'SERVICE' | 'RESERVE'
+
+  // Backward compatibility nature matchers
+  const isComponentNature = (n) => n === 'COMPONENT' || n === 'PARTIE';
+  const isPartNature = (n) => n === 'PART' || n === 'COMPOSANT';
 
   const currentFamilyFilter = whFamilyFilter !== undefined ? whFamilyFilter : internalFamilyFilter;
   const changeFamilyFilter = setWhFamilyFilter || setInternalFamilyFilter;
@@ -144,11 +149,176 @@ export default function EntrepotView({
   }, [localSearch, setWhSearch]);
 
   // Form state for add modal (Dual Twin)
+  const [familyComponentCodes, setFamilyComponentCodes] = useState(() => {
+    const initialMap = {};
+    // 1. From families table (primary source of truth)
+    (families || []).forEach((f) => {
+      if (f.id_family && f.componentCode) {
+        initialMap[f.id_family] = String(f.componentCode).toUpperCase().trim();
+      }
+    });
+
+    // 2. From saved localStorage
+    try {
+      const saved = localStorage.getItem('gmao_family_component_codes_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        Object.assign(initialMap, parsed);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    // 3. From existing items in warehouseItems
+    (warehouseItems || []).forEach((item) => {
+      if (isComponentNature(item.nature) && item.id_family && item.id_warehouse_item) {
+        if (!initialMap[item.id_family]) {
+          const match = String(item.id_warehouse_item).match(/^([A-Z0-9]+)-/i);
+          if (match) {
+            initialMap[item.id_family] = match[1].toUpperCase();
+          }
+        }
+      }
+    });
+
+    if (!initialMap['FAM-EXT']) initialMap['FAM-EXT'] = 'EXT';
+    if (!initialMap['FAM-MOT']) initialMap['FAM-MOT'] = 'MOT';
+    if (!initialMap['FAM-POM']) initialMap['FAM-POM'] = 'POM';
+    if (!initialMap['FAM-RED']) initialMap['FAM-RED'] = 'RED';
+    if (!initialMap['FAM-EMB']) initialMap['FAM-EMB'] = 'EMB';
+    if (!initialMap['FAM-USI']) initialMap['FAM-USI'] = 'USI';
+    if (!initialMap['FAM-DEC']) initialMap['FAM-DEC'] = 'DEC';
+    if (!initialMap['FAM-ASSEM']) initialMap['FAM-ASSEM'] = 'ASS';
+    if (!initialMap['FAM-COUR']) initialMap['FAM-COUR'] = 'COUR';
+    return initialMap;
+  });
+
+  // Persist familyComponentCodes to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('gmao_family_component_codes_v1', JSON.stringify(familyComponentCodes));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [familyComponentCodes]);
+
+  // Helper to calculate next sequential component code based on Family Prefix
+  const getNextFamilyComponentCode = (familyId, customPrefix = '', items = warehouseItems) => {
+    let prefix = customPrefix || familyComponentCodes[familyId] || '';
+    if (!prefix && familyId) {
+      const famObj = families.find((f) => f.id_family === familyId);
+      if (famObj && famObj.componentCode) {
+        prefix = famObj.componentCode;
+      } else {
+        const raw = (famObj ? famObj.libelle : familyId)
+          .replace(/^FAM-?/i, '')
+          .replace(/[^A-Z0-9]/gi, '')
+          .toUpperCase()
+          .slice(0, 4);
+        prefix = raw || 'CMP';
+      }
+    }
+    prefix = prefix.toUpperCase().trim();
+    if (!prefix) return '';
+
+    let maxIdx = 0;
+    items.forEach((it) => {
+      if (isComponentNature(it.nature)) {
+        const code = String(it.id_warehouse_item || '').toUpperCase();
+        if (code.startsWith(prefix + '-')) {
+          const match = code.match(new RegExp(`^${prefix}-(\\d+)`, 'i'));
+          if (match) {
+            const n = parseInt(match[1], 10);
+            if (!isNaN(n) && n > maxIdx) maxIdx = n;
+          }
+        }
+      }
+    });
+    return `${prefix}-${String(maxIdx + 1).padStart(2, '0')}`;
+  };
+
+  // Helper to calculate next auto Reference for PARTS based on Type (e.g. VIS-01, ROUL-01, RACC-01)
+  const getNextPartRef = (typeId, items = warehouseItems) => {
+    if (!typeId) return 'PART-01';
+    let prefix = '';
+    const clean = String(typeId).toUpperCase();
+    if (clean.includes('VIS') || clean.includes('FIX')) prefix = 'VIS';
+    else if (clean.includes('ROUL') || clean.includes('MEC')) prefix = 'ROUL';
+    else if (clean.includes('RACC') || clean.includes('PNE')) prefix = 'RACC';
+    else if (clean.includes('ELE') || clean.includes('CAPT')) prefix = 'ELEC';
+    else if (clean.includes('COU') || clean.includes('LAME')) prefix = 'COU';
+    else if (clean.includes('CON') || clean.includes('POLY')) prefix = 'CONS';
+    else if (clean.includes('OUT')) prefix = 'OUT';
+    else {
+      prefix = clean.replace(/^TYPE-?/i, '').replace(/[^A-Z0-9]/g, '').slice(0, 4) || 'PART';
+    }
+
+    let maxIdx = 0;
+    items.forEach((it) => {
+      if (isPartNature(it.nature)) {
+        const code = String(it.id_warehouse_item || it.ref || '').toUpperCase();
+        if (code.startsWith(prefix + '-') || code.startsWith(prefix)) {
+          const match = code.match(new RegExp(`^${prefix}[-_]?(\\d+)`, 'i'));
+          if (match) {
+            const n = parseInt(match[1], 10);
+            if (!isNaN(n) && n > maxIdx) maxIdx = n;
+          }
+        }
+      }
+    });
+    return `${prefix}-${String(maxIdx + 1).padStart(2, '0')}`;
+  };
+
+  // Cascade Update: When a family prefix is changed, update state, families table, and rename existing components
+  const handleCascadeFamilyPrefixUpdate = (familyId, newPrefix) => {
+    const cleanPrefix = (newPrefix || '').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+    if (!familyId || !cleanPrefix) return;
+
+    // 1. Update dictionary state
+    setFamilyComponentCodes((prev) => ({
+      ...prev,
+      [familyId]: cleanPrefix,
+    }));
+
+    // 2. Update Family in families table if onUpdateFamily exists
+    if (onUpdateFamily) {
+      const fam = families.find((f) => f.id_family === familyId);
+      if (fam) {
+        onUpdateFamily(familyId, {
+          ...fam,
+          componentCode: cleanPrefix,
+        });
+      }
+    }
+
+    // 3. Cascade rename all existing components under this family
+    if (onUpdateWarehouseItem) {
+      const matchingComponents = warehouseItems.filter(
+        (it) => isComponentNature(it.nature) && it.id_family === familyId
+      );
+
+      matchingComponents.forEach((item, index) => {
+        const oldCode = item.id_warehouse_item;
+        const numMatch = String(oldCode).match(/-(\d+)$/);
+        const seqNum = numMatch ? numMatch[1] : String(index + 1).padStart(2, '0');
+        const newCode = `${cleanPrefix}-${seqNum}`;
+
+        if (oldCode !== newCode) {
+          onUpdateWarehouseItem(oldCode, {
+            ...item,
+            id_warehouse_item: newCode,
+          });
+        }
+      });
+    }
+  };
+
   const [addForm, setAddForm] = useState({
     id_warehouse_item: '',
     designation: '',
-    nature: 'PARTIE', // 'PARTIE' (Machine Twin) | 'COMPOSANT' (Stock Twin)
+    nature: 'COMPONENT', // 'COMPONENT' (Machine Twin) | 'PART' (Stock Twin)
     id_family: '',
+    family_prefix: '', // Prefix stored/entered for this family (e.g. EXT)
     id_templates: '',
     id_type: '',
     id_diag: '',
@@ -167,7 +337,7 @@ export default function EntrepotView({
   const [editForm, setEditForm] = useState({
     id_warehouse_item: '',
     designation: '',
-    nature: 'PARTIE',
+    nature: 'COMPONENT',
     id_family: '',
     id_templates: '',
     id_type: '',
@@ -188,14 +358,16 @@ export default function EntrepotView({
     const defaultFam = families[0]?.id_family || 'FAM-MOT';
     const relTemplates = templates.filter((t) => t.id_family === defaultFam);
     const defaultTpl = relTemplates[0]?.id_templates || templates[0]?.id_templates || '';
-    const autoCode = generateWarehouseItemCode(defaultFam, warehouseItems, 'PARTIE');
+    const prefix = familyComponentCodes[defaultFam] || '';
+    const autoCode = getNextFamilyComponentCode(defaultFam, prefix);
     const defaultTplObj = templates.find((t) => t.id_templates === defaultTpl);
 
     setAddForm({
       id_warehouse_item: autoCode,
       designation: defaultTplObj ? defaultTplObj.libelle : '',
-      nature: 'PARTIE',
+      nature: 'COMPONENT',
       id_family: defaultFam,
+      family_prefix: prefix,
       id_templates: defaultTpl,
       id_type: types[0]?.id_type || 'TYPE-MEC',
       id_diag: '',
@@ -214,32 +386,34 @@ export default function EntrepotView({
 
   // Switch Nature in Add Modal
   const handleAddNatureSwitch = (newNature) => {
-    if (newNature === 'PARTIE') {
+    if (isComponentNature(newNature)) {
       const defaultFam = addForm.id_family || families[0]?.id_family || 'FAM-MOT';
       const relTemplates = templates.filter((t) => t.id_family === defaultFam);
       const defaultTpl = relTemplates[0]?.id_templates || '';
-      const autoCode = generateWarehouseItemCode(defaultFam, warehouseItems, 'PARTIE');
+      const prefix = addForm.family_prefix || familyComponentCodes[defaultFam] || '';
+      const autoCode = getNextFamilyComponentCode(defaultFam, prefix);
       const defaultTplObj = templates.find((t) => t.id_templates === defaultTpl);
 
       setAddForm((prev) => ({
         ...prev,
-        nature: 'PARTIE',
+        nature: 'COMPONENT',
         id_family: defaultFam,
+        family_prefix: prefix,
         id_templates: defaultTpl,
         id_warehouse_item: autoCode,
         designation: defaultTplObj ? defaultTplObj.libelle : prev.designation,
       }));
     } else {
-      // COMPOSANT
+      // PART
       const defaultType = addForm.id_type || types[0]?.id_type || 'TYPE-MEC';
       const relDiags = diagnostics.filter((d) => d.id_type === defaultType);
       const defaultDiag = relDiags[0]?.id_diag || '';
-      const autoCode = generateWarehouseItemCode(defaultType, warehouseItems, 'COMPOSANT');
+      const autoCode = getNextPartRef(defaultType);
       const defaultDiagObj = diagnostics.find((d) => d.id_diag === defaultDiag);
 
       setAddForm((prev) => ({
         ...prev,
-        nature: 'COMPOSANT',
+        nature: 'PART',
         id_type: defaultType,
         id_diag: defaultDiag,
         id_warehouse_item: autoCode,
@@ -254,7 +428,7 @@ export default function EntrepotView({
     setEditForm({
       id_warehouse_item: item.id_warehouse_item || '',
       designation: item.designation || '',
-      nature: item.nature || 'PARTIE',
+      nature: item.nature || 'COMPONENT',
       id_family: item.id_family || '',
       id_templates: item.id_templates || '',
       id_type: item.id_type || '',
@@ -308,15 +482,28 @@ export default function EntrepotView({
   const handleAddFamilyChange = (newFam) => {
     const relTpl = templates.filter((t) => t.id_family === newFam);
     const newTpl = relTpl[0]?.id_templates || '';
-    const autoCode = generateWarehouseItemCode(newFam, warehouseItems, 'PARTIE');
+    const prefix = familyComponentCodes[newFam] || '';
+    const autoCode = getNextFamilyComponentCode(newFam, prefix);
     const tplObj = templates.find((t) => t.id_templates === newTpl);
 
     setAddForm((prev) => ({
       ...prev,
       id_family: newFam,
+      family_prefix: prefix,
       id_templates: newTpl,
       id_warehouse_item: autoCode,
       designation: tplObj ? tplObj.libelle : prev.designation,
+    }));
+  };
+
+  const handleAddFamilyPrefixChange = (newPrefix) => {
+    const cleanPrefix = newPrefix.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const autoCode = getNextFamilyComponentCode(addForm.id_family, cleanPrefix);
+
+    setAddForm((prev) => ({
+      ...prev,
+      family_prefix: cleanPrefix,
+      id_warehouse_item: autoCode || prev.id_warehouse_item,
     }));
   };
 
@@ -332,7 +519,7 @@ export default function EntrepotView({
   const handleAddTypeChange = (newType) => {
     const relDiags = diagnostics.filter((d) => d.id_type === newType);
     const newDiag = relDiags[0]?.id_diag || '';
-    const autoCode = generateWarehouseItemCode(newType, warehouseItems, 'COMPOSANT');
+    const autoCode = getNextPartRef(newType);
     const diagObj = diagnostics.find((d) => d.id_diag === newDiag);
 
     setAddForm((prev) => ({
@@ -361,15 +548,26 @@ export default function EntrepotView({
       return;
     }
 
+    const isComp = isComponentNature(addForm.nature);
+
+    // If adding a Component, save the family prefix and sync with familyComponentCodes / families
+    if (isComp && addForm.id_family) {
+      const match = String(addForm.id_warehouse_item).match(/^([A-Z0-9]+)-/i);
+      const prefixToSave = (addForm.family_prefix || (match ? match[1] : '')).toUpperCase().trim();
+      if (prefixToSave) {
+        handleCascadeFamilyPrefixUpdate(addForm.id_family, prefixToSave);
+      }
+    }
+
     if (onAddWarehouseItem) {
       onAddWarehouseItem({
         id_warehouse_item: addForm.id_warehouse_item.trim().toUpperCase(),
         designation: addForm.designation.trim(),
         nature: addForm.nature,
-        id_family: addForm.nature === 'PARTIE' ? addForm.id_family : '',
-        id_templates: addForm.nature === 'PARTIE' ? addForm.id_templates : '',
-        id_type: addForm.nature === 'COMPOSANT' ? addForm.id_type : '',
-        id_diag: addForm.nature === 'COMPOSANT' ? addForm.id_diag : '',
+        id_family: isComp ? addForm.id_family : '',
+        id_templates: isComp ? addForm.id_templates : '',
+        id_type: !isComp ? addForm.id_type : '',
+        id_diag: !isComp ? addForm.id_diag : '',
         rattachement_type: addForm.rattachement_type,
         id_machine_registered:
           addForm.rattachement_type === 'MACHINE' ? addForm.id_machine_registered : '',
@@ -394,14 +592,15 @@ export default function EntrepotView({
     }
 
     if (onUpdateWarehouseItem) {
+      const isComp = isComponentNature(editForm.nature);
       onUpdateWarehouseItem(toEdit.id_warehouse_item, {
         ...toEdit,
         designation: editForm.designation.trim(),
         nature: editForm.nature,
-        id_family: editForm.nature === 'PARTIE' ? editForm.id_family : '',
-        id_templates: editForm.nature === 'PARTIE' ? editForm.id_templates : '',
-        id_type: editForm.nature === 'COMPOSANT' ? editForm.id_type : '',
-        id_diag: editForm.nature === 'COMPOSANT' ? editForm.id_diag : '',
+        id_family: isComp ? editForm.id_family : '',
+        id_templates: isComp ? editForm.id_templates : '',
+        id_type: !isComp ? editForm.id_type : '',
+        id_diag: !isComp ? editForm.id_diag : '',
         rattachement_type: editForm.rattachement_type,
         id_machine_registered:
           editForm.rattachement_type === 'MACHINE' ? editForm.id_machine_registered : '',
@@ -451,37 +650,38 @@ export default function EntrepotView({
   const filteredItems = useMemo(() => {
     return warehouseItems.filter((item) => {
       // Nature filter
-      if (currentNatureFilter !== 'ALL' && item.nature !== currentNatureFilter) {
-        return false;
+      if (currentNatureFilter !== 'ALL') {
+        if (isComponentNature(currentNatureFilter) && !isComponentNature(item.nature)) return false;
+        if (isPartNature(currentNatureFilter) && !isPartNature(item.nature)) return false;
       }
 
       // KPI filter
-      if (activeKpiFilter === 'PARTIE' && item.nature !== 'PARTIE') return false;
-      if (activeKpiFilter === 'COMPOSANT' && item.nature !== 'COMPOSANT') return false;
+      if (isComponentNature(activeKpiFilter) && !isComponentNature(item.nature)) return false;
+      if (isPartNature(activeKpiFilter) && !isPartNature(item.nature)) return false;
       if (activeKpiFilter === 'SERVICE' && !String(item.status || '').toLowerCase().includes('service')) return false;
       if (activeKpiFilter === 'RESERVE' && !String(item.status || '').toLowerCase().includes('stock') && !String(item.status || '').toLowerCase().includes('dispo')) return false;
 
-      // Family filter (for parties)
+      // Family filter (for components)
       if (
-        item.nature === 'PARTIE' &&
+        isComponentNature(item.nature) &&
         currentFamilyFilter !== 'ALL' &&
         item.id_family !== currentFamilyFilter
       ) {
         return false;
       }
 
-      // Template filter (for parties)
+      // Template filter (for components)
       if (
-        item.nature === 'PARTIE' &&
+        isComponentNature(item.nature) &&
         currentTemplateFilter !== 'ALL' &&
         item.id_templates !== currentTemplateFilter
       ) {
         return false;
       }
 
-      // Type filter (for composants)
+      // Type filter (for parts)
       if (
-        item.nature === 'COMPOSANT' &&
+        isPartNature(item.nature) &&
         currentTypeFilter !== 'ALL' &&
         item.id_type !== currentTypeFilter
       ) {
@@ -613,15 +813,15 @@ export default function EntrepotView({
 
   // Quick Analytics Counts
   const kpis = useMemo(() => {
-    let parties = 0;
-    let composants = 0;
+    let components = 0;
+    let parts = 0;
     let enService = 0;
     let enStock = 0;
     let enRevision = 0;
 
     warehouseItems.forEach((item) => {
-      if (item.nature === 'PARTIE') parties++;
-      else composants++;
+      if (isComponentNature(item.nature)) components++;
+      else parts++;
 
       const st = String(item.status || '').toLowerCase();
       if (st.includes('service')) enService++;
@@ -631,8 +831,8 @@ export default function EntrepotView({
 
     return {
       total: warehouseItems.length,
-      parties,
-      composants,
+      components,
+      parts,
       enService,
       enStock,
       enRevision,
@@ -668,39 +868,37 @@ export default function EntrepotView({
   return (
     <AnimatedPage className="space-y-5">
       {/* 1. Header Banner (Consistent GMAO Light Theme) */}
-      <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
-              <Warehouse className="w-5 h-5 text-teal-700" />
+      <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 sm:gap-4 w-full">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
+            <Warehouse className="w-5 h-5 text-teal-700" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                Entrepôt : Components & Parts
+              </h2>
+              <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold bg-teal-50 text-teal-700 border border-teal-200 rounded-full">
+                {warehouseItems.length} Enregistrés
+              </span>
+              <span className="px-2.5 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 rounded-full">
+                Dual-Twin GMAO
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                  Entrepôt : Éléments & Composants
-                </h2>
-                <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold bg-teal-50 text-teal-700 border border-teal-200 rounded-full">
-                  {warehouseItems.length} Enregistrés
-                </span>
-                <span className="px-2.5 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 rounded-full">
-                  Dual-Twin GMAO
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
-                Inventaire physique & réconciliation de l'entrepôt. Gestion unifiée des{' '}
-                <b className="text-blue-700 font-bold">Parties Machines</b> (arborescence Famille/Template) et des{' '}
-                <b className="text-indigo-700 font-bold">Composants de Rechange</b> (Type/Désignation).
-              </p>
-            </div>
+            <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
+              Inventaire physique & réconciliation de l'entrepôt. Gestion unifiée des{' '}
+              <b className="text-blue-700 font-bold">Components Machines</b> (arborescence Famille/Template) et des{' '}
+              <b className="text-indigo-700 font-bold">Parts de Rechange</b> (Type/Désignation).
+            </p>
           </div>
         </div>
 
         <button
           onClick={handleOpenAddModal}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0 cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-black transition shadow-xs shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Nouvel Élément / Composant</span>
+          <span>Nouveau Component / Part</span>
         </button>
       </div>
 
@@ -726,7 +924,7 @@ export default function EntrepotView({
               {kpis.total}
             </span>
             <span className="text-[11px] text-slate-500 mt-0.5 block">
-              Éléments & Composants
+              Components & Parts
             </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0 border border-teal-200/60">
@@ -734,27 +932,27 @@ export default function EntrepotView({
           </div>
         </div>
 
-        {/* Card 2: Parties Machines (Ensembles) */}
+        {/* Card 2: Components (Ensembles / Sub-systems) */}
         <div
           onClick={() => {
-            setActiveKpiFilter('PARTIE');
-            changeNatureFilter('PARTIE');
+            setActiveKpiFilter('COMPONENT');
+            changeNatureFilter('COMPONENT');
           }}
           className={`bg-white p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex items-center justify-between ${
-            currentNatureFilter === 'PARTIE' || activeKpiFilter === 'PARTIE'
+            isComponentNature(currentNatureFilter) || isComponentNature(activeKpiFilter)
               ? 'border-blue-500 ring-2 ring-blue-100 bg-blue-50/20'
               : 'border-slate-200 hover:border-slate-300'
           }`}
         >
           <div>
             <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">
-              Parties (Twin Machine)
+              Components (Twin Machine)
             </span>
             <span className="text-2xl font-black text-blue-700 mt-0.5 block font-mono">
-              {kpis.parties}
+              {kpis.components}
             </span>
             <span className="text-[11px] text-slate-500 mt-0.5 block">
-              Moteurs, Pompes, Réducteurs
+              Moteurs, Pompes, Extincteurs (Ensembles)
             </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 border border-blue-200/60">
@@ -762,27 +960,27 @@ export default function EntrepotView({
           </div>
         </div>
 
-        {/* Card 3: Composants Spécifiques (Stock) */}
+        {/* Card 3: Parts (Pièces détachées) */}
         <div
           onClick={() => {
-            setActiveKpiFilter('COMPOSANT');
-            changeNatureFilter('COMPOSANT');
+            setActiveKpiFilter('PART');
+            changeNatureFilter('PART');
           }}
           className={`bg-white p-4 rounded-2xl border transition-all cursor-pointer shadow-xs flex items-center justify-between ${
-            currentNatureFilter === 'COMPOSANT' || activeKpiFilter === 'COMPOSANT'
+            isPartNature(currentNatureFilter) || isPartNature(activeKpiFilter)
               ? 'border-indigo-500 ring-2 ring-indigo-100 bg-indigo-50/20'
               : 'border-slate-200 hover:border-slate-300'
           }`}
         >
           <div>
             <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">
-              Composants (Twin Stock)
+              Parts (Twin Stock)
             </span>
             <span className="text-2xl font-black text-indigo-700 mt-0.5 block font-mono">
-              {kpis.composants}
+              {kpis.parts}
             </span>
             <span className="text-[11px] text-slate-500 mt-0.5 block">
-              Pièces d'usure & Composants PDR
+              Pièces détachées & Composants PDR
             </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 border border-indigo-200/60">
@@ -824,7 +1022,7 @@ export default function EntrepotView({
           <div>
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <Layers className="w-3 h-3 text-blue-600" />
-              <span>FORMULE TWIN : PARTIE</span>
+              <span>FORMULE TWIN : COMPONENT</span>
             </div>
             <div className="font-mono text-xs text-blue-700 font-bold mt-0.5">
               Code = Auto(Famille, Template)
@@ -839,7 +1037,7 @@ export default function EntrepotView({
           <div>
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
               <Puzzle className="w-3 h-3 text-indigo-600" />
-              <span>FORMULE TWIN : COMPOSANT</span>
+              <span>FORMULE TWIN : PART</span>
             </div>
             <div className="font-mono text-xs text-indigo-700 font-bold mt-0.5">
               Code = Auto(Type, Désignation)
@@ -1024,116 +1222,112 @@ export default function EntrepotView({
           {/* Field 2: Nature Twin Filter (Dual-Twin Switch) */}
           <div className="space-y-1">
             <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
-              Nature (Dual Twin)
+              Nature (Dual Twin) (B)
             </label>
-            <select
+            <CustomSelect
               value={currentNatureFilter}
-              onChange={(e) => {
-                changeNatureFilter(e.target.value);
+              onChange={(val) => {
+                changeNatureFilter(val);
                 setActiveKpiFilter('ALL');
               }}
-              className={`w-full h-9 px-3 rounded-xl border text-xs font-semibold focus:bg-white focus:ring-2 outline-none transition shadow-2xs cursor-pointer ${
-                currentNatureFilter === 'PARTIE'
-                  ? 'bg-blue-50/80 text-blue-900 border-blue-200 focus:border-blue-500 focus:ring-blue-100'
-                  : currentNatureFilter === 'COMPOSANT'
-                  ? 'bg-indigo-50/80 text-indigo-900 border-indigo-200 focus:border-indigo-500 focus:ring-indigo-100'
-                  : 'bg-slate-50/70 text-slate-700 border-slate-200 focus:border-teal-500 focus:ring-teal-100'
-              }`}
-            >
-              <option value="ALL">Toutes les Natures (Dual Twin)</option>
-              <option value="PARTIE">Parties (Machine / Ensemble)</option>
-              <option value="COMPOSANT">Composants (Stock / Rechange)</option>
-            </select>
+              options={[
+                { value: 'ALL', label: 'Toutes Natures (Dual Twin)', badge: '[B]', badgeColor: 'bg-teal-50 text-teal-800' },
+                { value: 'COMPONENT', label: 'Components (Machine / Ensemble)', badge: '[B]', badgeColor: 'bg-blue-50 text-blue-800' },
+                { value: 'PART', label: 'Parts (Stock / Rechange)', badge: '[B]', badgeColor: 'bg-indigo-50 text-indigo-800' },
+              ]}
+            />
           </div>
 
-          {/* Field 3: Smart Classification Filter: Family for PARTIE or Type for COMPOSANT */}
+          {/* Field 3: Smart Classification Filter: Family for COMPONENT or Type for PART */}
           <div className="space-y-1">
             <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
-              {currentNatureFilter === 'COMPOSANT' ? (
+              {isPartNature(currentNatureFilter) ? (
                 <span className="inline-flex items-center gap-1.5 text-indigo-700">
                   <Puzzle className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                  Type de Composant
+                  Type de Part (B)
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 text-blue-700">
                   <Layers className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  Famille de Partie
+                  Famille de Component (D)
                 </span>
               )}
             </label>
-            {currentNatureFilter === 'COMPOSANT' ? (
-              <select
+            {isPartNature(currentNatureFilter) ? (
+              <CustomSelect
                 value={currentTypeFilter}
-                onChange={(e) => changeTypeFilter(e.target.value)}
-                className="w-full h-9 px-3 rounded-xl border border-indigo-200 bg-indigo-50/40 text-xs font-semibold text-indigo-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition shadow-2xs cursor-pointer"
-              >
-                <option value="ALL">Tous les Types de Composants ({types.length})</option>
-                {types.map((t) => {
-                  const count = warehouseItems.filter(
-                    (i) => i.nature === 'COMPOSANT' && i.id_type === t.id_type
-                  ).length;
-                  return (
-                    <option key={t.id_type} value={t.id_type}>
-                      {t.libelle} ({t.id_type}) [{count}]
-                    </option>
-                  );
-                })}
-              </select>
+                onChange={(val) => changeTypeFilter(val)}
+                options={[
+                  { value: 'ALL', label: `Tous Types (${types.length})`, badge: '[B]', badgeColor: 'bg-indigo-50 text-indigo-800' },
+                  ...types.map((t) => {
+                    const count = warehouseItems.filter(
+                      (i) => isPartNature(i.nature) && i.id_type === t.id_type
+                    ).length;
+                    return {
+                      value: t.id_type,
+                      label: `[B] ${t.libelle} (${t.id_type})`,
+                      badge: `[${count}]`,
+                      badgeColor: 'bg-indigo-50 text-indigo-800',
+                    };
+                  }),
+                ]}
+              />
             ) : (
-              <select
+              <CustomSelect
                 value={currentFamilyFilter}
-                onChange={(e) => {
-                  changeFamilyFilter(e.target.value);
+                onChange={(val) => {
+                  changeFamilyFilter(val);
                   if (changeTemplateFilter) changeTemplateFilter('ALL');
                 }}
-                className="w-full h-9 px-3 rounded-xl border border-blue-200 bg-blue-50/40 text-xs font-semibold text-blue-900 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition shadow-2xs cursor-pointer"
-              >
-                <option value="ALL">Toutes les Familles de Parties ({families.length})</option>
-                {families.map((f) => {
-                  const count = warehouseItems.filter((i) => i.id_family === f.id_family).length;
-                  return (
-                    <option key={f.id_family} value={f.id_family}>
-                      {f.libelle} ({f.id_family}) [{count}]
-                    </option>
-                  );
-                })}
-              </select>
+                options={[
+                  { value: 'ALL', label: `Toutes Familles (${families.length})`, badge: '[D]', badgeColor: 'bg-blue-50 text-blue-800' },
+                  ...families.map((f) => {
+                    const count = warehouseItems.filter((i) => i.id_family === f.id_family).length;
+                    return {
+                      value: f.id_family,
+                      label: `[D] ${f.libelle} (${f.id_family})`,
+                      badge: `[${count}]`,
+                      badgeColor: 'bg-blue-50 text-blue-800',
+                    };
+                  }),
+                ]}
+              />
             )}
           </div>
 
           {/* Field 4: Rattachement Filter */}
           <div className="space-y-1">
             <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
-              Rattachement & Emplacement
+              Rattachement & Emplacement (E)
             </label>
-            <select
+            <CustomSelect
               value={currentRattachementFilter}
-              onChange={(e) => changeRattachementFilter(e.target.value)}
-              className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50/70 text-xs font-semibold text-slate-700 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition shadow-2xs cursor-pointer"
-            >
-              <option value="ALL">Tous les Rattachements</option>
-              <option value="MACHINE">🏭 Rattaché à une Machine</option>
-              <option value="ZONE">📍 Rattaché à une Zone / Atelier</option>
-              <option value="ENTREPOT">🏢 Entrepôt Central (Stock)</option>
-            </select>
+              onChange={(val) => changeRattachementFilter(val)}
+              options={[
+                { value: 'ALL', label: 'Tous Rattachements' },
+                { value: 'MACHINE', label: '🏭 Rattaché à une Machine', badge: '[E]', badgeColor: 'bg-teal-50 text-teal-800' },
+                { value: 'ZONE', label: '📍 Rattaché à une Zone / Atelier', badge: '[F]', badgeColor: 'bg-purple-50 text-purple-800' },
+                { value: 'ENTREPOT', label: '🏢 Entrepôt Central (Stock)', badge: '[E]', badgeColor: 'bg-slate-100 text-slate-800' },
+              ]}
+            />
           </div>
 
           {/* Field 5: Status Filter */}
           <div className="space-y-1">
             <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
-              Statut Opérationnel
+              Statut Opérationnel (G)
             </label>
-            <select
+            <CustomSelect
               value={currentStatusFilter}
-              onChange={(e) => changeStatusFilter(e.target.value)}
-              className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-slate-50/70 text-xs font-semibold text-slate-700 focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-none transition shadow-2xs cursor-pointer"
-            >
-              <option value="ALL">Tous les Statuts</option>
-              <option value="En service">🟢 En service</option>
-              <option value="En stock (Disponible)">🔵 En stock (Disponible)</option>
-              <option value="En révision / Externe">🟡 En révision / Externe</option>
-              <option value="Hors service">🔴 Hors service</option>
-            </select>
+              onChange={(val) => changeStatusFilter(val)}
+              options={[
+                { value: 'ALL', label: 'Tous Statuts' },
+                { value: 'En service', label: '🟢 En service', badge: '[G]', badgeColor: 'bg-emerald-50 text-emerald-800' },
+                { value: 'En stock (Disponible)', label: '🔵 En stock (Disponible)', badge: '[G]', badgeColor: 'bg-blue-50 text-blue-800' },
+                { value: 'En révision / Externe', label: '🟡 En révision / Externe', badge: '[G]', badgeColor: 'bg-amber-50 text-amber-800' },
+                { value: 'Hors service', label: '🔴 Hors service', badge: '[G]', badgeColor: 'bg-rose-50 text-rose-800' },
+              ]}
+            />
           </div>
         </div>
 
@@ -1160,18 +1354,18 @@ export default function EntrepotView({
               {currentNatureFilter !== 'ALL' && (
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg font-bold text-[11px] border ${
-                    currentNatureFilter === 'PARTIE'
+                    isComponentNature(currentNatureFilter)
                       ? 'bg-blue-50 text-blue-700 border-blue-200'
                       : 'bg-indigo-50 text-indigo-700 border-indigo-200'
                   }`}
                 >
-                  {currentNatureFilter === 'PARTIE' ? (
+                  {isComponentNature(currentNatureFilter) ? (
                     <span className="inline-flex items-center gap-1">
-                      <Layers className="w-3 h-3 text-blue-600" /> Parties
+                      <Layers className="w-3 h-3 text-blue-600" /> Components
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1">
-                      <Puzzle className="w-3 h-3 text-indigo-600" /> Composants
+                      <Puzzle className="w-3 h-3 text-indigo-600" /> Parts
                     </span>
                   )}
                   <button
@@ -1246,15 +1440,13 @@ export default function EntrepotView({
       {/* 5. Main Table (BDR Light GMAO Excel Twin Layout) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         {/* Top Info Header Bar inside Card (Excel Twin Model Header) */}
-        <div className="p-2.5 bg-slate-100/70 border-b border-slate-200 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-600">
-            <span className="w-2 h-2 rounded-full bg-teal-500"></span>
-            <span className="font-bold text-slate-800">{filteredItems.length}</span> élément{filteredItems.length > 1 ? 's' : ''} enregistré{filteredItems.length > 1 ? 's' : ''}
-            <span className="text-slate-300">|</span>
-            <span className="text-[11px] text-slate-500">Modèle Excel Twin Entrepôt Colonnes A→I • Dual Twin PDR & Machines</span>
+        <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+          <div className="font-bold text-slate-800 text-[13px] flex items-center gap-2">
+            <Warehouse className="w-4 h-4 text-teal-600" />
+            <span>Tableau Warehouse_Items • Colonnes A → I</span>
           </div>
-          <div className="text-[11px] text-slate-400 font-mono hidden xl:block">
-            N° | Code (A) | Nature (B) | Désignation & Spécifications (C) | Classification (D) | Rattachement (E) | Responsable (F) | Statut (G) | Stock (H) | •••
+          <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
+            id_warehouse_item (A) | nature (B) | designation (C) | classification (D) | rattachement (E) | technician (F) | status (G) | stockActuel (H)
           </div>
         </div>
 
@@ -1421,7 +1613,7 @@ export default function EntrepotView({
               ) : (
                 displayedData.map((item, idx) => {
                   const realIndex = startIndex + idx;
-                  const isPartie = item.nature === 'PARTIE';
+                  const isCompItem = isComponentNature(item.nature);
                   const famObj = families.find((f) => f.id_family === item.id_family);
                   const tplObj = templates.find((t) => t.id_templates === item.id_templates);
                   const typeObj = types.find((t) => t.id_type === item.id_type);
@@ -1442,7 +1634,7 @@ export default function EntrepotView({
                       <td className="py-2.5 px-3.5 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-mono font-bold text-xs border shadow-2xs ${
-                            isPartie
+                            isCompItem
                               ? 'bg-blue-50 text-blue-900 border-blue-200/90'
                               : 'bg-indigo-50 text-indigo-900 border-indigo-200/90'
                           }`}
@@ -1454,13 +1646,13 @@ export default function EntrepotView({
 
                       {/* Col 2: Nature (Twin) (B) */}
                       <td className="py-2.5 px-3 whitespace-nowrap">
-                        {isPartie ? (
+                        {isCompItem ? (
                           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs">
                             <div className="w-6 h-6 rounded-lg bg-blue-100/80 flex items-center justify-center shrink-0">
                               <Layers className="w-3.5 h-3.5 text-blue-600" />
                             </div>
                             <div>
-                              <span className="font-extrabold text-[11px] block leading-tight">PARTIE</span>
+                              <span className="font-extrabold text-[11px] block leading-tight">COMPONENT</span>
                               <span className="text-[9.5px] text-blue-500 font-medium block">Machine Twin</span>
                             </div>
                           </div>
@@ -1470,7 +1662,7 @@ export default function EntrepotView({
                               <Puzzle className="w-3.5 h-3.5 text-indigo-600" />
                             </div>
                             <div>
-                              <span className="font-extrabold text-[11px] block leading-tight">COMPOSANT</span>
+                              <span className="font-extrabold text-[11px] block leading-tight">PART</span>
                               <span className="text-[9.5px] text-indigo-500 font-medium block">Stock Twin</span>
                             </div>
                           </div>
@@ -1508,7 +1700,7 @@ export default function EntrepotView({
 
                       {/* Col 4: Classification (D) */}
                       <td className="py-2.5 px-3 whitespace-nowrap">
-                        {isPartie ? (
+                        {isCompItem ? (
                           <div className="space-y-1">
                             <button
                               type="button"
@@ -1902,27 +2094,27 @@ export default function EntrepotView({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => handleAddNatureSwitch('PARTIE')}
+                    onClick={() => handleAddNatureSwitch('COMPONENT')}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                      addForm.nature === 'PARTIE'
+                      isComponentNature(addForm.nature)
                         ? 'bg-blue-50 text-blue-700 border-blue-300 ring-2 ring-blue-500/20'
                         : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
                     <Layers className="w-3.5 h-3.5" />
-                    <span>Partie (Twin Machine)</span>
+                    <span>Component (Twin Machine)</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleAddNatureSwitch('COMPOSANT')}
+                    onClick={() => handleAddNatureSwitch('PART')}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                      addForm.nature === 'COMPOSANT'
+                      isPartNature(addForm.nature)
                         ? 'bg-indigo-50 text-indigo-700 border-indigo-300 ring-2 ring-indigo-500/20'
                         : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
                     <Puzzle className="w-3.5 h-3.5" />
-                    <span>Composant (Twin Stock)</span>
+                    <span>Part (Twin Stock)</span>
                   </button>
                 </div>
               </div>
@@ -1959,21 +2151,33 @@ export default function EntrepotView({
               </div>
 
               {/* Dynamic Classification according to Nature */}
-              {addForm.nature === 'PARTIE' ? (
+              {isComponentNature(addForm.nature) ? (
                 <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 space-y-2.5">
-                  <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5" />
-                    <span>Classification Partie Machine (Twin Model)</span>
+                  <div className="text-[10px] font-bold text-blue-700 uppercase tracking-wider flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Classification Component Machine (Twin Model)</span>
+                    </div>
+                    {addForm.id_family && familyComponentCodes[addForm.id_family] ? (
+                      <span className="px-2 py-0.5 rounded-md text-[9.5px] font-mono font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                        Préfixe Famille Actif : {familyComponentCodes[addForm.id_family]}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-md text-[9.5px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                        Nouveau Préfixe de Famille
+                      </span>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div>
                       <label className="text-[10.5px] font-semibold text-slate-700 block mb-1">
-                        Famille
+                        Famille *
                       </label>
                       <select
                         value={addForm.id_family}
                         onChange={(e) => handleAddFamilyChange(e.target.value)}
-                        className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs focus:border-blue-500 outline-none"
+                        className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs font-medium focus:border-blue-500 outline-none"
                       >
                         {families.map((f) => (
                           <option key={f.id_family} value={f.id_family}>
@@ -1982,6 +2186,30 @@ export default function EntrepotView({
                         ))}
                       </select>
                     </div>
+
+                    <div>
+                      <label className="text-[10.5px] font-semibold text-slate-700 block mb-1">
+                        Code Préfixe Famille (Composant) *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={addForm.family_prefix || ''}
+                          onChange={(e) => handleAddFamilyPrefixChange(e.target.value)}
+                          placeholder="Ex: EXT, MOT, POM..."
+                          className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs font-mono font-bold text-blue-900 focus:border-blue-500 outline-none uppercase"
+                        />
+                        {familyComponentCodes[addForm.id_family] && (
+                          <span
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200"
+                            title="Ce préfixe est enregistré pour cette famille"
+                          >
+                            ✓ Enregistré
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
                     <div>
                       <label className="text-[10.5px] font-semibold text-slate-700 block mb-1">
                         Template Associé
@@ -2000,22 +2228,46 @@ export default function EntrepotView({
                       </select>
                     </div>
                   </div>
+
+                  <div className="text-[10.5px] text-slate-500 bg-white/70 p-2 rounded-lg border border-blue-100/70 flex items-center justify-between gap-2 flex-wrap">
+                    <span className="leading-tight">
+                      Code auto-généré : <b className="text-blue-700 font-bold font-mono">{addForm.id_warehouse_item || '...'}</b> (Famille {addForm.id_family})
+                    </span>
+                    {addForm.id_family && addForm.family_prefix && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleCascadeFamilyPrefixUpdate(addForm.id_family, addForm.family_prefix);
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold text-blue-800 bg-blue-100 hover:bg-blue-200 border border-blue-300 transition cursor-pointer"
+                        title="Synchroniser et renommer tous les composants existants de cette famille avec ce nouveau préfixe"
+                      >
+                        <Zap className="w-3 h-3 text-blue-600" />
+                        <span>Mettre à jour tous les composants ({warehouseItems.filter((i) => isComponentNature(i.nature) && i.id_family === addForm.id_family).length})</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 space-y-2.5">
-                  <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
-                    <Puzzle className="w-3.5 h-3.5" />
-                    <span>Classification Composant Stock (Twin Model)</span>
+                  <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Puzzle className="w-3.5 h-3.5" />
+                      <span>Classification Part Stock (Twin Model)</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-md text-[9.5px] font-mono font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                      Réf PDR Auto-générée : {addForm.id_warehouse_item || 'PART-01'}
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="text-[10.5px] font-semibold text-slate-700 block mb-1">
-                        Type Pièce
+                        Type Pièce (Génère la Référence) *
                       </label>
                       <select
                         value={addForm.id_type}
                         onChange={(e) => handleAddTypeChange(e.target.value)}
-                        className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs focus:border-indigo-500 outline-none"
+                        className="w-full h-8 px-2.5 rounded-lg border border-slate-200 bg-white text-xs focus:border-indigo-500 outline-none font-semibold"
                       >
                         {types.map((t) => (
                           <option key={t.id_type} value={t.id_type}>
@@ -2041,6 +2293,15 @@ export default function EntrepotView({
                         ))}
                       </select>
                     </div>
+                  </div>
+
+                  <div className="text-[10.5px] text-slate-500 bg-white/70 p-2 rounded-lg border border-indigo-100/70 flex items-center justify-between gap-2">
+                    <span className="leading-tight">
+                      Réf Pièce <b className="text-indigo-700 font-bold font-mono">{addForm.id_warehouse_item || '...'}</b> générée automatiquement selon le Type.
+                    </span>
+                    <span className="font-mono text-[10px] font-bold text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 shrink-0">
+                      Type: {addForm.id_type || 'TYPE'}
+                    </span>
                   </div>
                 </div>
               )}
@@ -2456,15 +2717,15 @@ export default function EntrepotView({
                 <div className="p-2.5 bg-slate-50 rounded-xl">
                   <div className="text-[10px] font-bold text-slate-400 uppercase">Nature (Twin)</div>
                   <div className="font-bold text-slate-800 flex items-center gap-1.5 mt-0.5">
-                    {selectedDetails.nature === 'PARTIE' ? (
+                    {isComponentNature(selectedDetails.nature) ? (
                       <span className="inline-flex items-center gap-1 text-blue-700">
                         <Layers className="w-3.5 h-3.5 text-blue-600" />
-                        Partie (Machine)
+                        Component (Machine Twin)
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-indigo-700">
                         <Puzzle className="w-3.5 h-3.5 text-indigo-600" />
-                        Composant (Stock)
+                        Part (Stock Twin)
                       </span>
                     )}
                   </div>
@@ -2475,7 +2736,7 @@ export default function EntrepotView({
                 </div>
               </div>
 
-              {selectedDetails.nature === 'PARTIE' ? (
+              {isComponentNature(selectedDetails.nature) ? (
                 <div className="grid grid-cols-2 gap-2">
                   <div className="p-2.5 bg-blue-50/50 rounded-xl border border-blue-100">
                     <div className="text-[10px] font-bold text-blue-700 uppercase">Famille [D]</div>

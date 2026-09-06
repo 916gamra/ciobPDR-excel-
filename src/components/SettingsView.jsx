@@ -43,6 +43,11 @@ import {
   LogIn,
   LogOut as LogOutIcon,
   Laptop,
+  ShieldCheck,
+  Gauge,
+  Zap,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 
 import {
@@ -61,6 +66,9 @@ import { backupService } from '../utils/BackupService';
 import { auditService } from '../utils/AuditService';
 import { accessLogService } from '../utils/AccessLogService';
 import { logger } from '../utils/Logger';
+import { dataIntegrityService } from '../services/dataIntegrityService';
+import { performanceService } from '../services/performanceService';
+import { syncQueueService } from '../services/syncQueueService';
 
 
 export default function SettingsView({
@@ -805,15 +813,81 @@ export default function SettingsView({
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [accessLogs, setAccessLogs] = useState([]);
-  const [auditSubTab, setAuditSubTab] = useState('access'); // 'access' | 'backups' | 'events'
+  const [auditSubTab, setAuditSubTab] = useState('access'); // 'access' | 'backups' | 'events' | 'integrity' | 'performance'
+  const [integrityReport, setIntegrityReport] = useState(null);
+  const [checkingIntegrity, setCheckingIntegrity] = useState(false);
+  const [currentChecksum, setCurrentChecksum] = useState('');
+  const [syncQueueState, setSyncQueueState] = useState(() => syncQueueService.getState());
+  const [perfStats, setPerfStats] = useState({
+    heapMB: 0,
+    recalcStats: null,
+  });
 
   useEffect(() => {
     if (activeTab === 'backup-audit') {
       loadBackups();
       loadAuditLogs();
       loadAccessLogs();
+      runIntegrityCheck();
+      refreshPerformanceMetrics();
     }
   }, [activeTab]);
+
+  const runIntegrityCheck = () => {
+    setCheckingIntegrity(true);
+    setTimeout(() => {
+      try {
+        const rep = dataIntegrityService.getIntegrityReport(rawStock, mouvements);
+        const cs = dataIntegrityService.calculateChecksum({ rawStock, mouvements, machines, families });
+        setIntegrityReport(rep);
+        setCurrentChecksum(cs);
+      } catch (err) {
+        console.error('Erreur diagnostic intégrité:', err);
+      } finally {
+        setCheckingIntegrity(false);
+      }
+    }, 120);
+  };
+
+  const handleRepairData = () => {
+    if (!window.confirm('Voulez-vous corriger automatiquement les anomalies de stocks négatifs et valeurs manquantes ?')) return;
+    const repairedStock = rawStock.map((item) => dataIntegrityService.repairData(item));
+    setRawStock(repairedStock);
+    storageService.saveArticles(repairedStock);
+    runIntegrityCheck();
+    showToast('Données assainies et réparées avec succès.', 'success');
+  };
+
+  const runPerformanceBenchmark = async () => {
+    try {
+      await performanceService.measure('Calcul_Formules_Twin_Stock', async () => {
+        const mvtsMap = new Map();
+        for (const m of mouvements) {
+          const r = (m.ref || '').toUpperCase();
+          if (!mvtsMap.has(r)) mvtsMap.set(r, { in: 0, out: 0 });
+          const item = mvtsMap.get(r);
+          if (m.type === 'Entrée') item.in += Number(m.quantite) || 0;
+          else if (m.type === 'Sortie') item.out += Number(m.quantite) || 0;
+        }
+        return rawStock.map((s) => ({
+          ...s,
+          calc: (Number(s.stockInitial) || 0) + (mvtsMap.get((s.ref || '').toUpperCase())?.in || 0) - (mvtsMap.get((s.ref || '').toUpperCase())?.out || 0),
+        }));
+      });
+      refreshPerformanceMetrics();
+      showToast('Benchmark de performance calculé avec succès.', 'success');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const refreshPerformanceMetrics = () => {
+    setPerfStats({
+      heapMB: performanceService.getMemoryUsage(),
+      recalcStats: performanceService.getStats('Calcul_Formules_Twin_Stock'),
+    });
+    setSyncQueueState(syncQueueService.getState());
+  };
 
   const loadAccessLogs = () => {
     const logs = accessLogService.getLogs();
@@ -2133,6 +2207,34 @@ export default function SettingsView({
                   <Clock className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Points de Restauration ({backupsList.length})</span>
                 </button>
+                <button
+                  onClick={() => {
+                    setAuditSubTab('integrity');
+                    runIntegrityCheck();
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    auditSubTab === 'integrity'
+                      ? 'bg-white text-emerald-700 shadow-xs border border-emerald-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Intégrité des Données</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setAuditSubTab('performance');
+                    refreshPerformanceMetrics();
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    auditSubTab === 'performance'
+                      ? 'bg-white text-amber-700 shadow-xs border border-amber-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Gauge className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Performance & Sync</span>
+                </button>
               </div>
             </div>
 
@@ -2355,6 +2457,235 @@ export default function SettingsView({
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {/* SUBTAB 4: DATA INTEGRITY & TWIN EXCEL FORMULAS */}
+            {auditSubTab === 'integrity' && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-50/70 p-3.5 rounded-2xl border border-emerald-200/80">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-emerald-950">
+                        Diagnostic d'Intégrité des Données & Formules Jumelles
+                      </h4>
+                      <p className="text-[11px] text-emerald-800/80">
+                        Vérifie la concordance mathématique (Stock Actuel = Initial + Entrées - Sorties), l'absence de valeurs négatives et l'empreinte Checksum.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={runIntegrityCheck}
+                      disabled={checkingIntegrity}
+                      className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${checkingIntegrity ? 'animate-spin' : ''}`} />
+                      <span>{checkingIntegrity ? 'Vérification...' : 'Lancer l\'Audit'}</span>
+                    </button>
+                    <button
+                      onClick={handleRepairData}
+                      className="px-3 py-1.5 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-300 shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-600" />
+                      <span>Réparer Auto</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Status KPI Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                    <div className="text-[11px] font-mono text-slate-500">Statut Global</div>
+                    <div className="text-base font-black mt-1 flex items-center gap-1.5">
+                      {integrityReport?.overall?.valid ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <span className="text-emerald-700">100% Conforme</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="w-4 h-4 text-amber-600" />
+                          <span className="text-amber-700">{integrityReport?.overall?.totalErrors || 0} anomalie(s)</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                    <div className="text-[11px] font-mono text-slate-500">Articles Contrôlés</div>
+                    <div className="text-base font-black text-slate-900 mt-1 font-mono">
+                      {rawStock.length} articles
+                    </div>
+                  </div>
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                    <div className="text-[11px] font-mono text-slate-500">Mouvements Audités</div>
+                    <div className="text-base font-black text-slate-900 mt-1 font-mono">
+                      {mouvements.length} lignes
+                    </div>
+                  </div>
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                    <div className="text-[11px] font-mono text-slate-500">Empreinte Checksum</div>
+                    <div className="text-xs font-mono font-bold text-slate-700 mt-1 truncate" title={currentChecksum}>
+                      0x{currentChecksum || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Audit Results Table */}
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+                  <div className="p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800">
+                      Rapport d'Audit Détaillé ({integrityReport?.overall?.totalErrors || 0} Erreurs, {integrityReport?.overall?.totalWarnings || 0} Avertissements)
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      Horodatage: {integrityReport?.timestamp ? new Date(integrityReport.timestamp).toLocaleTimeString() : 'En attente'}
+                    </span>
+                  </div>
+
+                  {(!integrityReport || (integrityReport.overall.totalErrors === 0 && integrityReport.overall.totalWarnings === 0)) ? (
+                    <div className="p-6 text-center text-xs text-slate-500 space-y-1">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                      <div className="font-bold text-slate-800 mt-2">Aucune anomalie détectée</div>
+                      <div>Toutes les formules Excel Twin et les cohérences relationnelles sont parfaitement alignées.</div>
+                    </div>
+                  ) : (
+                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 text-xs">
+                      {integrityReport.stock.errors.map((err, i) => (
+                        <div key={`se-${i}`} className="p-3 bg-rose-50/50 flex items-start gap-2.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <span className="font-bold text-rose-900 font-mono">[{err.type}]</span>
+                            <span className="ml-2 text-rose-800">{err.message}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {integrityReport.stock.warnings.map((warn, i) => (
+                        <div key={`sw-${i}`} className="p-3 bg-amber-50/40 flex items-start gap-2.5">
+                          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <span className="font-bold text-amber-900 font-mono">[{warn.type}]</span>
+                            <span className="ml-2 text-amber-800">{warn.message}</span>
+                          </div>
+                        </div>
+                      ))}
+                      {integrityReport.movements.errors.map((err, i) => (
+                        <div key={`me-${i}`} className="p-3 bg-rose-50/50 flex items-start gap-2.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <span className="font-bold text-rose-900 font-mono">[MVT_{err.type}]</span>
+                            <span className="ml-2 text-rose-800">{err.message}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* SUBTAB 5: PERFORMANCE MONITOR & OFFLINE SYNC QUEUE */}
+            {auditSubTab === 'performance' && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200/80">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Gauge className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-950">
+                        Moniteur de Performance & File d'Attente Offline
+                      </h4>
+                      <p className="text-[11px] text-amber-800/80">
+                        Suivi des temps d'exécution, consommation mémoire JS Heap et état des opérations en attente de synchronisation.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={runPerformanceBenchmark}
+                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Tester le Recalcul</span>
+                    </button>
+                    <button
+                      onClick={() => performanceService.exportReport()}
+                      className="px-3 py-1.5 bg-white hover:bg-amber-50 text-amber-900 text-xs font-bold rounded-xl border border-amber-300 shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5 text-amber-700" />
+                      <span>Exporter CSV</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Metrics Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                    <div className="text-[11px] font-mono text-slate-500">Consommation Mémoire Heap</div>
+                    <div className="text-lg font-black text-slate-900 mt-1 font-mono">
+                      {perfStats.heapMB ? `${perfStats.heapMB.toFixed(1)} Mo` : 'Non disponible'}
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1">Estimée via performance.memory</div>
+                  </div>
+
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                    <div className="text-[11px] font-mono text-slate-500">Recalcul Twin (Moyenne)</div>
+                    <div className="text-lg font-black text-amber-600 mt-1 font-mono">
+                      {perfStats.recalcStats?.avg ? `${perfStats.recalcStats.avg} ms` : 'À tester'}
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1">
+                      Min: {perfStats.recalcStats?.min ?? 'N/A'}ms • Max: {perfStats.recalcStats?.max ?? 'N/A'}ms
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                    <div className="text-[11px] font-mono text-slate-500">File de Synchronisation</div>
+                    <div className="text-lg font-black mt-1 font-mono flex items-center gap-2">
+                      <span className={syncQueueState.isOnline ? 'text-emerald-700' : 'text-amber-600'}>
+                        {syncQueueState.isOnline ? 'En ligne' : 'Hors-ligne'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-400">
+                        ({syncQueueState.pendingCount} en attente)
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-1">
+                      {syncQueueState.failedCount} échec(s) • IndexedDB actif
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sync Queue Detail Box */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <Wifi className="w-4 h-4 text-emerald-600" />
+                      <span className="text-xs font-bold text-slate-800">
+                        Gestionnaire de File d'Attente de Synchronisation
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => syncQueueService.processQueue()}
+                        className="px-2.5 py-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition cursor-pointer"
+                      >
+                        Rejouer la file
+                      </button>
+                      <button
+                        onClick={() => syncQueueService.clearQueue()}
+                        className="px-2.5 py-1 text-[11px] bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg transition cursor-pointer"
+                      >
+                        Vider la file
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Le service <strong>SyncQueueService</strong> enregistre toute transaction d'écriture en mode hors-ligne dans IndexedDB avec priorité d'exécution et tentatives automatiques (jusqu'à 3 essais) dès que le réseau ou le partage est réactivé.
+                  </p>
                 </div>
               </div>
             )}

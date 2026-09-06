@@ -26,14 +26,14 @@ export const INITIAL_DIAGNOSTICS = [
 ];
 
 export const INITIAL_FAMILIES = [
-  { id_family: 'FAM-EMB', libelle: 'Emballage & Conditionnement' },
-  { id_family: 'FAM-USI', libelle: 'Usinage & Fraisage' },
-  { id_family: 'FAM-DEC', libelle: 'Découpe & Presses' },
-  { id_family: 'FAM-ASSEM', libelle: 'Assemblage & Lignes' },
-  { id_family: 'FAM-MOT', libelle: 'Moteurs & Motoréducteurs' },
-  { id_family: 'FAM-POM', libelle: 'Pompes & Centrales Hydrauliques' },
-  { id_family: 'FAM-EXT', libelle: 'Extincteurs & Sécurité Incendie' },
-  { id_family: 'FAM-COUR', libelle: 'Courroies & Bandes Spéciales' },
+  { id_family: 'FAM-EMB', libelle: 'Emballage & Conditionnement', componentCode: 'EMB' },
+  { id_family: 'FAM-USI', libelle: 'Usinage & Fraisage', componentCode: 'USI' },
+  { id_family: 'FAM-DEC', libelle: 'Découpe & Presses', componentCode: 'DEC' },
+  { id_family: 'FAM-ASSEM', libelle: 'Assemblage & Lignes', componentCode: 'ASS' },
+  { id_family: 'FAM-MOT', libelle: 'Moteurs & Motoréducteurs', componentCode: 'MOT' },
+  { id_family: 'FAM-POM', libelle: 'Pompes & Centrales Hydrauliques', componentCode: 'POM' },
+  { id_family: 'FAM-EXT', libelle: 'Extincteurs & Sécurité Incendie', componentCode: 'EXT' },
+  { id_family: 'FAM-COUR', libelle: 'Courroies & Bandes Spéciales', componentCode: 'COUR' },
 ];
 
 export const INITIAL_TEMPLATES = [
@@ -54,11 +54,11 @@ export const INITIAL_TEMPLATES = [
 
 export const INITIAL_WAREHOUSE_ITEMS = [
   {
-    id_warehouse_item: 'MOT-01',
+    id_warehouse_item: 'MOT-01-01',
     stockInitial: 1,
     seuil: 0,
     designation: 'Moteur 380V 5.5kW - Entraînement Détacheuse',
-    nature: 'PARTIE', // 'PARTIE' (جزء / Ensemble) or 'COMPOSANT' (مكون)
+    nature: 'COMPONENT', // 'COMPONENT' (Sous-système / Ensemble Machine) or 'PART' (Pièce détachée / PDR)
     id_family: 'FAM-MOT',
     id_templates: 'TPL-MOT380',
     id_type: '',
@@ -72,11 +72,11 @@ export const INITIAL_WAREHOUSE_ITEMS = [
     remarques: 'Installé sur axe principal. Révision planifiée 2026.',
   },
   {
-    id_warehouse_item: 'MOT-02',
+    id_warehouse_item: 'MOT-01-02',
     stockInitial: 1,
     seuil: 0,
     designation: 'Moteur 380V 7.5kW Réserve Atelier',
-    nature: 'PARTIE',
+    nature: 'COMPONENT',
     id_family: 'FAM-MOT',
     id_templates: 'TPL-MOT380',
     id_type: '',
@@ -90,11 +90,11 @@ export const INITIAL_WAREHOUSE_ITEMS = [
     remarques: 'Moteur de secours prêt à lemploi.',
   },
   {
-    id_warehouse_item: 'POM-01',
+    id_warehouse_item: 'POM-VAC-01',
     stockInitial: 1,
     seuil: 0,
     designation: 'Pompe à Vide Busch 40m3/h',
-    nature: 'PARTIE',
+    nature: 'COMPONENT',
     id_family: 'FAM-POM',
     id_templates: 'TPL-POMVAC',
     id_type: '',
@@ -108,11 +108,11 @@ export const INITIAL_WAREHOUSE_ITEMS = [
     remarques: 'Niveau dhuile vérifié mensuellement.',
   },
   {
-    id_warehouse_item: 'POM-02',
+    id_warehouse_item: 'POM-HYD-01',
     stockInitial: 1,
     seuil: 0,
     designation: 'Pompe Hydraulique 250 Bar Réserve',
-    nature: 'PARTIE',
+    nature: 'COMPONENT',
     id_family: 'FAM-POM',
     id_templates: 'TPL-POMHYD',
     id_type: '',
@@ -126,11 +126,11 @@ export const INITIAL_WAREHOUSE_ITEMS = [
     remarques: 'Joints neufs remplacés.',
   },
   {
-    id_warehouse_item: 'COMP-FIX-01',
-    stockInitial: 1,
-    seuil: 0,
+    id_warehouse_item: 'FIX-01',
+    stockInitial: 50,
+    seuil: 10,
     designation: 'Cheville Filetée Haute Résistance 12x100',
-    nature: 'COMPOSANT',
+    nature: 'PART',
     id_family: '',
     id_templates: '',
     id_type: 'TYPE-FIX',
@@ -144,11 +144,11 @@ export const INITIAL_WAREHOUSE_ITEMS = [
     remarques: 'Ancrage socle lourd machine.',
   },
   {
-    id_warehouse_item: 'COMP-COU-01',
-    stockInitial: 1,
-    seuil: 0,
+    id_warehouse_item: 'MEC-01',
+    stockInitial: 20,
+    seuil: 5,
     designation: 'Courroie Plate Thermocollée 1200x50 Spéciale',
-    nature: 'COMPOSANT',
+    nature: 'PART',
     id_family: '',
     id_templates: '',
     id_type: 'TYPE-MEC',
@@ -162,11 +162,11 @@ export const INITIAL_WAREHOUSE_ITEMS = [
     remarques: 'Envoyé pour vulcanisation spéciale chez prestataire externe.',
   },
   {
-    id_warehouse_item: 'COMP-PNE-01',
-    stockInitial: 1,
-    seuil: 0,
+    id_warehouse_item: 'PNE-01',
+    stockInitial: 15,
+    seuil: 3,
     designation: 'Vérin Pneumatique Compact Double Effet 50mm',
-    nature: 'COMPOSANT',
+    nature: 'PART',
     id_family: '',
     id_templates: '',
     id_type: 'TYPE-PNE',
@@ -183,35 +183,39 @@ export const INITIAL_WAREHOUSE_ITEMS = [
 
 /**
  * Auto-generates unique Warehouse Element / Component Code:
- * - If PARTIE: based on Family prefix (e.g., FAM-MOT -> MOT-01, MOT-02)
- * - If COMPOSANT: based on Type prefix (e.g., TYPE-FIX -> COMP-FIX-01, TYPE-MEC -> COMP-MEC-01)
+ * - If COMPONENT (formerly PARTIE): based on Template/Family prefix (e.g., EXT-01 -> EXT-01-01, MOT-01 -> MOT-01-01)
+ * - If PART (formerly COMPOSANT): based on Type prefix (e.g., VIS -> VIS-01, FIX -> FIX-01)
  */
-export function generateWarehouseItemCode(selectedId = '', existingItems = [], nature = 'PARTIE') {
+export function generateWarehouseItemCode(selectedId = '', existingItems = [], nature = 'COMPONENT') {
+  const isPart = nature === 'PART' || nature === 'COMPOSANT';
   let prefix = '';
-  if (nature === 'COMPOSANT') {
+  if (isPart) {
     const raw = String(selectedId || '')
       .replace(/^TYPE-?/i, '')
       .replace(/^COMP-?/i, '')
+      .replace(/^PART-?/i, '')
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '')
-      .slice(0, 4) || 'MEC';
-    prefix = `COMP-${raw}`;
+      .slice(0, 5) || 'PART';
+    prefix = `${raw}`;
   } else {
-    prefix =
-      String(selectedId || '')
-        .replace(/^FAM-?/i, '')
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, '')
-        .slice(0, 4) || 'MOT';
+    // COMPONENT
+    const raw = String(selectedId || '')
+      .replace(/^TPL-?/i, '')
+      .replace(/^FAM-?/i, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 8) || 'CMP';
+    prefix = `${raw}`;
   }
 
   let maxIndex = 0;
   existingItems.forEach((item) => {
-    // Only check items of the same nature
-    if (item.nature && item.nature !== nature) return;
+    const itemIsPart = item.nature === 'PART' || item.nature === 'COMPOSANT';
+    if (itemIsPart !== isPart) return;
 
-    const code = String(item.id_warehouse_item || item.id_element || '').toUpperCase();
-    if (code.startsWith(prefix + '-')) {
+    const code = String(item.id_warehouse_item || item.id_element || item.ref || '').toUpperCase();
+    if (code.startsWith(prefix + '-') || code.startsWith(prefix)) {
       const match = code.match(/\d+$/);
       if (match) {
         const num = parseInt(match[0], 10);

@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import AnimatedPage from './AnimatedPage';
 import CustomSelect from './CustomSelect';
 import {
+  BadgeCheck,
   Layers,
   Plus,
   Search,
@@ -235,16 +236,20 @@ export default function DesignationView({
   return (
     <AnimatedPage className="space-y-4">
       {/* Top Banner */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2.5">
-            <Layers className="w-5 h-5 text-indigo-600 shrink-0" />
-            <span>Désignations d'Articles</span>
-          </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Équivalent des <b className="text-indigo-600">Templates</b> pour les machines: chaque
-            Désignation est rattachée à un <b className="text-cyan-600">Type (Family)</b>.
-          </p>
+      <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 sm:gap-4 w-full">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
+            <BadgeCheck className="w-5 h-5 text-indigo-700" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+              Désignations d'Articles
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Équivalent des <b className="text-indigo-600">Templates</b> pour les machines: chaque
+              Désignation est rattachée à un <b className="text-cyan-600">Type (Family)</b>.
+            </p>
+          </div>
         </div>
 
         <button
@@ -256,9 +261,9 @@ export default function DesignationView({
             handleTypeSelect(initialType);
             setShowAddModal(true);
           }}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-black transition shadow-xs shrink-0 cursor-pointer"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-4 h-4" />
           <span>Nouvelle Désignation</span>
         </button>
       </div>
@@ -489,11 +494,12 @@ export default function DesignationView({
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
         {/* Top Info Header Bar inside Card */}
         <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
-          <div className="font-bold text-slate-800 text-[13px]">
-            Désignations • Ordre Excel Row 3 : B→G
+          <div className="font-bold text-slate-800 text-[13px] flex items-center gap-2">
+            <BadgeCheck className="w-4 h-4 text-indigo-600" />
+            <span>Tableau Désignations • Colonnes B → G</span>
           </div>
           <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
-            ref | designation | type | stockActuel | alerte | emplacement
+            id_diag (B) | designation (C) | id_type (D) | nb_articles (E) | qte_stock (F) | emplacement (G)
           </div>
         </div>
 

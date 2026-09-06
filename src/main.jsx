@@ -12,4 +12,18 @@ storageService.init().then(() => {
       </ErrorBoundary>
     </React.StrictMode>
   );
+
+  // Enregistrement du Service Worker pour le mode 100% Offline et PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/service-worker.js')
+        .then((registration) => {
+          console.log('✅ CIOB GMAO Service Worker enregistré:', registration.scope);
+        })
+        .catch((error) => {
+          console.warn('⚠️ Erreur enregistrement Service Worker:', error);
+        });
+    });
+  }
 });

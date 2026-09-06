@@ -6,6 +6,7 @@ import {
   Package,
   Tag,
   Boxes,
+  BadgeCheck,
   Layers,
   MapPin,
   Users,
@@ -279,7 +280,7 @@ export default function Sidebar({
                 className={getTabClass('designations', true)}
               >
                 <span className="flex items-center gap-2">
-                  <Layers
+                  <BadgeCheck
                     className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}
                   />
                   <span>Désignations</span>

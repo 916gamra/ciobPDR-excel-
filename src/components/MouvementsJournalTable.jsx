@@ -1540,15 +1540,14 @@ export default function MouvementsJournalTable({
 
       {/* Main Table Container */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-2.5 bg-slate-100/70 border-b border-slate-200 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-600">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span className="font-bold text-slate-800">{filteredMouvements.length}</span> enregistrements
-            <span className="text-slate-300">|</span>
-            <span className="text-[11px] text-slate-500">Modèle Excel Twin Colonnes A→J</span>
+        {/* Top Info Header Bar inside Card */}
+        <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
+          <div className="font-bold text-slate-800 text-[13px] flex items-center gap-2">
+            <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
+            <span>Tableau Mouvements_Journal • Colonnes A → J</span>
           </div>
-          <div className="text-[11px] text-slate-400 font-mono hidden md:block">
-            N° | Bon/Date (A) | OT/Cde/Réf | Flux (B) | Src (C) | Article (D) | Qté (E) | Act (F) | Dest (G) | Int (H) | Com (I) | Stat (J) | •••
+          <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
+            date_bon (A) | type_flux (B) | source (C) | article (D) | quantite (E) | action (F) | destination (G) | intervenant (H) | commentaire (I) | statut (J)
           </div>
         </div>
 

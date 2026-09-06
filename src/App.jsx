@@ -653,11 +653,30 @@ export default function App() {
   const { handleUpdate: handleUpdateMouvement, handleDelete: handleDeleteMouvement } =
     useGenericCRUD(setMouvements, 'id');
 
-  const {
-    handleAdd: handleAddWarehouseItem,
-    handleUpdate: handleUpdateWarehouseItem,
-    handleDelete: handleDeleteWarehouseItem,
-  } = useGenericCRUD(setWarehouseItems, 'id');
+  const handleAddWarehouseItem = (newItem) => {
+    setWarehouseItems((prev) => [newItem, ...prev]);
+  };
+
+  const handleUpdateWarehouseItem = (idOrCode, updatedItem) => {
+    setWarehouseItems((prev) =>
+      prev.map((it) =>
+        it.id_warehouse_item === idOrCode || it.id === idOrCode ? updatedItem : it
+      )
+    );
+    if (idOrCode !== updatedItem.id_warehouse_item) {
+      setMouvements((prev) =>
+        prev.map((m) =>
+          m.ref === idOrCode ? { ...m, ref: updatedItem.id_warehouse_item } : m
+        )
+      );
+    }
+  };
+
+  const handleDeleteWarehouseItem = (idOrCode) => {
+    setWarehouseItems((prev) =>
+      prev.filter((it) => it.id_warehouse_item !== idOrCode && it.id !== idOrCode)
+    );
+  };
 
   const handleDirectAdjustStock = (article, newTargetStock) => {
     // When directly adjusting real stock balance, calculate new stockInitial so that:
@@ -1194,6 +1213,7 @@ export default function App() {
                 zones={zones}
                 machines={machines}
                 technicians={technicians}
+                onUpdateFamily={handleUpdateFamily}
                 onNavigateToFamily={handleNavigateToMachinesByFamily}
                 onNavigateToTemplate={handleNavigateToMachinesByTemplate}
                 onNavigateToType={handleNavigateToStockFiltered}
