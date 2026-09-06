@@ -121,6 +121,22 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('xlsx')) {
+              return 'vendor-xlsx';
+            }
+            if (id.includes('bcryptjs') || id.includes('crypto-js')) {
+              return 'vendor-crypto';
+            }
+            if (id.includes('zod')) {
+              return 'vendor-zod';
+            }
+            return 'vendor-core';
+          }
+        }
+      },
       onwarn(warning, defaultHandler) {
         if (
           warning.code === 'MODULE_LEVEL_DIRECTIVE' ||
