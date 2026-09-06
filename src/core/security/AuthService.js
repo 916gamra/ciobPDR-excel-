@@ -107,7 +107,7 @@ export class AuthService {
   }
 
   getAvailableAccounts() {
-    let users = [];
+    let users;
     try {
       users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
     } catch {
@@ -136,7 +136,7 @@ export class AuthService {
       throw new Error('Le nouveau mot de passe doit comporter au moins 4 caractères.');
     }
 
-    let users = [];
+    let users;
     try {
       users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
     } catch {
@@ -171,7 +171,7 @@ export class AuthService {
   }
 
   updateUserProfile(usernameOrId, updates = {}) {
-    let users = [];
+    let users;
     try {
       users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
     } catch {

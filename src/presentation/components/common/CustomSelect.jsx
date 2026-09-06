@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ChevronDown, Check, Search, X, Plus } from 'lucide-react';
 
 /**
@@ -177,8 +177,25 @@ export default function CustomSelect({
     }
   }, [isOpen, shouldEnableSearch]);
 
+  // Focus trigger on close
+  const prevIsOpenRef = useRef(isOpen);
+  useEffect(() => {
+    if (!isOpen && prevIsOpenRef.current && !disabled) {
+      triggerRef.current?.focus();
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen, disabled]);
+
+  const handleSelect = useCallback((opt) => {
+    if (opt.disabled) return;
+    onChange(opt.value);
+    setIsOpen(false);
+    setSearchQuery('');
+    setHighlightedIndex(-1);
+  }, [onChange]);
+
   // Keyboard navigation
-  const handleKeyDown = (e) => {
+  const handleKeyDown = useCallback((e) => {
     if (disabled) return;
 
     if (!isOpen) {
@@ -194,7 +211,6 @@ export default function CustomSelect({
         e.preventDefault();
         setIsOpen(false);
         setSearchQuery('');
-        triggerRef.current?.focus();
         break;
       case 'ArrowDown':
         e.preventDefault();
@@ -213,16 +229,7 @@ export default function CustomSelect({
       default:
         break;
     }
-  };
-
-  const handleSelect = (opt) => {
-    if (opt.disabled) return;
-    onChange(opt.value);
-    setIsOpen(false);
-    setSearchQuery('');
-    setHighlightedIndex(-1);
-    triggerRef.current?.focus();
-  };
+  }, [disabled, isOpen, filteredOptions, highlightedIndex, handleSelect]);
 
   // Group filtered options by group name for rendering
   const groupedSections = useMemo(() => {

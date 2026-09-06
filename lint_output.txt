@@ -1,0 +1,612 @@
+
+> gmao-app@0.0.0 lint
+> eslint .
+
+
+/app/applet/src/App.jsx
+   10:10  warning  'useGenericCRUD' is defined but never used                   no-unused-vars
+   13:3   warning  'INITIAL_TYPES' is defined but never used                    no-unused-vars
+   14:3   warning  'INITIAL_DIAGNOSTICS' is defined but never used              no-unused-vars
+   17:3   warning  'INITIAL_MACHINES_REGISTERED' is defined but never used      no-unused-vars
+   18:3   warning  'INITIAL_ZONES' is defined but never used                    no-unused-vars
+   19:3   warning  'INITIAL_TECHNICIANS' is defined but never used              no-unused-vars
+   20:3   warning  'INITIAL_OPERATIONS' is defined but never used               no-unused-vars
+   21:3   warning  'mapItemToTypeAndDiag' is defined but never used             no-unused-vars
+   24:8   warning  'Sidebar' is defined but never used                          no-unused-vars
+   25:8   warning  'Header' is defined but never used                           no-unused-vars
+   26:8   warning  'LoadingSkeleton' is defined but never used                  no-unused-vars
+   28:8   warning  'Toast' is defined but never used                            no-unused-vars
+   33:10  warning  'auditService' is defined but never used                     no-unused-vars
+   39:10  warning  'SparePartApplicationService' is defined but never used      no-unused-vars
+   40:10  warning  'MachineApplicationService' is defined but never used        no-unused-vars
+   41:10  warning  'TaskApplicationService' is defined but never used           no-unused-vars
+   44:10  warning  'indexedDBService' is defined but never used                 no-unused-vars
+  110:30  warning  'logout' is assigned a value but never used                  no-unused-vars
+  145:14  warning  '_e' is defined but never used                               no-unused-vars
+  384:9   warning  'deferredStockSearch' is assigned a value but never used     no-unused-vars
+  389:9   warning  'deferredMchSearch' is assigned a value but never used       no-unused-vars
+  394:10  warning  'diagTypeFilter' is assigned a value but never used          no-unused-vars
+  570:9   warning  'handleAddDiagnostic' is assigned a value but never used     no-unused-vars
+  592:5   warning  'handleUpdateDiagnostic' is assigned a value but never used  no-unused-vars
+  592:29  warning  'handleDeleteDiagnostic' is assigned a value but never used  no-unused-vars
+  601:26  warning  'handleDeleteArticle' is assigned a value but never used     no-unused-vars
+
+/app/applet/src/context/AuthContext.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/core/security/AuthService.js
+  110:9  error  The value assigned to 'users' is not used in subsequent statements  no-useless-assignment
+  139:9  error  The value assigned to 'users' is not used in subsequent statements  no-useless-assignment
+  174:9  error  The value assigned to 'users' is not used in subsequent statements  no-useless-assignment
+
+/app/applet/src/data/seedData.js
+  1:8  warning  'initialData' is defined but never used  no-unused-vars
+
+/app/applet/src/domain/machines/repositories/IMachineRepository.js
+  2:16  warning  'machine' is defined but never used. Allowed unused args must match /^_/u           no-unused-vars
+  3:18  warning  'id' is defined but never used. Allowed unused args must match /^_/u                no-unused-vars
+  4:17  warning  'filters' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+  5:16  warning  'id' is defined but never used. Allowed unused args must match /^_/u                no-unused-vars
+  5:20  warning  'machine' is defined but never used. Allowed unused args must match /^_/u           no-unused-vars
+  6:16  warning  'id' is defined but never used. Allowed unused args must match /^_/u                no-unused-vars
+
+/app/applet/src/domain/maintenance/repositories/ITaskRepository.js
+  2:16  warning  'task' is defined but never used. Allowed unused args must match /^_/u              no-unused-vars
+  3:18  warning  'id' is defined but never used. Allowed unused args must match /^_/u                no-unused-vars
+  4:17  warning  'filters' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+  5:16  warning  'id' is defined but never used. Allowed unused args must match /^_/u                no-unused-vars
+  5:20  warning  'task' is defined but never used. Allowed unused args must match /^_/u              no-unused-vars
+  6:16  warning  'id' is defined but never used. Allowed unused args must match /^_/u                no-unused-vars
+
+/app/applet/src/domain/pdr/repositories/ISparePartRepository.js
+  2:16  warning  'sparePart' is defined but never used. Allowed unused args must match /^_/u         no-unused-vars
+  3:18  warning  'id' is defined but never used. Allowed unused args must match /^_/u                no-unused-vars
+  4:19  warning  'ref' is defined but never used. Allowed unused args must match /^_/u               no-unused-vars
+  5:17  warning  'filters' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+  6:16  warning  'id' is defined but never used. Allowed unused args must match /^_/u                no-unused-vars
+  6:20  warning  'sparePart' is defined but never used. Allowed unused args must match /^_/u         no-unused-vars
+  7:16  warning  'id' is defined but never used. Allowed unused args must match /^_/u                no-unused-vars
+
+/app/applet/src/hooks/useAppComplexHandlers.js
+   11:3   warning  'machines' is defined but never used. Allowed unused args must match /^_/u          no-unused-vars
+   12:3   warning  'mouvements' is defined but never used. Allowed unused args must match /^_/u        no-unused-vars
+   13:3   warning  'types' is defined but never used. Allowed unused args must match /^_/u             no-unused-vars
+   15:3   warning  'designations' is defined but never used. Allowed unused args must match /^_/u      no-unused-vars
+   16:3   warning  'families' is defined but never used. Allowed unused args must match /^_/u          no-unused-vars
+   17:3   warning  'templates' is defined but never used. Allowed unused args must match /^_/u         no-unused-vars
+   18:3   warning  'compFamilies' is defined but never used. Allowed unused args must match /^_/u      no-unused-vars
+   19:3   warning  'compTemplates' is defined but never used. Allowed unused args must match /^_/u     no-unused-vars
+   20:3   warning  'partTypes' is defined but never used. Allowed unused args must match /^_/u         no-unused-vars
+   21:3   warning  'partDesignations' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+   22:3   warning  'warehouseItems' is defined but never used. Allowed unused args must match /^_/u    no-unused-vars
+  318:30  warning  'article' is defined but never used. Allowed unused args must match /^_/u           no-unused-vars
+
+/app/applet/src/hooks/useAppHandlers.js
+   1:8   warning  'React' is defined but never used                       no-unused-vars
+   1:17  warning  'useCallback' is defined but never used                 no-unused-vars
+   3:10  warning  'sanitizeObject' is defined but never used              no-unused-vars
+   4:10  warning  'calculateStockStatus' is defined but never used        no-unused-vars
+   8:5   warning  'types' is assigned a value but never used              no-unused-vars
+   9:5   warning  'designations' is assigned a value but never used       no-unused-vars
+  10:5   warning  'families' is assigned a value but never used           no-unused-vars
+  11:5   warning  'templates' is assigned a value but never used          no-unused-vars
+  12:5   warning  'machines' is assigned a value but never used           no-unused-vars
+  12:15  warning  'setMachines' is assigned a value but never used        no-unused-vars
+  13:5   warning  'warehouseItems' is assigned a value but never used     no-unused-vars
+  13:21  warning  'setWarehouseItems' is assigned a value but never used  no-unused-vars
+  14:5   warning  'zones' is assigned a value but never used              no-unused-vars
+  15:5   warning  'technicians' is assigned a value but never used        no-unused-vars
+  16:5   warning  'operations' is assigned a value but never used         no-unused-vars
+  17:5   warning  'mouvements' is assigned a value but never used         no-unused-vars
+  17:17  warning  'setMouvements' is assigned a value but never used      no-unused-vars
+  18:5   warning  'rawStock' is assigned a value but never used           no-unused-vars
+  18:15  warning  'setRawStock' is assigned a value but never used        no-unused-vars
+  19:5   warning  'compFamilies' is assigned a value but never used       no-unused-vars
+  20:5   warning  'compTemplates' is assigned a value but never used      no-unused-vars
+  21:5   warning  'partTypes' is assigned a value but never used          no-unused-vars
+  22:5   warning  'partDesignations' is assigned a value but never used   no-unused-vars
+
+/app/applet/src/hooks/useGmaoState.js
+    6:3  warning  'INITIAL_TYPES' is defined but never used                                                       no-unused-vars
+  579:3  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+
+/app/applet/src/presentation/components/common/CustomSelect.jsx
+    1:8   warning  'React' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+  389:40  error    Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+  387 |                         type="button"
+  388 |                         disabled={opt.disabled}
+> 389 |                         onClick={() => handleSelect(opt)}
+      |                                        ^^^^^^^^^^^^ Passing a ref to a function may read its value during render
+  390 |                         className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-left transition-colors text-xs ${
+  391 |                           opt.disabled
+  392 |                             ? 'opacity-40 cursor-not-allowed text-slate-400'  react-hooks/refs
+
+/app/applet/src/presentation/components/common/DashboardSkeleton.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/components/common/LoadingSkeleton.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/components/common/OfflineIndicator.jsx
+  1:8   warning  'React' is defined but never used              no-unused-vars
+  2:19  warning  'Wifi' is defined but never used               no-unused-vars
+  2:25  warning  'HardDriveDownload' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/components/common/PWAInstallButton.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/components/common/PageSkeletons.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/components/common/SortieEntreeIcon.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/components/common/Toast.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/components/common/icons/Engine.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/components/common/icons/PlayingCardsFan.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/components/common/icons/RoboticHand.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/components/layout/Header.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/components/layout/MainLayout.jsx
+   1:8   warning  'React' is defined but never used  no-unused-vars
+  40:20  warning  '_e' is defined but never used     no-unused-vars
+
+/app/applet/src/presentation/components/layout/Sidebar.jsx
+   1:8   warning  'React' is defined but never used          no-unused-vars
+   8:3   warning  'Boxes' is defined but never used          no-unused-vars
+  13:3   warning  'ClipboardList' is defined but never used  no-unused-vars
+  25:3   warning  'FileText' is defined but never used       no-unused-vars
+  26:12  warning  'BoxesIcon' is defined but never used      no-unused-vars
+
+/app/applet/src/presentation/hooks/useSparePartService.js
+  1:10  warning  'useState' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/auth/LoginScreen.jsx
+    1:8   warning  'React' is defined but never used                    no-unused-vars
+    1:27  warning  'useEffect' is defined but never used                no-unused-vars
+    7:3   warning  'Lock' is defined but never used                     no-unused-vars
+  118:9   warning  'getAccountIcon' is assigned a value but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/auth/SplashScreen.jsx
+   1:8   warning  'React' is defined but never used                     no-unused-vars
+   5:3   warning  'Database' is defined but never used                  no-unused-vars
+   8:3   warning  'CheckCircle2' is defined but never used              no-unused-vars
+  17:10  warning  'activeStepIndex' is assigned a value but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/dashboard/DashboardView.jsx
+   1:8  warning  'React' is defined but never used                                                          no-unused-vars
+   7:3  warning  'Cpu' is defined but never used                                                            no-unused-vars
+  12:3  warning  'TrendingUp' is defined but never used                                                     no-unused-vars
+  13:3  warning  'Boxes' is defined but never used                                                          no-unused-vars
+  20:3  warning  'RotateCcw' is defined but never used                                                      no-unused-vars
+  23:3  warning  'Wrench' is defined but never used                                                         no-unused-vars
+  26:3  warning  'Search' is defined but never used                                                         no-unused-vars
+  27:3  warning  'Filter' is defined but never used                                                         no-unused-vars
+  28:3  warning  'Calendar' is defined but never used                                                       no-unused-vars
+  30:3  warning  'Info' is defined but never used                                                           no-unused-vars
+  31:3  warning  'Sparkles' is defined but never used                                                       no-unused-vars
+  33:3  warning  'Edit3' is defined but never used                                                          no-unused-vars
+  34:3  warning  'ExternalLink' is defined but never used                                                   no-unused-vars
+  36:3  warning  'BarChart3' is defined but never used                                                      no-unused-vars
+  46:3  warning  'warehouseItems' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+  49:3  warning  'diagnostics' is assigned a value but never used. Allowed unused args must match /^_/u     no-unused-vars
+  50:3  warning  'zones' is assigned a value but never used. Allowed unused args must match /^_/u           no-unused-vars
+
+/app/applet/src/presentation/pages/dashboard/components/DashboardKPIs.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/machines/AddMachineModal.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/machines/FamilyView.jsx
+    1:8  warning  'React' is defined but never used                    no-unused-vars
+   99:9  warning  'handleSort' is assigned a value but never used      no-unused-vars
+  108:9  warning  'renderSortIcon' is assigned a value but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/machines/MachinesRegisteredView.jsx
+   1:8   warning  'React' is defined but never used                                                                no-unused-vars
+  13:3   warning  'FolderTree' is defined but never used                                                           no-unused-vars
+  15:3   warning  'Wrench' is defined but never used                                                               no-unused-vars
+  29:3   warning  'Sparkles' is defined but never used                                                             no-unused-vars
+  30:3   warning  'ShieldCheck' is defined but never used                                                          no-unused-vars
+  33:3   warning  'FileSpreadsheet' is defined but never used                                                      no-unused-vars
+  34:3   warning  'Zap' is defined but never used                                                                  no-unused-vars
+  52:3   warning  'onNavigateToFamily' is assigned a value but never used. Allowed unused args must match /^_/u    no-unused-vars
+  53:3   warning  'onNavigateToTemplate' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+  54:3   warning  'onNavigateToZone' is assigned a value but never used. Allowed unused args must match /^_/u      no-unused-vars
+  57:21  warning  'loading' is assigned a value but never used                                                     no-unused-vars
+
+/app/applet/src/presentation/pages/machines/TemplatesView.jsx
+    1:8  warning  'React' is defined but never used                    no-unused-vars
+   10:3  warning  'FolderTree' is defined but never used               no-unused-vars
+  109:9  warning  'handleSort' is assigned a value but never used      no-unused-vars
+  118:9  warning  'renderSortIcon' is assigned a value but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/machines/components/MachinesKPIBar.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/movements/SortieRapideView.jsx
+     1:8   warning  'React' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     no-unused-vars
+     2:13  warning  'XLSX' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-unused-vars
+    15:3   warning  'ArrowRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+    21:3   warning  'Building2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 no-unused-vars
+    23:3   warning  'DollarSign' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+    27:3   warning  'SlidersHorizontal' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+    29:3   warning  'ArrowUpDown' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-unused-vars
+    30:3   warning  'ArrowUp' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+    31:3   warning  'ArrowDown' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 no-unused-vars
+    32:3   warning  'CalendarRange' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             no-unused-vars
+    33:3   warning  'ChevronLeft' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-unused-vars
+    34:3   warning  'ChevronRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              no-unused-vars
+    35:3   warning  'ArrowUpAZ' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 no-unused-vars
+    36:3   warning  'ArrowDownAZ' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-unused-vars
+    40:3   warning  'Factory' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+    42:3   warning  'Edit2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     no-unused-vars
+    45:3   warning  'Zap' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       no-unused-vars
+    47:3   warning  'Hash' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-unused-vars
+    49:3   warning  'FileText' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+    50:3   warning  'Warehouse' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 no-unused-vars
+    51:3   warning  'Flame' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     no-unused-vars
+    56:3   warning  'Send' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-unused-vars
+    58:3   warning  'Split' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     no-unused-vars
+    59:3   warning  'ChevronsUp' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+    62:3   warning  'ArrowUpRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              no-unused-vars
+    63:3   warning  'ArrowDownLeft' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             no-unused-vars
+    69:10  warning  'validateMovementWithContext' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-unused-vars
+   217:3   warning  'families' is assigned a value but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+   218:3   warning  'templates' is assigned a value but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+   219:3   warning  'types' is assigned a value but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-unused-vars
+   220:3   warning  'diagnostics' is assigned a value but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+   236:3   warning  'onNavigateToWarehouse' is defined but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-unused-vars
+   363:9   warning  'getSmartOtCommande' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-unused-vars
+   382:9   warning  'resolveArticleInfo' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-unused-vars
+   472:88  error    Unnecessary escape character: \.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-useless-escape
+   572:9   warning  'renderFluxBadge' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+   860:9   warning  'supervisorsList' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+   861:9   warning  'chefsList' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        no-unused-vars
+  1011:10  warning  'currentPage' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-unused-vars
+  1011:23  warning  'setCurrentPage' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+  1012:10  warning  'pageSize' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+  1012:20  warning  'setPageSize' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-unused-vars
+  1015:32  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. This value was memoized in source but not in compilation output.
+
+  1013 |
+  1014 |   // Unified items list for search modal (Merging PDR Stock + Warehouse Digital Twin Items)
+> 1015 |   const unifiedSearchCatalog = useMemo(() => {
+       |                                ^^^^^^^^^^^^^^^
+> 1016 |     const catalog = [];
+       | ^^^^^^^^^^^^^^^^^^^^^^^
+> 1017 |
+       …
+       | ^^^^^^^^^^^^^^^^^^^^^^^
+> 1061 |     return catalog;
+       | ^^^^^^^^^^^^^^^^^^^^^^^
+> 1062 |   }, [stockItems, warehouseItems]);
+       | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Could not preserve existing memoization
+  1063 |
+  1064 |   // Filtered Search Results
+  1065 |   const filteredCatalogResults = useMemo(() => {  react-hooks/preserve-manual-memoization
+  1415:30  error    'isWarehouseDest' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-undef
+  4566:42  error    'handleFulfillRepair' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-undef
+
+/app/applet/src/presentation/pages/referentiel/AddZoneModal.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/referentiel/CompFamilyView.jsx
+   1:8   warning  'React' is defined but never used                         no-unused-vars
+  40:10  warning  'showSortDropdown' is assigned a value but never used     no-unused-vars
+  40:28  warning  'setShowSortDropdown' is assigned a value but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/referentiel/CompTemplateView.jsx
+   1:8  warning  'React' is defined but never used  no-unused-vars
+  19:3  warning  'Tag' is defined but never used    no-unused-vars
+
+/app/applet/src/presentation/pages/referentiel/DesignationView.jsx
+    1:8  warning  'React' is defined but never used                    no-unused-vars
+   25:3  warning  'X' is defined but never used                        no-unused-vars
+  203:9  warning  'handleSort' is assigned a value but never used      no-unused-vars
+  212:9  warning  'renderSortIcon' is assigned a value but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/referentiel/PartDesignationView.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/referentiel/PartTypeView.jsx
+  1:8  warning  'React' is defined but never used    no-unused-vars
+  9:3  warning  'Package' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/referentiel/TypeView.jsx
+    1:8  warning  'React' is defined but never used                    no-unused-vars
+   10:3  warning  'Layers' is defined but never used                   no-unused-vars
+   98:9  warning  'handleSort' is assigned a value but never used      no-unused-vars
+  107:9  warning  'renderSortIcon' is assigned a value but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/referentiel/ZonesView.jsx
+    1:8  warning  'React' is defined but never used                    no-unused-vars
+   11:3  warning  'Trash2' is defined but never used                   no-unused-vars
+   12:3  warning  'Edit2' is defined but never used                    no-unused-vars
+  112:9  warning  'handleSort' is assigned a value but never used      no-unused-vars
+  121:9  warning  'renderSortIcon' is assigned a value but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/settings/SettingsView.jsx
+     1:8   warning  'React' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     no-unused-vars
+     1:47  warning  'useRef' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    no-unused-vars
+     9:3   warning  'SlidersHorizontal' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+    10:3   warning  'ArrowUpDown' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-unused-vars
+    23:3   warning  'Play' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      no-unused-vars
+    26:3   warning  'ChevronRight' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              no-unused-vars
+    27:3   warning  'HelpCircle' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+    29:3   warning  'MapPin' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    no-unused-vars
+    30:3   warning  'ClipboardList' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             no-unused-vars
+    32:3   warning  'ChevronLeft' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               no-unused-vars
+    34:3   warning  'ArrowUp' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+    35:3   warning  'ArrowDown' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 no-unused-vars
+    41:3   warning  'Monitor' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+    50:3   warning  'WifiOff' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+    54:3   warning  'INITIAL_TYPES' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             no-unused-vars
+    55:3   warning  'INITIAL_DIAGNOSTICS' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       no-unused-vars
+    96:3   warning  'setLinkedFileHandle' is defined but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 no-unused-vars
+    98:3   warning  'setLinkedFileName' is defined but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+   100:3   warning  'onDirectSave' is defined but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        no-unused-vars
+   108:24  error    Do not access Object.prototype method 'hasOwnProperty' from target object                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             no-prototype-builtins
+   142:5   warning  'updateUserProfile' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+   192:15  warning  'reseted' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          no-unused-vars
+   215:16  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+   429:15  error    The value assigned to 'inferredRole' is not used in subsequent statements                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             no-useless-assignment
+   470:16  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+   578:14  warning  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       no-unused-vars
+   892:7   error    Error: Cannot access variable before it is declared
+
+`loadBackups` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  890 |   useEffect(() => {
+  891 |     if (activeTab === 'backup-audit') {
+> 892 |       loadBackups();
+      |       ^^^^^^^^^^^ `loadBackups` accessed before it is declared
+  893 |       loadAuditLogs();
+  894 |       loadAccessLogs();
+  895 |       runIntegrityCheck();
+
+  967 |   };
+  968 |
+> 969 |   const loadBackups = async () => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 970 |     try {
+      | ^^^^^^^^^
+> 971 |       const list = await backupService.getBackupsList();
+      | ^^^^^^^^^
+> 972 |       setBackupsList(list || []);
+      | ^^^^^^^^^
+> 973 |     } catch (e) {
+      | ^^^^^^^^^
+> 974 |       console.error(e);
+      | ^^^^^^^^^
+> 975 |     }
+      | ^^^^^^^^^
+> 976 |   };
+      | ^^^^^ `loadBackups` is declared here
+  977 |
+  978 |   const loadAuditLogs = async () => {
+  979 |     try {                                                                                                                                          react-hooks/immutability
+   893:7   error    Error: Cannot access variable before it is declared
+
+`loadAuditLogs` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  891 |     if (activeTab === 'backup-audit') {
+  892 |       loadBackups();
+> 893 |       loadAuditLogs();
+      |       ^^^^^^^^^^^^^ `loadAuditLogs` accessed before it is declared
+  894 |       loadAccessLogs();
+  895 |       runIntegrityCheck();
+  896 |       refreshPerformanceMetrics();
+
+  976 |   };
+  977 |
+> 978 |   const loadAuditLogs = async () => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 979 |     try {
+      | ^^^^^^^^^
+> 980 |       setLoadingAudit(true);
+      …
+      | ^^^^^^^^^
+> 987 |     }
+      | ^^^^^^^^^
+> 988 |   };
+      | ^^^^^ `loadAuditLogs` is declared here
+  989 |
+  990 |   const handleRestoreBackup = async (id) => {
+  991 |     if (!window.confirm('Attention : Cette action va écraser toutes vos données actuelles. Confirmer ?')) return;                                                                                                                                                                             react-hooks/immutability
+   894:7   error    Error: Cannot access variable before it is declared
+
+`loadAccessLogs` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  892 |       loadBackups();
+  893 |       loadAuditLogs();
+> 894 |       loadAccessLogs();
+      |       ^^^^^^^^^^^^^^ `loadAccessLogs` accessed before it is declared
+  895 |       runIntegrityCheck();
+  896 |       refreshPerformanceMetrics();
+  897 |     }
+
+  954 |   };
+  955 |
+> 956 |   const loadAccessLogs = () => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 957 |     const logs = accessLogService.getLogs();
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 958 |     setAccessLogs(logs || []);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 959 |   };
+      | ^^^^^ `loadAccessLogs` is declared here
+  960 |
+  961 |   const handleClearAccessLogs = () => {
+  962 |     if (window.confirm('Êtes-vous sûr de vouloir vider le journal des connexions et sessions ?')) {                                                                                                                                                                      react-hooks/immutability
+   895:7   error    Error: Cannot access variable before it is declared
+
+`runIntegrityCheck` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  893 |       loadAuditLogs();
+  894 |       loadAccessLogs();
+> 895 |       runIntegrityCheck();
+      |       ^^^^^^^^^^^^^^^^^ `runIntegrityCheck` accessed before it is declared
+  896 |       refreshPerformanceMetrics();
+  897 |     }
+  898 |   }, [activeTab]);
+
+  898 |   }, [activeTab]);
+  899 |
+> 900 |   const runIntegrityCheck = () => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 901 |     setCheckingIntegrity(true);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 902 |     setTimeout(() => {
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 913 |     }, 120);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 914 |   };
+      | ^^^^^ `runIntegrityCheck` is declared here
+  915 |
+  916 |   const handleRepairData = () => {
+  917 |     if (!window.confirm('Voulez-vous corriger automatiquement les anomalies de stocks négatifs et valeurs manquantes ?')) return;                                                                                         react-hooks/immutability
+   896:7   error    Error: Cannot access variable before it is declared
+
+`refreshPerformanceMetrics` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  894 |       loadAccessLogs();
+  895 |       runIntegrityCheck();
+> 896 |       refreshPerformanceMetrics();
+      |       ^^^^^^^^^^^^^^^^^^^^^^^^^ `refreshPerformanceMetrics` accessed before it is declared
+  897 |     }
+  898 |   }, [activeTab]);
+  899 |
+
+  946 |   };
+  947 |
+> 948 |   const refreshPerformanceMetrics = () => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 949 |     setPerfStats({
+      | ^^^^^^^^^^^^^^^^^^
+> 950 |       heapMB: performanceService.getMemoryUsage(),
+      | ^^^^^^^^^^^^^^^^^^
+> 951 |       recalcStats: performanceService.getStats('Calcul_Formules_Twin_Stock'),
+      | ^^^^^^^^^^^^^^^^^^
+> 952 |     });
+      | ^^^^^^^^^^^^^^^^^^
+> 953 |     setSyncQueueState(syncQueueService.getState());
+      | ^^^^^^^^^^^^^^^^^^
+> 954 |   };
+      | ^^^^^ `refreshPerformanceMetrics` is declared here
+  955 |
+  956 |   const loadAccessLogs = () => {
+  957 |     const logs = accessLogService.getLogs();  react-hooks/immutability
+  1004:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+  1013:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-unused-vars
+
+/app/applet/src/presentation/pages/stock/AddArticleModal.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/stock/EditArticleModal.jsx
+   1:8   warning  'React' is defined but never used                                                     no-unused-vars
+   2:51  warning  'Radio' is defined but never used                                                     no-unused-vars
+   2:58  warning  'ShieldAlert' is defined but never used                                               no-unused-vars
+  11:3   warning  'onOpenAddTypeModal' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/app/applet/src/presentation/pages/stock/StockView.jsx
+   1:44  warning  'useState' is defined but never used                                                         no-unused-vars
+   4:8   warning  'SortieEntreeIcon' is defined but never used                                                 no-unused-vars
+  11:3   warning  'Filter' is defined but never used                                                           no-unused-vars
+  17:3   warning  'Layers' is defined but never used                                                           no-unused-vars
+  18:3   warning  'ArrowRight' is defined but never used                                                       no-unused-vars
+  33:3   warning  'ShieldCheck' is defined but never used                                                      no-unused-vars
+  36:3   warning  'FileSpreadsheet' is defined but never used                                                  no-unused-vars
+  37:3   warning  'Zap' is defined but never used                                                              no-unused-vars
+  40:3   warning  'RotateCcw' is defined but never used                                                        no-unused-vars
+  42:3   warning  'Wrench' is defined but never used                                                           no-unused-vars
+  43:3   warning  'Clock' is defined but never used                                                            no-unused-vars
+  44:3   warning  'Sparkles' is defined but never used                                                         no-unused-vars
+  45:3   warning  'Users' is defined but never used                                                            no-unused-vars
+  81:3   warning  'onQuickSortie' is assigned a value but never used. Allowed unused args must match /^_/u     no-unused-vars
+  85:3   warning  'onNavigateToType' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+  87:23  warning  'loading' is assigned a value but never used                                                 no-unused-vars
+
+/app/applet/src/presentation/pages/stock/components/StockKPIBar.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/system/GuideView.jsx
+  1:8  warning  'React' is defined but never used         no-unused-vars
+  5:3  warning  'CheckCircle2' is defined but never used  no-unused-vars
+  6:3  warning  'ArrowRight' is defined but never used    no-unused-vars
+
+/app/applet/src/presentation/pages/system/NexusView.jsx
+  1:8  warning  'React' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/utilisateurs/AddUserModal.jsx
+  1:8  warning  'React' is defined but never used            no-unused-vars
+  6:3  warning  'getTemplateById' is defined but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/utilisateurs/UtilisateursView.jsx
+   1:8  warning  'React' is defined but never used                                             no-unused-vars
+  40:3  warning  'mouvements' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/app/applet/src/presentation/pages/warehouse/EntrepotView.jsx
+    1:8   warning  'React' is defined but never used                                                      no-unused-vars
+    5:10  warning  'generateWarehouseItemCode' is defined but never used                                  no-unused-vars
+   11:3   warning  'Filter' is defined but never used                                                     no-unused-vars
+   12:3   warning  'ArrowRight' is defined but never used                                                 no-unused-vars
+   14:3   warning  'Users' is defined but never used                                                      no-unused-vars
+   16:3   warning  'FolderTree' is defined but never used                                                 no-unused-vars
+   20:3   warning  'AlertTriangle' is defined but never used                                              no-unused-vars
+   32:3   warning  'Sparkles' is defined but never used                                                   no-unused-vars
+   33:3   warning  'ExternalLink' is defined but never used                                               no-unused-vars
+   34:3   warning  'ShieldCheck' is defined but never used                                                no-unused-vars
+   38:3   warning  'Clock' is defined but never used                                                      no-unused-vars
+   41:3   warning  'Building2' is defined but never used                                                  no-unused-vars
+   44:3   warning  'XCircle' is defined but never used                                                    no-unused-vars
+   45:3   warning  'FileSpreadsheet' is defined but never used                                            no-unused-vars
+   65:3   warning  'stockItems' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+   69:3   warning  'mouvements' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+  189:14  warning  'e' is defined but never used                                                          no-unused-vars
+  221:14  warning  'e' is defined but never used                                                          no-unused-vars
+
+/app/applet/src/presentation/pages/warehouse/MouvementsJournalTable.jsx
+     1:8   warning  'React' is defined but never used               no-unused-vars
+     8:3   warning  'AlertTriangle' is defined but never used       no-unused-vars
+    10:3   warning  'Plus' is defined but never used                no-unused-vars
+    33:3   warning  'Send' is defined but never used                no-unused-vars
+    34:3   warning  'Wrench' is defined but never used              no-unused-vars
+    38:3   warning  'HelpCircle' is defined but never used          no-unused-vars
+  1715:25  warning  'isOutflow' is assigned a value but never used  no-unused-vars
+
+/app/applet/src/presentation/pages/warehouse/QuickMovementModal.jsx
+   1:8   warning  'React' is defined but never used                                                      no-unused-vars
+  14:3   warning  'ClipboardList' is defined but never used                                              no-unused-vars
+  16:3   warning  'AlertTriangle' is defined but never used                                              no-unused-vars
+  21:3   warning  'FileSpreadsheet' is defined but never used                                            no-unused-vars
+  34:3   warning  'operations' is assigned a value but never used. Allowed unused args must match /^_/u  no-unused-vars
+  46:23  warning  'setFournisseur' is assigned a value but never used                                    no-unused-vars
+
+/app/applet/src/presentation/router/AppRouter.jsx
+   1:8   warning  'React' is defined but never used                                                no-unused-vars
+   3:8   warning  'LoadingSkeleton' is defined but never used                                      no-unused-vars
+  25:15  warning  'setCurrentTab' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/app/applet/src/utils/PerformanceMonitor.js
+  69:54  warning  'metrics' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+✖ 321 problems (15 errors, 306 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

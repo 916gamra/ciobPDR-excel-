@@ -692,7 +692,7 @@ export const resolveStockEquation = (m = {}, { stockItems = [], warehouseItems =
   }
 
   // Determine Stock Après color
-  let apresClass = 'text-slate-900 font-bold';
+  let apresClass;
   if (stockApres <= 0) {
     apresClass = 'text-rose-600 font-extrabold';
   } else if (stockApres < seuilMin) {

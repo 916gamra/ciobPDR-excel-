@@ -105,7 +105,7 @@ export default function SettingsView({
   const localStorageSizeKB = useMemo(() => {
     let total = 0;
     for (let x in localStorage) {
-      if (localStorage.hasOwnProperty(x)) {
+      if (Object.prototype.hasOwnProperty.call(localStorage, x)) {
         total += (localStorage[x].length + x.length) * 2;
       }
     }
@@ -426,7 +426,7 @@ export default function SettingsView({
 
       return Object.entries(userMap)
         .map(([name, meta]) => {
-          let inferredRole = 'TECHNICIEN';
+          let inferredRole;
           if (/\bchef\b/i.test(name) || /\bsuperviseur\b/i.test(name)) {
             inferredRole = 'CHEF';
           } else if (/\bop/i.test(name) || /\bopér/i.test(name) || meta.opCount > meta.techCount) {
@@ -887,15 +887,6 @@ export default function SettingsView({
     recalcStats: null,
   });
 
-  useEffect(() => {
-    if (activeTab === 'backup-audit') {
-      loadBackups();
-      loadAuditLogs();
-      loadAccessLogs();
-      runIntegrityCheck();
-      refreshPerformanceMetrics();
-    }
-  }, [activeTab]);
 
   const runIntegrityCheck = () => {
     setCheckingIntegrity(true);
@@ -986,6 +977,16 @@ export default function SettingsView({
       setLoadingAudit(false);
     }
   };
+
+  useEffect(() => {
+    if (activeTab === 'backup-audit') {
+      loadBackups();
+      loadAuditLogs();
+      loadAccessLogs();
+      runIntegrityCheck();
+      refreshPerformanceMetrics();
+    }
+  }, [activeTab]);
 
   const handleRestoreBackup = async (id) => {
     if (!window.confirm('Attention : Cette action va écraser toutes vos données actuelles. Confirmer ?')) return;

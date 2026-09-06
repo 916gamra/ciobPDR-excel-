@@ -469,7 +469,7 @@ export default function SortieRapideView({
     }
 
     // 5. Intelligent Category & Number Decomposition for GMAO references (e.g. "Raccord04", "Courroie61", "Vis34")
-    const match = rawRef.match(/^([a-zA-Z\s\u00C0-\u017F]+?)[_\-\s]*([0-9]+[a-zA-Z0-9\-\.]*)$/);
+    const match = rawRef.match(/^([a-zA-Z\s\u00C0-\u017F]+?)[_\-\s]*([0-9]+[a-zA-Z0-9.-]*)$/);
     if (match) {
       const rawCat = match[1].trim();
       const numPart = match[2].trim();
@@ -812,6 +812,7 @@ export default function SortieRapideView({
   const isBonSortie = form.type === 'Bon de Sortie' || form.type === 'Sortie Externe';
   const isEntreeExterne = form.type === 'Entrée Externe';
   const isCommandeFlow = form.type === 'COMMANDE';
+  const isWarehouseDest = form.destination_type?.startsWith('WAREHOUSE_');
 
   // Dynamic Supplier Options
   const supplierOptions = useMemo(() => {
@@ -4563,7 +4564,7 @@ export default function SortieRapideView({
                         <button
                           key={`rep-btn-${idx}`}
                           type="button"
-                          onClick={() => handleFulfillRepair(rep)}
+                          onClick={() => handleReceiveRepairReturn(rep)}
                           className="px-2 py-1 bg-white hover:bg-purple-100 border border-purple-300 text-purple-900 rounded-lg text-[10.5px] font-bold transition flex items-center gap-1 cursor-pointer shadow-2xs"
                         >
                           <span>{rep.code_bon}</span>
