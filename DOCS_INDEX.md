@@ -16,6 +16,7 @@
 | **Zones & Emplacements** | [`docs/ZONES_VIEW.md`](./docs/ZONES_VIEW.md) | شجرة المناطق الصناعية ومواقع التخزين في المستودعات. |
 | **Utilisateurs & Profils** | [`docs/UTILISATEURS_VIEW.md`](./docs/UTILISATEURS_VIEW.md) | الفنيين، المشغلين، رؤساء الفرق، وتوزيع الأدوار والصلاحيات. |
 | **Paramètres & Excel Twin** | [`docs/SETTINGS_BACKUP.md`](./docs/SETTINGS_BACKUP.md) | الاستيراد والتصدير، النسخ الاحتياطي المضغوط، ونظام التدقيق. |
+| **الدليل المعماري وقابلية التوسع** | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | هيكل المشروع الكامل، إرشادات إضافة شاشات ونوافذ ومميزات جديدة. |
 
 ---
 

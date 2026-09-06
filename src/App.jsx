@@ -3,8 +3,8 @@ import React, {
   useMemo,
   useRef,
   useEffect,
-  lazy,
-  Suspense,
+  
+  
   useDeferredValue,
 } from 'react';
 import * as XLSX from 'xlsx';
@@ -26,26 +26,49 @@ import {
 // Baseline stock lookup dictionary to ensure real quantities are permanently preserved
 const INITIAL_STOCK_LOOKUP = new Map();
 (initialData.Stock_Actuel || []).forEach((item, idx) => {
-  const refKey = String(item.Ref || item.ref || item['Référence'] || item['Reference'] || '').trim().toLowerCase();
-  const desigKey = String(item['Désignation'] || item.designation || '').trim().toLowerCase();
+  const refKey = String(item.Ref || item.ref || item['Référence'] || item['Reference'] || '')
+    .trim()
+    .toLowerCase();
+  const desigKey = String(item['Désignation'] || item.designation || '')
+    .trim()
+    .toLowerCase();
 
   let initQty = 0;
   if (item.stockInitial != null && item.stockInitial !== '' && !isNaN(Number(item.stockInitial))) {
     initQty = Number(item.stockInitial);
-  } else if (item['Stock Initial'] != null && item['Stock Initial'] !== '' && !isNaN(Number(item['Stock Initial']))) {
+  } else if (
+    item['Stock Initial'] != null &&
+    item['Stock Initial'] !== '' &&
+    !isNaN(Number(item['Stock Initial']))
+  ) {
     initQty = Number(item['Stock Initial']);
-  } else if (item['Stock Actuel'] != null && item['Stock Actuel'] !== '' && !isNaN(Number(item['Stock Actuel']))) {
+  } else if (
+    item['Stock Actuel'] != null &&
+    item['Stock Actuel'] !== '' &&
+    !isNaN(Number(item['Stock Actuel']))
+  ) {
     initQty = Number(item['Stock Actuel']);
   } else if (typeof item.Type === 'number' && !isNaN(item.Type)) {
     initQty = item.Type;
-  } else if (!isNaN(Number(item.Type)) && item.Type !== '' && item.Type !== null && typeof item.Type !== 'string') {
+  } else if (
+    !isNaN(Number(item.Type)) &&
+    item.Type !== '' &&
+    item.Type !== null &&
+    typeof item.Type !== 'string'
+  ) {
     initQty = Number(item.Type);
   }
 
   const dataObj = {
     qty: initQty,
-    ref: item.ref || item.Ref || item['Référence'] || item['Reference'] || `ART${String(idx + 1).padStart(3, '0')}`,
-    designation: item.designation || item.Ref || item.ref || item['Désignation'] || `Piece ${idx + 1}`,
+    ref:
+      item.ref ||
+      item.Ref ||
+      item['Référence'] ||
+      item['Reference'] ||
+      `ART${String(idx + 1).padStart(3, '0')}`,
+    designation:
+      item.designation || item.Ref || item.ref || item['Désignation'] || `Piece ${idx + 1}`,
     type: item.type || item.id_type || item['Désignation'] || 'Divers',
     seuil: Number(item["Seuil d'Alerte"] || item.seuil) || 3,
     emplacement: item.Emplacement || item.emplacement || `A${(idx % 8) + 1}-R${(idx % 6) + 1}`,
@@ -55,14 +78,12 @@ const INITIAL_STOCK_LOOKUP = new Map();
   if (desigKey && !INITIAL_STOCK_LOOKUP.has(desigKey)) INITIAL_STOCK_LOOKUP.set(desigKey, dataObj);
 });
 
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import LoadingSkeleton from './components/LoadingSkeleton';
-import SplashScreen from './components/SplashScreen';
-import LoginScreen from './components/LoginScreen';
-import Toast from './components/Toast';
-import ErrorBoundary from './components/ErrorBoundary';
-import OfflineIndicator from './components/OfflineIndicator';
+import Sidebar from './presentation/components/layout/Sidebar';
+import Header from './presentation/components/layout/Header';
+import LoadingSkeleton from './presentation/components/common/LoadingSkeleton';
+import { SplashScreen, LoginScreen } from './presentation/pages/auth';
+import Toast from './presentation/components/common/Toast';
+import OfflineIndicator from './presentation/components/common/OfflineIndicator';
 
 import { validateImportedData } from './utils/validation';
 import { backupService } from './utils/BackupService';
@@ -70,64 +91,32 @@ import { auditService } from './utils/AuditService';
 import { logger } from './utils/Logger';
 import { monitor } from './utils/PerformanceMonitor';
 
-// Lazy load views for instant app startup & fast tab transitions
-const DashboardView = lazy(() => import('./components/DashboardView'));
-const StockView = lazy(() => import('./components/StockView'));
-const TypeView = lazy(() => import('./components/TypeView'));
-const DesignationView = lazy(() => import('./components/DesignationView'));
-const MachinesRegisteredView = lazy(() => import('./components/MachinesRegisteredView'));
-const EntrepotView = lazy(() => import('./components/EntrepotView'));
-const CompFamilyView = lazy(() => import('./components/CompFamilyView'));
-const CompTemplateView = lazy(() => import('./components/CompTemplateView'));
-const PartTypeView = lazy(() => import('./components/PartTypeView'));
-const PartDesignationView = lazy(() => import('./components/PartDesignationView'));
-const FamilyView = lazy(() => import('./components/FamilyView'));
-const TemplatesView = lazy(() => import('./components/TemplatesView'));
-const ZonesView = lazy(() => import('./components/ZonesView'));
-const UtilisateursView = lazy(() => import('./components/UtilisateursView'));
-const SortieRapideView = lazy(() => import('./components/SortieRapideView'));
-const NexusView = lazy(() => import('./components/NexusView'));
-const GuideView = lazy(() => import('./components/GuideView'));
-const SettingsView = lazy(() => import('./components/SettingsView'));
 
-const AddArticleModal = lazy(() => import('./components/AddArticleModal'));
-const AddMachineModal = lazy(() => import('./components/AddMachineModal'));
-const AddUserModal = lazy(() => import('./components/AddUserModal'));
-const AddZoneModal = lazy(() => import('./components/AddZoneModal'));
 
 import { storageService } from './utils/storageService';
+
+import { SparePartApplicationService } from './application/services/SparePartApplicationService.js';
+import { MachineApplicationService } from './application/services/MachineApplicationService.js';
+import { TaskApplicationService } from './application/services/TaskApplicationService.js';
+
 import { sanitizeObject } from './utils/sanitize';
 import { indexedDBService } from './utils/indexedDBService';
 import { safeNum, calculateStockStatus } from './utils/formulaEngine';
-import { accessLogService } from './utils/AccessLogService';
+
+import { useAuth } from './context/AuthContext';
+import { useAppComplexHandlers } from './hooks/useAppComplexHandlers';
+
+import MainLayout from './presentation/components/layout/MainLayout';
+import AppModals from './presentation/modals/AppModals';
+import AppRouter from './presentation/router/AppRouter';
 
 export default function App() {
-  // Splash & Auth States (Skip splash if already seen in current session for instant window load)
-  const [showSplash, setShowSplash] = useState(() => {
-    try {
-      return !sessionStorage.getItem('gmao_splash_shown');
-    } catch {
-      return false;
-    }
-  });
-  const [currentUser, setCurrentUser] = useState(
-    () =>
-      storageService.getItem('gmao_user_session') || {
-        id: 'USER-01',
-        name: 'Rachid Mansouri',
-        role: 'ADMIN',
-        titleFr: 'Responsable Maintenance & Stock',
-        avatar: 'RM',
-        email: 'r.mansouri@ciob.ma',
-      }
-  );
+  const { user: currentUser, logout } = useAuth();
+
+  // Splash & Auth States - Always display splash screen on application start/reload
+  const [showSplash, setShowSplash] = useState(true);
 
   const handleSplashComplete = () => {
-    try {
-      sessionStorage.setItem('gmao_splash_shown', 'true');
-    } catch (_e) {
-      /* ignore storage error */
-    }
     setShowSplash(false);
   };
 
@@ -217,7 +206,7 @@ export default function App() {
           Technicians: technicians,
           Operations: operations,
         };
-      }, currentUser?.nom || 'system');
+      }, currentUser?.name || currentUser?.nom || 'system');
     });
 
     return () => {
@@ -260,15 +249,25 @@ export default function App() {
     });
 
     return rawStock.map((item) => {
-      const itemRefKey = String(item.ref || '').trim().toLowerCase();
-      const itemDesigKey = String(item.designation || '').trim().toLowerCase();
+      const itemRefKey = String(item.ref || '')
+        .trim()
+        .toLowerCase();
+      const itemDesigKey = String(item.designation || '')
+        .trim()
+        .toLowerCase();
 
-      let entrees = mvtSummary[itemRefKey]?.entrees || (itemDesigKey ? mvtSummary[itemDesigKey]?.entrees || 0 : 0);
-      let sorties = mvtSummary[itemRefKey]?.sorties || (itemDesigKey ? mvtSummary[itemDesigKey]?.sorties || 0 : 0);
+      let entrees =
+        mvtSummary[itemRefKey]?.entrees ||
+        (itemDesigKey ? mvtSummary[itemDesigKey]?.entrees || 0 : 0);
+      let sorties =
+        mvtSummary[itemRefKey]?.sorties ||
+        (itemDesigKey ? mvtSummary[itemDesigKey]?.sorties || 0 : 0);
 
       let stockInitial = safeNum(item.stockInitial, 0);
       if (stockInitial <= 0) {
-        const baseline = INITIAL_STOCK_LOOKUP.get(itemRefKey) || (itemDesigKey ? INITIAL_STOCK_LOOKUP.get(itemDesigKey) : null);
+        const baseline =
+          INITIAL_STOCK_LOOKUP.get(itemRefKey) ||
+          (itemDesigKey ? INITIAL_STOCK_LOOKUP.get(itemDesigKey) : null);
         if (baseline && baseline.qty > 0) {
           stockInitial = baseline.qty;
         }
@@ -327,7 +326,9 @@ export default function App() {
     if (
       Array.isArray(templates) &&
       templates.length > 0 &&
-      !templates.some((t) => t.ref || t.stockInitial !== undefined || t.stockActuel !== undefined) &&
+      !templates.some(
+        (t) => t.ref || t.stockInitial !== undefined || t.stockActuel !== undefined
+      ) &&
       templates.some((t) => t.id_templates && (t.id_family || t.libelle))
     ) {
       return templates;
@@ -357,12 +358,14 @@ export default function App() {
     });
 
     return warehouseItems.map((item) => {
-      const r = String(item.id_warehouse_item || '').trim().toLowerCase();
+      const r = String(item.id_warehouse_item || '')
+        .trim()
+        .toLowerCase();
       const initial = safeNum(item.stockInitial, 1);
       const entrees = mvtSummary[r]?.entrees || 0;
       const sorties = mvtSummary[r]?.sorties || 0;
       const stockActuel = initial + entrees - sorties;
-      
+
       const seuil = safeNum(item.seuil, 0);
       let alerte = 'OK';
       if (stockActuel <= 0) alerte = 'RUPTURE';
@@ -414,29 +417,7 @@ export default function App() {
   const [showAddZoneModal, setShowAddZoneModal] = useState(false);
 
   // Filtered Stock Items
-  const filteredStock = useMemo(() => {
-    return stockItems.filter((item) => {
-      if (
-        stockTypeFilter !== 'ALL' &&
-        item.id_type !== stockTypeFilter &&
-        item.type !== stockTypeFilter
-      )
-        return false;
-      if (stockAlertOnly && item.alerte === 'OK') return false;
-
-      if (deferredStockSearch) {
-        const q = String(deferredStockSearch).toLowerCase().trim();
-        return (
-          String(item.ref || '').toLowerCase().includes(q) ||
-          String(item.designation || '').toLowerCase().includes(q) ||
-          String(item.type || '').toLowerCase().includes(q) ||
-          String(item.id_type || '').toLowerCase().includes(q) ||
-          String(item.emplacement || '').toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [stockItems, stockTypeFilter, stockAlertOnly, deferredStockSearch]);
+  
 
   // Stock KPIs
   const stockKPIs = useMemo(() => {
@@ -605,283 +586,32 @@ export default function App() {
   };
 
   // ===== UPDATE & DELETE HANDLERS =====
-  const handleUpdateZone = (id, updatedZone) => {
-    setZones((prev) => prev.map((z) => (z.id_zone === id ? updatedZone : z)));
-    const oldZone = zones.find((z) => z.id_zone === id);
-    if (oldZone && oldZone.id_zone !== updatedZone.id_zone) {
-      setTechnicians((prev) =>
-        prev.map((t) => (t.id_zone === id ? { ...t, id_zone: updatedZone.id_zone } : t))
-      );
-      setOperations((prev) =>
-        prev.map((o) => (o.id_zone === id ? { ...o, id_zone: updatedZone.id_zone } : o))
-      );
-      setMachines((prev) =>
-        prev.map((m) =>
-          m.id_zone_default === id ? { ...m, id_zone_default: updatedZone.id_zone } : m
-        )
-      );
-      setMouvements((prev) =>
-        prev.map((m) => (m.id_zone === id ? { ...m, id_zone: updatedZone.id_zone } : m))
-      );
-    }
-  };
-  const handleDeleteZone = (id) => setZones((prev) => prev.filter((z) => z.id_zone !== id));
-
-  const handleUpdateOperation = (id, updatedOp) => {
-    setOperations((prev) => prev.map((o) => (o.id_operation === id ? updatedOp : o)));
-    const oldOp = operations.find((o) => o.id_operation === id);
-    if (oldOp && oldOp.nom !== updatedOp.nom) {
-      setMouvements((prev) =>
-        prev.map((m) => (m.operation === oldOp.nom ? { ...m, operation: updatedOp.nom } : m))
-      );
-    }
-  };
-  const handleDeleteOperation = (id) =>
-    setOperations((prev) => prev.filter((o) => o.id_operation !== id));
-
-  const handleUpdateMachine = (id, updatedMch) => {
-    setMachines((prev) => prev.map((m) => (m.id_machine_registered === id ? updatedMch : m)));
-    if (id !== updatedMch.id_machine_registered) {
-      setMouvements((prev) =>
-        prev.map((m) =>
-          m.id_machine_registered === id
-            ? { ...m, id_machine_registered: updatedMch.id_machine_registered }
-            : m
-        )
-      );
-    }
-  };
-  const handleDeleteMachine = (id) =>
-    setMachines((prev) => prev.filter((m) => m.id_machine_registered !== id));
-
-  const handleUpdateType = (id, updatedType) => {
-    setTypes((prev) => prev.map((t) => (t.id_type === id ? updatedType : t)));
-    if (id !== updatedType.id_type) {
-      setRawStock((prev) =>
-        prev.map((s) =>
-          s.type === id || s.id_type === id
-            ? { ...s, type: updatedType.id_type, id_type: updatedType.id_type }
-            : s
-        )
-      );
-    }
-  };
-  const handleDeleteType = (id) => setTypes((prev) => prev.filter((t) => t.id_type !== id));
-
-  const handleUpdateDesignation = (id, updatedDesig) => {
-    const updater = (s) =>
-      (s.ref === id || s.id_designation === id || s.id === id)
-        ? {
-            ...s,
-            ref: updatedDesig.ref,
-            designation: updatedDesig.designation,
-            type: updatedDesig.id_type,
-            id_type: updatedDesig.id_type,
-            stockInitial: Number(updatedDesig.stockInitial),
-            seuil: Number(updatedDesig.seuil),
-            emplacement: updatedDesig.emplacement,
-          }
-        : s;
-    setRawStock((prev) => prev.map(updater));
-    setDesignations((prev) => (prev || []).map(updater));
-  };
-  const handleDeleteDesignation = (id) => {
-    setRawStock((prev) => prev.filter((s) => s.ref !== id && s.id_designation !== id && s.id !== id));
-    setDesignations((prev) => (prev || []).filter((d) => d.ref !== id && d.id_designation !== id && d.id !== id));
-  };
-  const handleUpdateDiagnostic = handleUpdateDesignation;
-  const handleDeleteDiagnostic = handleDeleteDesignation;
-
-  const handleUpdateFamily = (id, updatedFamily) => {
-    setFamilies((prev) => prev.map((f) => (f.id_family === id ? updatedFamily : f)));
-    if (id !== updatedFamily.id_family) {
-      setTemplates((prev) =>
-        prev.map((t) => (t.id_family === id ? { ...t, id_family: updatedFamily.id_family } : t))
-      );
-      setMachines((prev) =>
-        prev.map((m) => (m.id_family === id ? { ...m, id_family: updatedFamily.id_family } : m))
-      );
-    }
-  };
-  const handleDeleteFamily = (id) => setFamilies((prev) => prev.filter((f) => f.id_family !== id));
-
-  // COMPONENT FAMILIES & TEMPLATES CRUD
-  const handleUpdateCompFamily = (id, updatedFam) => {
-    setCompFamilies((prev) => prev.map((f) => (f.id_family === id ? updatedFam : f)));
-    if (id !== updatedFam.id_family) {
-      setCompTemplates((prev) =>
-        prev.map((t) => (t.id_family === id ? { ...t, id_family: updatedFam.id_family } : t))
-      );
-      setWarehouseItems((prev) =>
-        prev.map((w) => (w.id_family === id ? { ...w, id_family: updatedFam.id_family } : w))
-      );
-    }
-  };
-  const handleDeleteCompFamily = (id) => {
-    setCompFamilies((prev) => prev.filter((f) => f.id_family !== id));
-  };
-
-  const handleUpdateCompTemplate = (id, updatedTpl) => {
-    setCompTemplates((prev) => prev.map((t) => (t.id_templates === id ? updatedTpl : t)));
-    if (id !== updatedTpl.id_templates) {
-      setWarehouseItems((prev) =>
-        prev.map((w) =>
-          w.id_templates === id ? { ...w, id_templates: updatedTpl.id_templates } : w
-        )
-      );
-    }
-  };
-  const handleDeleteCompTemplate = (id) => {
-    setCompTemplates((prev) => prev.filter((t) => t.id_templates !== id));
-  };
-
-  // PART TYPES & DESIGNATIONS CRUD
-  const handleUpdatePartType = (id, updatedType) => {
-    setPartTypes((prev) => prev.map((t) => (t.id_type === id ? updatedType : t)));
-    if (id !== updatedType.id_type) {
-      setPartDesignations((prev) =>
-        prev.map((d) => (d.id_type === id ? { ...d, id_type: updatedType.id_type } : d))
-      );
-      setWarehouseItems((prev) =>
-        prev.map((w) => (w.id_type === id ? { ...w, id_type: updatedType.id_type } : w))
-      );
-    }
-  };
-  const handleDeletePartType = (id) => {
-    setPartTypes((prev) => prev.filter((t) => t.id_type !== id));
-  };
-
-  const handleUpdatePartDesignation = (refId, updatedDesig) => {
-    setPartDesignations((prev) =>
-      prev.map((d) => (d.ref === refId || d.id_part === refId ? updatedDesig : d))
-    );
-  };
-  const handleDeletePartDesignation = (refId) => {
-    setPartDesignations((prev) =>
-      prev.filter((d) => d.ref !== refId && d.id_part !== refId)
-    );
-  };
-
-  const handleUpdateTemplate = (id, updatedTemplate) => {
-    setTemplates((prev) => prev.map((t) => (t.id_templates === id ? updatedTemplate : t)));
-    if (id !== updatedTemplate.id_templates) {
-      setMachines((prev) =>
-        prev.map((m) =>
-          m.id_templates === id ? { ...m, id_templates: updatedTemplate.id_templates } : m
-        )
-      );
-    }
-  };
-  const handleDeleteTemplate = (id) =>
-    setTemplates((prev) => prev.filter((t) => t.id_templates !== id));
-  // ===================================
-
-  const handleAddTechnician = (newTech) => {
-    setTechnicians((prev) => [...prev, newTech]);
-  };
-
-  const handleUpdateTechnician = (id, updatedTech) => {
-    setTechnicians((prev) => prev.map((t) => (t.id_technician === id ? updatedTech : t)));
-
-    // Cascade update to Machines (technician field) if name changed
-    const oldTech = technicians.find((t) => t.id_technician === id);
-    if (oldTech && oldTech.nom !== updatedTech.nom) {
-      setMachines((prev) =>
-        prev.map((m) => (m.technician === oldTech.nom ? { ...m, technician: updatedTech.nom } : m))
-      );
-      // Cascade update to Mouvements if it stores the name
-      setMouvements((prev) =>
-        prev.map((m) => (m.technicien === oldTech.nom ? { ...m, technicien: updatedTech.nom } : m))
-      );
-    }
-  };
-
-  const handleDeleteTechnician = (id) => {
-    setTechnicians((prev) => prev.filter((t) => t.id_technician !== id));
-  };
-
-  const handleAddOperation = (newOp) => {
-    setOperations((prev) => [...prev, newOp]);
-  };
-
-  const handleAddMachine = (newMch) => {
-    setMachines((prev) => [...prev, newMch]);
-  };
-
-  const handleAddArticle = (newArt) => {
-    if (rawStock.some((s) => String(s.ref).toLowerCase() === String(newArt.ref).toLowerCase())) {
-      showToast('Erreur: La référence existe déjà.', 'error');
-      return;
-    }
-    setRawStock((prev) => [
-      {
-        id: crypto.randomUUID(),
-        ...newArt,
-      },
-      ...prev,
-    ]);
-  };
-
-  const handleAddMouvement = (newMvtOrArray) => {
-    if (Array.isArray(newMvtOrArray)) {
-      setMouvements((prev) => [...newMvtOrArray, ...prev]);
-    } else {
-      setMouvements((prev) => [newMvtOrArray, ...prev]);
-    }
-  };
-
-  const { handleUpdate: handleUpdateArticle, handleDelete: handleDeleteArticle } = useGenericCRUD(
-    setRawStock,
-    'id'
-  );
-  const { handleUpdate: handleUpdateMouvement, handleDelete: handleDeleteMouvement } =
-    useGenericCRUD(setMouvements, 'id');
-
-  const handleAddWarehouseItem = (newItem) => {
-    setWarehouseItems((prev) => [newItem, ...prev]);
-  };
-
-  const handleUpdateWarehouseItem = (idOrCode, updatedItem) => {
-    setWarehouseItems((prev) =>
-      prev.map((it) =>
-        it.id_warehouse_item === idOrCode || it.id === idOrCode ? updatedItem : it
-      )
-    );
-    if (idOrCode !== updatedItem.id_warehouse_item) {
-      setMouvements((prev) =>
-        prev.map((m) =>
-          m.ref === idOrCode ? { ...m, ref: updatedItem.id_warehouse_item } : m
-        )
-      );
-    }
-  };
-
-  const handleDeleteWarehouseItem = (idOrCode) => {
-    setWarehouseItems((prev) =>
-      prev.filter((it) => it.id_warehouse_item !== idOrCode && it.id !== idOrCode)
-    );
-  };
-
-  const handleDirectAdjustStock = (article, newTargetStock) => {
-    // When directly adjusting real stock balance, calculate new stockInitial so that:
-    // stockActuel (stockInitial + entrees - sorties) equals newTargetStock
-    const entrees = Number(article.entrees || 0);
-    const sorties = Number(article.sorties || 0);
-    const newStockInitial = Math.max(0, Number(newTargetStock) - entrees + sorties);
-
-    setRawStock((prev) =>
-      prev.map((item) =>
-        item.id === article.id || item.ref === article.ref
-          ? { ...item, stockInitial: newStockInitial }
-          : item
-      )
-    );
-  };
-
-  const handleQuickSortie = (article) => {
-    // Navigate to Sortie Rapide tab
-    React.startTransition(() => setCurrentTab('sortie'));
-  };
+  
+  const {
+    handleUpdateZone, handleDeleteZone,
+    handleUpdateOperation, handleDeleteOperation,
+    handleUpdateMachine, handleDeleteMachine,
+    handleUpdateType, handleDeleteType,
+    handleUpdateDesignation, handleDeleteDesignation,
+    handleUpdateDiagnostic, handleDeleteDiagnostic,
+    handleUpdateFamily, handleDeleteFamily,
+    handleUpdateCompFamily, handleDeleteCompFamily,
+    handleUpdateCompTemplate, handleDeleteCompTemplate,
+    handleUpdatePartType, handleDeletePartType,
+    handleUpdatePartDesignation, handleDeletePartDesignation,
+    handleUpdateTemplate, handleDeleteTemplate,
+    handleAddTechnician, handleUpdateTechnician, handleDeleteTechnician,
+    handleAddOperation, handleAddMachine, handleAddArticle, handleAddMouvement,
+    handleUpdateArticle, handleDeleteArticle,
+    handleUpdateMouvement, handleDeleteMouvement,
+    handleAddWarehouseItem, handleUpdateWarehouseItem, handleDeleteWarehouseItem,
+    handleDirectAdjustStock, handleQuickSortie
+  } = useAppComplexHandlers({
+    zones, setZones, operations, setOperations, technicians, setTechnicians, machines, setMachines, mouvements, setMouvements,
+    types, setTypes, rawStock, setRawStock, designations, setDesignations, families, setFamilies, templates, setTemplates,
+    compFamilies, setCompFamilies, compTemplates, setCompTemplates, partTypes, setPartTypes, partDesignations, setPartDesignations,
+    warehouseItems, setWarehouseItems, showToast, setCurrentTab
+  });
 
   // AUTOMATIC BACKUP CREATOR
   const createAutomaticBackup = (reason = 'Importation Excel') => {
@@ -1023,7 +753,11 @@ export default function App() {
 
     // 15. Part_Designations
     if (partDesignations && partDesignations.length > 0) {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(partDesignations), 'Part_Designations');
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(partDesignations),
+        'Part_Designations'
+      );
     }
 
     return wb;
@@ -1087,21 +821,23 @@ export default function App() {
               workbook.Sheets['Warehouse_Items']
             );
           } else if (workbook.SheetNames.includes('Entrepot')) {
-            importedData.Warehouse_Items = XLSX.utils.sheet_to_json(
-              workbook.Sheets['Entrepot']
-            );
+            importedData.Warehouse_Items = XLSX.utils.sheet_to_json(workbook.Sheets['Entrepot']);
           }
           if (workbook.SheetNames.includes('Comp_Families')) {
             importedData.Comp_Families = XLSX.utils.sheet_to_json(workbook.Sheets['Comp_Families']);
           }
           if (workbook.SheetNames.includes('Comp_Templates')) {
-            importedData.Comp_Templates = XLSX.utils.sheet_to_json(workbook.Sheets['Comp_Templates']);
+            importedData.Comp_Templates = XLSX.utils.sheet_to_json(
+              workbook.Sheets['Comp_Templates']
+            );
           }
           if (workbook.SheetNames.includes('Part_Types')) {
             importedData.Part_Types = XLSX.utils.sheet_to_json(workbook.Sheets['Part_Types']);
           }
           if (workbook.SheetNames.includes('Part_Designations')) {
-            importedData.Part_Designations = XLSX.utils.sheet_to_json(workbook.Sheets['Part_Designations']);
+            importedData.Part_Designations = XLSX.utils.sheet_to_json(
+              workbook.Sheets['Part_Designations']
+            );
           }
         }
 
@@ -1250,527 +986,158 @@ export default function App() {
   }
 
   if (!currentUser) {
-    return <LoginScreen onLoginSuccess={(u) => setCurrentUser(u)} />;
+    return <LoginScreen />;
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col md:pl-[270px] relative isolate select-none font-sans">
-      {/* Background Excel Grid Subtle Lines & Ambient Tones (Identical to Splash Screen) */}
-      <div className="fixed inset-0 opacity-[0.04] pointer-events-none bg-[radial-gradient(#107c41_1px,transparent_1px)] [background-size:20px_20px] -z-10" />
-      <div className="fixed -top-32 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
-      <div className="fixed -bottom-32 -left-32 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
-
-      {/* Sidebar Navigation */}
-      <Sidebar
+    <MainLayout
+      currentTab={currentTab}
+      setCurrentTab={setCurrentTab}
+      counts={{
+        stock: stockItems.length,
+        types: types.length,
+        designations: effectiveDesignations.length,
+        diagnostics: effectiveDesignations.length,
+        machines: machines.length,
+        families: effectiveFamilies.length,
+        templates: effectiveTemplates.length,
+        warehouse: warehouseItemsComputed.length,
+        entrepot: warehouseItemsComputed.length,
+        compFamilies: (compFamilies || []).length,
+        compTemplates: (compTemplates || []).length,
+        partTypes: (partTypes || []).length,
+        partDesignations: (partDesignations || []).length,
+        zones: zones.length,
+        technicians: technicians.length,
+        operations: operations.length,
+      }}
+      mobileMenuOpen={mobileMenuOpen}
+      setMobileMenuOpen={setMobileMenuOpen}
+      fileInputRef={fileInputRef}
+      handleImportFile={handleImportFile}
+      handleExportExcel={handleExportExcel}
+      linkedFileName={linkedFileName}
+      onDirectLink={handleDirectFileLink}
+      onDirectSave={handleDirectSave}
+    >
+      <AppRouter 
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
-        mobileMenuOpen={mobileMenuOpen}
-        setMobileMenuOpen={setMobileMenuOpen}
-        counts={{
-          stock: stockItems.length,
-          types: types.length,
-          designations: effectiveDesignations.length,
-          diagnostics: effectiveDesignations.length,
-          machines: machines.length,
-          families: effectiveFamilies.length,
-          templates: effectiveTemplates.length,
-          warehouse: warehouseItemsComputed.length,
-          entrepot: warehouseItemsComputed.length,
-          compFamilies: (compFamilies || []).length,
-          compTemplates: (compTemplates || []).length,
-          partTypes: (partTypes || []).length,
-          partDesignations: (partDesignations || []).length,
-          zones: zones.length,
-          technicians: technicians.length,
-          operations: operations.length,
-        }}
-        currentUser={currentUser}
-        onLogout={() => {
-          accessLogService.recordLogout();
-          storageService.removeItem('gmao_user_session');
-          try {
-            localStorage.setItem('gmao_active_tab', 'dashboard');
-          } catch (_e) {
-            /* ignore storage error */
-          }
-          setCurrentTab('dashboard');
-          setCurrentUser(null);
+        props={{
+          dashboard: {
+            stockItems, machines, warehouseItems: warehouseItemsComputed, mouvements, types, diagnostics, zones, technicians, operations, stockKPIs,
+            onNavigateToStock: () => React.startTransition(() => setCurrentTab('stock')),
+            onNavigateToMachines: () => React.startTransition(() => setCurrentTab('machines')),
+            onNavigateToWarehouse: () => React.startTransition(() => setCurrentTab('entrepot')),
+            onNavigateToSortie: () => React.startTransition(() => setCurrentTab('sortie')),
+            onNavigateToZones: () => React.startTransition(() => setCurrentTab('zones')),
+            onNavigateToUsers: () => React.startTransition(() => setCurrentTab('utilisateurs')),
+            onNavigateToSettings: () => React.startTransition(() => setCurrentTab('settings')),
+            onQuickSortie: handleQuickSortie, onAddMouvement: handleAddMouvement, onUpdateMouvement: handleUpdateMouvement, onDeleteMouvement: handleDeleteMouvement, onExportExcel: handleExportExcel
+          },
+          stock: {
+            stockItems, stockSearch, setStockSearch, stockTypeFilter, setStockTypeFilter, stockAlertOnly, setStockAlertOnly, types, zones, machines, technicians, operations,
+            onOpenAddArticle: () => setShowAddArticleModal(true),
+            onQuickSortie: handleQuickSortie, onAddMouvement: handleAddMouvement, onUpdateArticle: handleUpdateArticle, onDirectAdjustStock: handleDirectAdjustStock, stockKPIs, onNavigateToType: handleNavigateToStockFiltered
+          },
+          sortie: {
+            mouvements,
+            stockItems,
+            warehouseItems: warehouseItemsComputed,
+            families,
+            templates,
+            types,
+            diagnostics,
+            zones,
+            machines,
+            technicians,
+            operations,
+            onAddMouvement: handleAddMouvement,
+            onUpdateMouvement: handleUpdateMouvement,
+            onDeleteMouvement: handleDeleteMouvement,
+            onDirectAdjustStock: handleDirectAdjustStock,
+            onAddWarehouseItem: handleAddWarehouseItem,
+            onUpdateWarehouseItem: handleUpdateWarehouseItem,
+            onOpenAddArticle: () => setShowAddArticleModal(true),
+            onOpenAddMachine: () => setShowAddMachineModal(true),
+            onOpenAddZone: () => setShowAddZoneModal(true),
+            onOpenAddTech: () => { setAddUserModalType('TECHNICIEN'); setShowAddUserModal(true); },
+            onOpenAddChef: () => { setAddUserModalType('RESPONSABLE'); setShowAddUserModal(true); },
+            onOpenAddOperator: () => { setAddUserModalType('OPERATEUR'); setShowAddUserModal(true); },
+            onNavigateToWarehouse: () => React.startTransition(() => setCurrentTab('entrepot')),
+            onNavigateToStockFilteredByRef: handleNavigateToStockFilteredByRef
+          },
+          entrepot: {
+            warehouseItems: warehouseItemsComputed, compFamilies, compTemplates, partTypes, partDesignations, machines, whSearch, setWhSearch, whFamilyFilter, setWhFamilyFilter, whTemplateFilter, setWhTemplateFilter, whTypeFilter, setWhTypeFilter, whNatureFilter, setWhNatureFilter,
+            onAddWarehouseItem: handleAddWarehouseItem, onUpdateWarehouseItem: handleUpdateWarehouseItem, onDeleteWarehouseItem: handleDeleteWarehouseItem,
+            onNavigateToCompFamilies: handleNavigateToCompFamilies, onNavigateToCompTemplates: handleNavigateToCompTemplates, onNavigateToPartTypes: handleNavigateToPartTypes, onNavigateToPartDesignations: handleNavigateToPartDesignations, onNavigateToEntrepotByPart: handleNavigateToEntrepotByPart
+          },
+          types: {
+            types, search: whSearch, setSearch: setWhSearch, onAddType: handleAddType, onUpdateType: handleUpdateType, onDeleteType: handleDeleteType, onNavigateToDesignations: handleNavigateToDesignationsFiltered
+          },
+          designations: {
+            designations, types, search: whSearch, setSearch: setWhSearch, onAddDesignation: handleAddDesignation, onUpdateDesignation: handleUpdateDesignation, onDeleteDesignation: handleDeleteDesignation, onOpenAddTypeModal: () => React.startTransition(() => setCurrentTab('types')), onNavigateToDiag: handleNavigateToDiagFiltered
+          },
+          machines: {
+            machines, effectiveFamilies, effectiveTemplates, zones, technicians, search: mchSearch, setSearch: setMchSearch, familyFilter: mchFamilyFilter, setFamilyFilter: setMchFamilyFilter, templateFilter: mchTemplateFilter, setTemplateFilter: setMchTemplateFilter, zoneFilter: mchZoneFilter, setZoneFilter: setMchZoneFilter,
+            onAddMachine: handleAddMachine, onUpdateMachine: handleUpdateMachine, onDeleteMachine: handleDeleteMachine, onOpenAddMachine: () => setShowAddMachineModal(true)
+          },
+          compFamilies: {
+            compFamilies, search: whSearch, setSearch: setWhSearch, onAddCompFamily: handleAddCompFamily, onUpdateCompFamily: handleUpdateCompFamily, onDeleteCompFamily: handleDeleteCompFamily, onNavigateToCompTemplates: handleNavigateToCompTemplates
+          },
+          compTemplates: {
+            compTemplates, compFamilies, search: whSearch, setSearch: setWhSearch, familyFilter: compTemplateFamilyFilter, setFamilyFilter: setCompTemplateFamilyFilter, onAddCompTemplate: handleAddCompTemplate, onUpdateCompTemplate: handleUpdateCompTemplate, onDeleteCompTemplate: handleDeleteCompTemplate, onOpenAddFamilyModal: () => React.startTransition(() => setCurrentTab('families')), onNavigateToEntrepotByComp: handleNavigateToEntrepotByComp
+          },
+          partTypes: {
+            partTypes, search: whSearch, setSearch: setWhSearch, onAddPartType: handleAddPartType, onUpdatePartType: handleUpdatePartType, onDeletePartType: handleDeletePartType, onNavigateToPartDesignations: handleNavigateToPartDesignations
+          },
+          partDesignations: {
+            partDesignations, partTypes, search: whSearch, setSearch: setWhSearch, typeFilter: partDesignationTypeFilter, setTypeFilter: setPartDesignationTypeFilter, onAddPartDesignation: handleAddPartDesignation, onUpdatePartDesignation: handleUpdatePartDesignation, onDeletePartDesignation: handleDeletePartDesignation, onOpenAddTypeModal: () => React.startTransition(() => setCurrentTab('types')), onNavigateToEntrepotByType: handleNavigateToEntrepotByType
+          },
+          families: {
+            families: effectiveFamilies, search: whSearch, setSearch: setWhSearch, onAddFamily: handleAddFamily, onUpdateFamily: handleUpdateFamily, onDeleteFamily: handleDeleteFamily, onNavigateToTemplates: handleNavigateToTemplatesFiltered, onNavigateToMachines: handleNavigateToMachinesByFamily
+          },
+          templates: {
+            templates: effectiveTemplates, families: effectiveFamilies, search: whSearch, setSearch: setWhSearch, familyFilter: templateFamilyFilter, setFamilyFilter: setTemplateFamilyFilter, onAddTemplate: handleAddTemplate, onUpdateTemplate: handleUpdateTemplate, onDeleteTemplate: handleDeleteTemplate, onOpenAddFamilyModal: () => React.startTransition(() => setCurrentTab('families')), onNavigateToMachines: handleNavigateToMachinesByTemplate
+          },
+          zones: {
+            zones, search: whSearch, setSearch: setWhSearch, onAddZone: handleAddZone, onUpdateZone: handleUpdateZone, onDeleteZone: handleDeleteZone, onNavigateToTechs: handleNavigateToTechsByZone, onNavigateToOps: handleNavigateToOpsByZone, onNavigateToMachines: handleNavigateToMachinesByZone, onOpenAddZoneModal: () => setShowAddZoneModal(true)
+          },
+          utilisateurs: {
+            technicians, operations, zones, mouvements, techZoneFilter, setTechZoneFilter, opZoneFilter, setOpZoneFilter,
+            onAddTechnician: handleAddTechnician, onUpdateTechnician: handleUpdateTechnician, onDeleteTechnician: handleDeleteTechnician,
+            onAddOperation: handleAddOperation, onUpdateOperation: handleUpdateOperation, onDeleteOperation: handleDeleteOperation,
+            onOpenAddArticle: () => setShowAddArticleModal(true), onOpenAddMachine: () => setShowAddMachineModal(true), onOpenAddZone: () => setShowAddZoneModal(true),
+            onOpenAddTechModal: () => { setAddUserModalType('TECHNICIEN'); setShowAddUserModal(true); },
+            onOpenAddRespModal: () => { setAddUserModalType('RESPONSABLE'); setShowAddUserModal(true); },
+            onOpenAddOpModal: () => { setAddUserModalType('OPERATEUR'); setShowAddUserModal(true); }
+          },
+          settings: {
+            rawStock, stockItems, machines, mouvements, types, designations, zones, technicians, operations,
+            compFamilies, compTemplates, partTypes, partDesignations, families: effectiveFamilies, templates: effectiveTemplates, warehouseItems: warehouseItemsComputed,
+            onNavigateToWarehouse: () => React.startTransition(() => setCurrentTab('entrepot'))
+          },
+          nexus: {
+            types, diagnostics, families: effectiveFamilies, templates: effectiveTemplates, zones, technicians, operations, machines, stockItems
+          },
+          guide: {}
         }}
       />
 
-      {/* Header Bar */}
-      <Header
-        currentTab={currentTab}
-        setMobileMenuOpen={setMobileMenuOpen}
-        fileInputRef={fileInputRef}
-        handleImportFile={handleImportFile}
-        handleExportExcel={handleExportExcel}
-        linkedFileName={linkedFileName}
-        onDirectLink={handleDirectFileLink}
-        onDirectSave={handleDirectSave}
+      <AppModals 
+        showAddArticleModal={showAddArticleModal} setShowAddArticleModal={setShowAddArticleModal}
+        showAddMachineModal={showAddMachineModal} setShowAddMachineModal={setShowAddMachineModal}
+        showAddUserModal={showAddUserModal} setShowAddUserModal={setShowAddUserModal} addUserModalType={addUserModalType} setAddUserModalType={setAddUserModalType}
+        showAddZoneModal={showAddZoneModal} setShowAddZoneModal={setShowAddZoneModal}
+        types={types} effectiveFamilies={effectiveFamilies} effectiveTemplates={effectiveTemplates} zones={zones} technicians={technicians} machines={machines} operations={operations}
+        handleAddArticle={handleAddArticle} handleAddMachine={handleAddMachine} handleUpdateMachine={handleUpdateMachine} handleDeleteMachine={handleDeleteMachine}
+        handleAddTechnician={handleAddTechnician} handleAddOperation={handleAddOperation} handleAddZone={handleAddZone}
+        setCurrentTab={setCurrentTab}
+        toast={toast} setToast={setToast}
       />
-
-      {/* Main Content Area - Full Fluid Width with Lazy Loading Suspense */}
-      <main className="flex-1 p-4 md:p-6 lg:p-8 w-full">
-        <Suspense fallback={<LoadingSkeleton currentTab={currentTab} />}>
-          {currentTab === 'dashboard' && (
-            <ErrorBoundary>
-              <DashboardView
-                stockItems={stockItems}
-                machines={machines}
-                warehouseItems={warehouseItemsComputed}
-                mouvements={mouvements}
-                types={types}
-                diagnostics={diagnostics}
-                zones={zones}
-                technicians={technicians}
-                operations={operations}
-                stockKPIs={stockKPIs}
-                onNavigateToStock={() => React.startTransition(() => setCurrentTab('stock'))}
-                onNavigateToMachines={() => React.startTransition(() => setCurrentTab('machines'))}
-                onNavigateToWarehouse={() => React.startTransition(() => setCurrentTab('entrepot'))}
-                onNavigateToSortie={() => React.startTransition(() => setCurrentTab('sortie'))}
-                onNavigateToZones={() => React.startTransition(() => setCurrentTab('zones'))}
-                onNavigateToUsers={() => React.startTransition(() => setCurrentTab('utilisateurs'))}
-                onNavigateToSettings={() => React.startTransition(() => setCurrentTab('settings'))}
-                onQuickSortie={handleQuickSortie}
-                onAddMouvement={handleAddMouvement}
-                onUpdateMouvement={handleUpdateMouvement}
-                onDeleteMouvement={handleDeleteMouvement}
-                onExportExcel={handleExportExcel}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'stock' && (
-            <ErrorBoundary>
-              <StockView
-                stockItems={stockItems}
-                filteredStock={filteredStock}
-                stockSearch={stockSearch}
-                setStockSearch={setStockSearch}
-                stockTypeFilter={stockTypeFilter}
-                setStockTypeFilter={setStockTypeFilter}
-                stockAlertOnly={stockAlertOnly}
-                setStockAlertOnly={setStockAlertOnly}
-                types={types}
-                zones={zones}
-                machines={machines}
-                technicians={technicians}
-                operations={operations}
-                onOpenAddArticle={() => setShowAddArticleModal(true)}
-                onQuickSortie={handleQuickSortie}
-                onAddMouvement={handleAddMouvement}
-                onUpdateArticle={handleUpdateArticle}
-                onDirectAdjustStock={handleDirectAdjustStock}
-                stockKPIs={stockKPIs}
-                onNavigateToType={handleNavigateToStockFiltered}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'types' && (
-            <ErrorBoundary>
-              <TypeView
-                types={types}
-                designations={effectiveDesignations}
-                stockItems={stockItems}
-                onAddType={handleAddType}
-                onUpdateType={handleUpdateType}
-                onDeleteType={handleDeleteType}
-                onNavigateToStockFiltered={handleNavigateToStockFiltered}
-                onNavigateToDesignationsFiltered={handleNavigateToDesignationsFiltered}
-              />
-            </ErrorBoundary>
-          )}
-
-          {(currentTab === 'designations' || currentTab === 'diagnostics') && (
-            <ErrorBoundary>
-              <DesignationView
-                designations={effectiveDesignations}
-                types={types}
-                stockItems={stockItems}
-                desigTypeFilter={diagTypeFilter}
-                setDesigTypeFilter={setDiagTypeFilter}
-                onAddDesignation={handleAddDesignation}
-                onUpdateDesignation={handleUpdateDesignation}
-                onDeleteDesignation={handleDeleteDesignation}
-                onOpenAddTypeModal={() => React.startTransition(() => setCurrentTab('types'))}
-                onNavigateToStockFilteredByRef={handleNavigateToStockFilteredByRef}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'machines' && (
-            <ErrorBoundary>
-              <MachinesRegisteredView
-                machines={machines}
-                onUpdateMachine={handleUpdateMachine}
-                onDeleteMachine={handleDeleteMachine}
-                families={effectiveFamilies}
-                templates={effectiveTemplates}
-                zones={zones}
-                technicians={technicians}
-                mouvements={mouvements}
-                mchFamilyFilter={mchFamilyFilter}
-                setMchFamilyFilter={setMchFamilyFilter}
-                mchTemplateFilter={mchTemplateFilter}
-                setMchTemplateFilter={setMchTemplateFilter}
-                mchZoneFilter={mchZoneFilter}
-                setMchZoneFilter={setMchZoneFilter}
-                mchSearch={mchSearch}
-                setMchSearch={setMchSearch}
-                onOpenAddMachine={() => setShowAddMachineModal(true)}
-                onNavigateToFamily={handleNavigateToMachinesByFamily}
-                onNavigateToTemplate={handleNavigateToMachinesByTemplate}
-                onNavigateToZone={handleNavigateToMachinesByZone}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'entrepot' && (
-            <ErrorBoundary>
-              <EntrepotView
-                warehouseItems={warehouseItemsComputed}
-                onAddWarehouseItem={handleAddWarehouseItem}
-                onUpdateWarehouseItem={handleUpdateWarehouseItem}
-                onDeleteWarehouseItem={handleDeleteWarehouseItem}
-                onAddMouvement={handleAddMouvement}
-                mouvements={mouvements}
-                families={compFamilies}
-                templates={compTemplates}
-                types={partTypes}
-                diagnostics={partDesignations}
-                compFamilies={compFamilies}
-                compTemplates={compTemplates}
-                partTypes={partTypes}
-                partDesignations={partDesignations}
-                stockItems={stockItems}
-                zones={zones}
-                machines={machines}
-                technicians={technicians}
-                onUpdateFamily={handleUpdateCompFamily}
-                onNavigateToFamily={handleNavigateToCompTemplates}
-                onNavigateToTemplate={handleNavigateToCompFamilies}
-                onNavigateToType={handleNavigateToPartDesignations}
-                onNavigateToDiag={handleNavigateToPartTypes}
-                onNavigateToZone={handleNavigateToMachinesByZone}
-                onNavigateToMachine={(mchId) => {
-                  setMchSearch(mchId);
-                  React.startTransition(() => setCurrentTab('machines'));
-                }}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'comp_families' && (
-            <ErrorBoundary>
-              <CompFamilyView
-                compFamilies={compFamilies}
-                compTemplates={compTemplates}
-                warehouseItems={warehouseItemsComputed}
-                onAddCompFamily={handleAddCompFamily}
-                onUpdateCompFamily={handleUpdateCompFamily}
-                onDeleteCompFamily={handleDeleteCompFamily}
-                onNavigateToCompTemplates={handleNavigateToCompTemplates}
-                onNavigateToEntrepotByFamily={(familyId) => {
-                  handleNavigateToEntrepotByComp(familyId, 'ALL');
-                }}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'comp_templates' && (
-            <ErrorBoundary>
-              <CompTemplateView
-                compTemplates={compTemplates}
-                compFamilies={compFamilies}
-                warehouseItems={warehouseItemsComputed}
-                compTemplateFamilyFilter={compTemplateFamilyFilter}
-                setCompTemplateFamilyFilter={setCompTemplateFamilyFilter}
-                onAddCompTemplate={handleAddCompTemplate}
-                onUpdateCompTemplate={handleUpdateCompTemplate}
-                onDeleteCompTemplate={handleDeleteCompTemplate}
-                onNavigateToCompFamilies={handleNavigateToCompFamilies}
-                onNavigateToEntrepotByTemplate={(familyId, templateId) => {
-                  handleNavigateToEntrepotByComp(familyId, templateId);
-                }}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'part_types' && (
-            <ErrorBoundary>
-              <PartTypeView
-                partTypes={partTypes}
-                partDesignations={partDesignations}
-                warehouseItems={warehouseItemsComputed}
-                onAddPartType={handleAddPartType}
-                onUpdatePartType={handleUpdatePartType}
-                onDeletePartType={handleDeletePartType}
-                onNavigateToPartDesignations={handleNavigateToPartDesignations}
-                onNavigateToEntrepotByType={handleNavigateToEntrepotByType}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'part_designations' && (
-            <ErrorBoundary>
-              <PartDesignationView
-                partDesignations={partDesignations}
-                partTypes={partTypes}
-                warehouseItems={warehouseItemsComputed}
-                partDesignationTypeFilter={partDesignationTypeFilter}
-                setPartDesignationTypeFilter={setPartDesignationTypeFilter}
-                onAddPartDesignation={handleAddPartDesignation}
-                onUpdatePartDesignation={handleUpdatePartDesignation}
-                onDeletePartDesignation={handleDeletePartDesignation}
-                onNavigateToPartTypes={handleNavigateToPartTypes}
-                onNavigateToEntrepotByPart={handleNavigateToEntrepotByPart}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'families' && (
-            <ErrorBoundary>
-              <FamilyView
-                families={effectiveFamilies}
-                templates={effectiveTemplates}
-                machines={machines}
-                onAddFamily={handleAddFamily}
-                onUpdateFamily={handleUpdateFamily}
-                onDeleteFamily={handleDeleteFamily}
-                onNavigateToTemplatesFiltered={handleNavigateToTemplatesFiltered}
-                onNavigateToMachinesByFamily={handleNavigateToMachinesByFamily}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'templates' && (
-            <ErrorBoundary>
-              <TemplatesView
-                templates={effectiveTemplates}
-                families={effectiveFamilies}
-                machines={machines}
-                templateFamilyFilter={templateFamilyFilter}
-                setTemplateFamilyFilter={setTemplateFamilyFilter}
-                onAddTemplate={handleAddTemplate}
-                onUpdateTemplate={handleUpdateTemplate}
-                onDeleteTemplate={handleDeleteTemplate}
-                onOpenAddFamilyModal={() => React.startTransition(() => setCurrentTab('families'))}
-                onNavigateToMachinesByTemplate={handleNavigateToMachinesByTemplate}
-                onNavigateToFamilyFiltered={handleNavigateToTemplatesFiltered}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'zones' && (
-            <ErrorBoundary>
-              <ZonesView
-                zones={zones}
-                technicians={technicians}
-                operations={operations}
-                machines={machines}
-                onAddZone={handleAddZone}
-                onUpdateZone={handleUpdateZone}
-                onDeleteZone={handleDeleteZone}
-                onNavigateToTechsByZone={handleNavigateToTechsByZone}
-                onNavigateToOpsByZone={handleNavigateToOpsByZone}
-                onNavigateToMachinesByZone={handleNavigateToMachinesByZone}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'utilisateurs' && (
-            <ErrorBoundary>
-              <UtilisateursView
-                technicians={technicians}
-                operations={operations}
-                zones={zones}
-                mouvements={mouvements}
-                onAddTechnician={handleAddTechnician}
-                onUpdateTechnician={handleUpdateTechnician}
-                onDeleteTechnician={handleDeleteTechnician}
-                onAddOperation={handleAddOperation}
-                onUpdateOperation={handleUpdateOperation}
-                onDeleteOperation={handleDeleteOperation}
-                onOpenAddZoneModal={() => setShowAddZoneModal(true)}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'sortie' && (
-            <ErrorBoundary>
-              <SortieRapideView
-                mouvements={mouvements}
-                stockItems={stockItems}
-                warehouseItems={warehouseItemsComputed}
-                families={families}
-                templates={templates}
-                types={types}
-                diagnostics={diagnostics}
-                zones={zones}
-                machines={machines}
-                technicians={technicians}
-                operations={operations}
-                onAddMouvement={handleAddMouvement}
-                onUpdateMouvement={handleUpdateMouvement}
-                onDeleteMouvement={handleDeleteMouvement}
-                onAddWarehouseItem={handleAddWarehouseItem}
-                onUpdateWarehouseItem={handleUpdateWarehouseItem}
-                onOpenAddArticle={() => setShowAddArticleModal(true)}
-                onOpenAddMachine={() => setShowAddMachineModal(true)}
-                onOpenAddZone={() => setShowAddZoneModal(true)}
-                onOpenAddTech={() => {
-                  setAddUserModalType('TECHNICIEN');
-                  setShowAddUserModal(true);
-                }}
-                onOpenAddChef={() => {
-                  setAddUserModalType('RESPONSABLE');
-                  setShowAddUserModal(true);
-                }}
-                onOpenAddOperator={() => {
-                  setAddUserModalType('OPERATEUR');
-                  setShowAddUserModal(true);
-                }}
-                onNavigateToWarehouse={() => React.startTransition(() => setCurrentTab('entrepot'))}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'nexus' && (
-            <ErrorBoundary>
-              <NexusView
-                types={types}
-                diagnostics={diagnostics}
-                families={families}
-                templates={templates}
-                zones={zones}
-                technicians={technicians}
-                operations={operations}
-                machines={machines}
-                stockItems={stockItems}
-              />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'guide' && (
-            <ErrorBoundary>
-              <GuideView />
-            </ErrorBoundary>
-          )}
-
-          {currentTab === 'settings' && (
-            <ErrorBoundary>
-              <SettingsView
-                rawStock={rawStock}
-                setRawStock={setRawStock}
-                mouvements={mouvements}
-                setMouvements={setMouvements}
-                machines={machines}
-                setMachines={setMachines}
-                families={effectiveFamilies}
-                setFamilies={setFamilies}
-                templates={effectiveTemplates}
-                setTemplates={setTemplates}
-                zones={zones}
-                setZones={setZones}
-                technicians={technicians}
-                setTechnicians={setTechnicians}
-                operations={operations}
-                setOperations={setOperations}
-                types={types}
-                setTypes={setTypes}
-                showToast={showToast}
-                linkedFileHandle={linkedFileHandle}
-                setLinkedFileHandle={setLinkedFileHandle}
-                linkedFileName={linkedFileName}
-                setLinkedFileName={setLinkedFileName}
-                onDirectLink={handleDirectFileLink}
-                onDirectSave={handleDirectSave}
-              />
-            </ErrorBoundary>
-          )}
-        </Suspense>
-      </main>
-
-      {/* Quick Add Modals with Suspense */}
-      <Suspense fallback={null}>
-        <AddArticleModal
-          isOpen={showAddArticleModal}
-          onClose={() => setShowAddArticleModal(false)}
-          types={types}
-          onAddArticle={handleAddArticle}
-          onOpenAddTypeModal={() => {
-            setShowAddArticleModal(false);
-            React.startTransition(() => setCurrentTab('types'));
-          }}
-        />
-
-        <AddMachineModal
-          isOpen={showAddMachineModal}
-          onClose={() => setShowAddMachineModal(false)}
-          families={effectiveFamilies}
-          templates={effectiveTemplates}
-          zones={zones}
-          technicians={technicians}
-          machines={machines}
-          onAddMachine={handleAddMachine}
-          onUpdateMachine={handleUpdateMachine}
-          onDeleteMachine={handleDeleteMachine}
-          onOpenAddFamilyModal={() => {
-            setShowAddMachineModal(false);
-            React.startTransition(() => setCurrentTab('families'));
-          }}
-          onOpenAddTemplateModal={() => {
-            setShowAddMachineModal(false);
-            React.startTransition(() => setCurrentTab('templates'));
-          }}
-          onOpenAddZoneModal={() => {
-            setShowAddMachineModal(false);
-            setShowAddZoneModal(true);
-          }}
-          onOpenAddTechModal={() => {
-            setShowAddMachineModal(false);
-            setAddUserModalType('TECHNICIEN');
-            setShowAddUserModal(true);
-          }}
-        />
-
-        <AddUserModal
-          isOpen={showAddUserModal}
-          onClose={() => setShowAddUserModal(false)}
-          zones={zones}
-          technicians={technicians}
-          operations={operations}
-          initialType={addUserModalType}
-          onAddTechnician={handleAddTechnician}
-          onAddOperation={handleAddOperation}
-          onOpenAddZoneModal={() => {
-            setShowAddUserModal(false);
-            setShowAddZoneModal(true);
-          }}
-        />
-
-        <AddZoneModal
-          isOpen={showAddZoneModal}
-          onClose={() => setShowAddZoneModal(false)}
-          zones={zones}
-          onAddZone={handleAddZone}
-        />
-      </Suspense>
-
-      {/* Global Notification Toast */}
-      {toast.message && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast({ message: '', type: 'success' })}
-        />
-      )}
 
       {/* 100% Offline Status Indicator */}
       <OfflineIndicator />
-    </div>
+    </MainLayout>
   );
 }

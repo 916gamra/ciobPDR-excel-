@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   plugins: [
+    react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: [
@@ -45,6 +47,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,json}'],
         runtimeCaching: [
           {
@@ -115,6 +118,8 @@ export default defineConfig({
     jsx: 'automatic',
   },
   build: {
+    outDir: 'dist',
+    emptyOutDir: true,
     rollupOptions: {
       onwarn(warning, defaultHandler) {
         if (

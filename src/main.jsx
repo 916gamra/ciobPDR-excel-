@@ -1,8 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import ErrorBoundary from './components/ErrorBoundary';
+import ErrorBoundary from './presentation/components/common/ErrorBoundary';
 import { storageService } from './utils/storageService';
+import { AuthProvider } from './context/AuthContext';
+import { ServiceProvider } from './core/di/ServiceProvider';
+
+// Initialize Enterprise Architecture DI Container
+ServiceProvider.register();
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
@@ -10,11 +15,14 @@ if (rootElement) {
   root.render(
     <React.StrictMode>
       <ErrorBoundary>
-        <App />
+        <AuthProvider>
+          <App />
+        </AuthProvider>
       </ErrorBoundary>
     </React.StrictMode>
   );
 }
+
 
 // Background initialization for storage migrations
 storageService.init().catch((err) => {
@@ -22,7 +30,7 @@ storageService.init().catch((err) => {
 });
 
 // Enregistrement du Service Worker pour le mode 100% Offline et PWA
-if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/service-worker.js')

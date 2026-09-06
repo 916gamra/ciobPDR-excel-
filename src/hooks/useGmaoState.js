@@ -19,6 +19,11 @@ import {
 } from '../data/seedData';
 import { safeNum } from '../utils/formulaEngine';
 
+import { SparePartApplicationService } from '../application/services/SparePartApplicationService.js';
+import { MachineApplicationService } from '../application/services/MachineApplicationService.js';
+import { TaskApplicationService } from '../application/services/TaskApplicationService.js';
+
+
 // Build a fast lookup dictionary from initial baseline stock data to ensure original quantities are never lost
 const INITIAL_STOCK_LOOKUP = new Map();
 (initialData.Stock_Actuel || []).forEach((item, idx) => {
@@ -212,7 +217,7 @@ export function useGmaoState() {
 
   const [mouvements, setMouvements] = useState(() => {
     const saved = groupedState.mouvements || storageService.getItem('gmao_mouvements');
-    const rawList = saved ? saved : initialData.Mouvement || [];
+    const rawList = saved && Array.isArray(saved) && saved.length > 0 ? saved : (initialData.Mouvement || []);
     return rawList.map((m, idx) => ({
       id: m.id || idx + 1,
       code_bon:
@@ -351,7 +356,9 @@ export function useGmaoState() {
           s.Emplacement ||
           (baseline ? baseline.emplacement : `A${(idx % 8) + 1}-R${(idx % 6) + 1}`);
 
-        return {
+      
+
+  return {
           id: s.id || idx + 1,
           ref: finalRef,
           designation: finalDesignation,
@@ -412,7 +419,9 @@ export function useGmaoState() {
         const seuil = Number(s.seuil || s["Seuil d'Alerte"] || (baseline ? baseline.seuil : 3)) || 3;
         const emplacement = s.emplacement || s.Emplacement || (baseline ? baseline.emplacement : `A${(idx % 8) + 1}-R${(idx % 6) + 1}`);
 
-        return {
+      
+
+  return {
           id: s.id || `desig-${idx + 1}`,
           ref: finalRef,
           designation: finalDesignation,
@@ -517,6 +526,58 @@ export function useGmaoState() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [isValidMachineFamilies, isValidMachineTemplates]);
 
+
+
+
+  useEffect(() => {
+    async function syncEnterpriseDb() {
+      try {
+        const sparePartService = new SparePartApplicationService();
+        const machineService = new MachineApplicationService();
+        const taskService = new TaskApplicationService();
+
+        const idbParts = await sparePartService.listSpareParts();
+        const idbMachines = await machineService.listMachines();
+        const idbTasks = await taskService.listTasks();
+
+        if (idbParts.length === 0 && rawStock.length > 0) {
+          for (const p of rawStock) {
+            const partId = p.id || p.ref || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `part_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
+            await sparePartService.createSparePart({ ...p, id: partId });
+          }
+        } else if (idbParts.length > 0 && rawStock.length === 0) {
+          setRawStock(idbParts);
+        }
+
+        if (idbMachines.length === 0 && machines.length > 0) {
+          for (const m of machines) {
+            const mchId = m.id || m.id_machine_registered || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `mch_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
+            await machineService.createMachine({
+              ...m,
+              id: mchId,
+              id_machine_registered: m.id_machine_registered || mchId
+            });
+          }
+        } else if (idbMachines.length > 0 && machines.length === 0) {
+          setMachines(idbMachines);
+        }
+
+        if (idbTasks.length === 0 && mouvements.length > 0) {
+          for (const t of mouvements) {
+            const taskId = t.id || t.code_bon || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `task_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
+            await taskService.createTask({ ...t, id: taskId });
+          }
+        } else if (idbTasks.length > 0 && mouvements.length === 0) {
+          setMouvements(idbTasks);
+        }
+      } catch(err) {
+        console.error('Enterprise DB Sync Error:', err);
+      }
+    }
+    // Only run once on mount
+    syncEnterpriseDb();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   return {
     types,
     setTypes,
