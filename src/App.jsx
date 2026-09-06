@@ -3,8 +3,6 @@ import React, {
   useMemo,
   useRef,
   useEffect,
-  
-  
   useDeferredValue,
 } from 'react';
 import * as XLSX from 'xlsx';
@@ -22,6 +20,36 @@ import {
   INITIAL_OPERATIONS,
   mapItemToTypeAndDiag,
 } from './data/seedData';
+
+import Sidebar from './presentation/components/layout/Sidebar';
+import Header from './presentation/components/layout/Header';
+import LoadingSkeleton from './presentation/components/common/LoadingSkeleton';
+import { SplashScreen, LoginScreen } from './presentation/pages/auth';
+import Toast from './presentation/components/common/Toast';
+import OfflineIndicator from './presentation/components/common/OfflineIndicator';
+
+import { validateImportedData } from './utils/validation';
+import { backupService } from './utils/BackupService';
+import { auditService } from './utils/AuditService';
+import { logger } from './utils/Logger';
+import { monitor } from './utils/PerformanceMonitor';
+
+import { storageService } from './utils/storageService';
+
+import { SparePartApplicationService } from './application/services/SparePartApplicationService.js';
+import { MachineApplicationService } from './application/services/MachineApplicationService.js';
+import { TaskApplicationService } from './application/services/TaskApplicationService.js';
+
+import { sanitizeObject } from './utils/sanitize';
+import { indexedDBService } from './utils/indexedDBService';
+import { safeNum, calculateStockStatus } from './utils/formulaEngine';
+
+import { useAuth } from './context/AuthContext';
+import { useAppComplexHandlers } from './hooks/useAppComplexHandlers';
+
+import MainLayout from './presentation/components/layout/MainLayout';
+import AppModals from './presentation/modals/AppModals';
+import AppRouter from './presentation/router/AppRouter';
 
 // Baseline stock lookup dictionary to ensure real quantities are permanently preserved
 const INITIAL_STOCK_LOOKUP = new Map();
@@ -77,38 +105,6 @@ const INITIAL_STOCK_LOOKUP = new Map();
   if (refKey) INITIAL_STOCK_LOOKUP.set(refKey, dataObj);
   if (desigKey && !INITIAL_STOCK_LOOKUP.has(desigKey)) INITIAL_STOCK_LOOKUP.set(desigKey, dataObj);
 });
-
-import Sidebar from './presentation/components/layout/Sidebar';
-import Header from './presentation/components/layout/Header';
-import LoadingSkeleton from './presentation/components/common/LoadingSkeleton';
-import { SplashScreen, LoginScreen } from './presentation/pages/auth';
-import Toast from './presentation/components/common/Toast';
-import OfflineIndicator from './presentation/components/common/OfflineIndicator';
-
-import { validateImportedData } from './utils/validation';
-import { backupService } from './utils/BackupService';
-import { auditService } from './utils/AuditService';
-import { logger } from './utils/Logger';
-import { monitor } from './utils/PerformanceMonitor';
-
-
-
-import { storageService } from './utils/storageService';
-
-import { SparePartApplicationService } from './application/services/SparePartApplicationService.js';
-import { MachineApplicationService } from './application/services/MachineApplicationService.js';
-import { TaskApplicationService } from './application/services/TaskApplicationService.js';
-
-import { sanitizeObject } from './utils/sanitize';
-import { indexedDBService } from './utils/indexedDBService';
-import { safeNum, calculateStockStatus } from './utils/formulaEngine';
-
-import { useAuth } from './context/AuthContext';
-import { useAppComplexHandlers } from './hooks/useAppComplexHandlers';
-
-import MainLayout from './presentation/components/layout/MainLayout';
-import AppModals from './presentation/modals/AppModals';
-import AppRouter from './presentation/router/AppRouter';
 
 export default function App() {
   const { user: currentUser, logout } = useAuth();
@@ -1095,10 +1091,34 @@ export default function App() {
             partDesignations, partTypes, search: whSearch, setSearch: setWhSearch, typeFilter: partDesignationTypeFilter, setTypeFilter: setPartDesignationTypeFilter, onAddPartDesignation: handleAddPartDesignation, onUpdatePartDesignation: handleUpdatePartDesignation, onDeletePartDesignation: handleDeletePartDesignation, onOpenAddTypeModal: () => React.startTransition(() => setCurrentTab('types')), onNavigateToEntrepotByType: handleNavigateToEntrepotByType
           },
           families: {
-            families: effectiveFamilies, search: whSearch, setSearch: setWhSearch, onAddFamily: handleAddFamily, onUpdateFamily: handleUpdateFamily, onDeleteFamily: handleDeleteFamily, onNavigateToTemplates: handleNavigateToTemplatesFiltered, onNavigateToMachines: handleNavigateToMachinesByFamily
+            families: effectiveFamilies,
+            templates: effectiveTemplates,
+            machines,
+            search: whSearch,
+            setSearch: setWhSearch,
+            onAddFamily: handleAddFamily,
+            onUpdateFamily: handleUpdateFamily,
+            onDeleteFamily: handleDeleteFamily,
+            onNavigateToTemplatesFiltered: handleNavigateToTemplatesFiltered,
+            onNavigateToMachinesByFamily: handleNavigateToMachinesByFamily
           },
           templates: {
-            templates: effectiveTemplates, families: effectiveFamilies, search: whSearch, setSearch: setWhSearch, familyFilter: templateFamilyFilter, setFamilyFilter: setTemplateFamilyFilter, onAddTemplate: handleAddTemplate, onUpdateTemplate: handleUpdateTemplate, onDeleteTemplate: handleDeleteTemplate, onOpenAddFamilyModal: () => React.startTransition(() => setCurrentTab('families')), onNavigateToMachines: handleNavigateToMachinesByTemplate
+            templates: effectiveTemplates,
+            families: effectiveFamilies,
+            machines,
+            search: whSearch,
+            setSearch: setWhSearch,
+            templateFamilyFilter,
+            setTemplateFamilyFilter,
+            onAddTemplate: handleAddTemplate,
+            onUpdateTemplate: handleUpdateTemplate,
+            onDeleteTemplate: handleDeleteTemplate,
+            onOpenAddFamilyModal: () => React.startTransition(() => setCurrentTab('families')),
+            onNavigateToMachinesByTemplate: handleNavigateToMachinesByTemplate,
+            onNavigateToFamilyFiltered: (famId) => {
+              setWhSearch(famId || '');
+              React.startTransition(() => setCurrentTab('families'));
+            }
           },
           zones: {
             zones, search: whSearch, setSearch: setWhSearch, onAddZone: handleAddZone, onUpdateZone: handleUpdateZone, onDeleteZone: handleDeleteZone, onNavigateToTechs: handleNavigateToTechsByZone, onNavigateToOps: handleNavigateToOpsByZone, onNavigateToMachines: handleNavigateToMachinesByZone, onOpenAddZoneModal: () => setShowAddZoneModal(true)

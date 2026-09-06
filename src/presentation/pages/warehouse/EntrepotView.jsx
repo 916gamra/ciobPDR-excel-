@@ -1,7 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import CustomSelect from '../../components/common/CustomSelect';
-import QuickMovementModal from '../../components/modals/QuickMovementModal';
+import QuickMovementModal from './QuickMovementModal';
 import { generateWarehouseItemCode } from '../../../data/seedData';
 import { storageService } from '../../../utils/storageService';
 import {

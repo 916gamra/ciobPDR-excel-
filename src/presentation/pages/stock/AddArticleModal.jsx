@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Package, Plus, X } from 'lucide-react';
-import CustomSelect from '../common/CustomSelect';
+import CustomSelect from '../../components/common/CustomSelect';
 
 export default function AddArticleModal({
   isOpen,

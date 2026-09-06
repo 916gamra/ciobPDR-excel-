@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserCheck, Plus, X, Wrench, ShieldCheck, ClipboardList, Check, MapPin } from 'lucide-react';
-import CustomSelect from '../common/CustomSelect';
+import CustomSelect from '../../components/common/CustomSelect';
 import {
   RESPONSABLE_TEMPLATES,
   getTemplateById,

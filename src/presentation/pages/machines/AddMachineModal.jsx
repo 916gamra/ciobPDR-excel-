@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Factory, Plus, X, Boxes, Layers, MapPin, Users, Radio, Cpu } from 'lucide-react';
-import CustomSelect from '../common/CustomSelect';
+import CustomSelect from '../../components/common/CustomSelect';
 
 function generateMachineCode(selectedTemplateId, existingMachines = []) {
   if (!selectedTemplateId) return 'MCH-01';

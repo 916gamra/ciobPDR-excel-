@@ -67,7 +67,7 @@ import {
 } from 'lucide-react';
 
 import { validateMovementWithContext } from '../../../utils/formulaEngine';
-import MouvementsJournalTable from '../../components/common/MouvementsJournalTable';
+import MouvementsJournalTable from '../warehouse/MouvementsJournalTable';
 
 // Animation wrapper
 function AnimatedPage({ children }) {

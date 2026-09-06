@@ -26,22 +26,19 @@
 src/
 ├── presentation/              # 🎨 طبقة العرض والواجهات (Presentation Layer)
 │   ├── components/            # 🧩 العناصر المشتركة والهيكلية
-│   │   ├── common/            # عناصر واجهة المستخدم البسيطة (CustomSelect, AnimatedPage, SortieEntreeIcon)
-│   │   ├── layout/            # الهيكل العام للتطبيق (Header, Sidebar, GuideView)
-│   │   └── modals/            # النوافذ المنبثقة التفاعلية (QuickMovementModal, BackupModal...)
-│   ├── pages/                 # 📄 الصفحات الأساسية لكل ميزة (Features)
+│   │   ├── common/            # عناصر واجهة المستخدم المشتركة والـ UI (CustomSelect, AnimatedPage, SortieEntreeIcon)
+│   │   └── layout/            # الهيكل العام للتطبيق (Header, Sidebar, MainLayout)
+│   ├── pages/                 # 📄 الصفحات المنظمة بنظام Feature-Based Folders
 │   │   ├── dashboard/         # لوحة التحكم ومراقبة المؤشرات (DashboardView)
-│   │   ├── stock/             # إدارة مخزون قطع الغيار PDR (StockView, AddArticleModal)
-│   │   ├── entrepot/          # إدارة المستودع والرفوف وقطع الغيار المركبة (EntrepotView)
-│   │   ├── machines/          # إدارة الآلات والمسؤولين (MachinesRegisteredView, AddMachineModal)
-│   │   ├── families/          # إدارة عائلات الآلات (FamilyView)
-│   │   ├── templates/         # قوالب ومواصفات الآلات (TemplatesView)
-│   │   ├── reference/         # جداول المرجعيات (Types, Diagnostics, Zones, Technicians, Operations)
-│   │   ├── sortie-rapide/     # حركات المخزون والتدخلات السريعة (SortieRapideView, MouvementsJournalTable)
-│   │   ├── system/            # شاشات النظام والتدقيق والروابط الذكية (NexusView)
-│   │   ├── utilisateurs/      # إدارة حسابات المستخدمين والمشرفين
-│   │   └── auth/              # شاشات تسجيل الدخول والـ Splash Screen
-│   ├── hooks/                 # خطافات مخصصة لطبقة العرض والواجهة
+│   │   ├── stock/             # إدارة مخزون قطع الغيار PDR (StockView, AddArticleModal, EditArticleModal)
+│   │   ├── warehouse/         # إدارة المستودع والرفوف وقطع الغيار المركبة (EntrepotView, QuickMovementModal, MouvementsJournalTable)
+│   │   ├── movements/         # حركات المخزون والتدخلات السريعة (SortieRapideView - 5 Flux)
+│   │   ├── machines/          # إدارة الآلات والمسؤولين (MachinesRegisteredView, AddMachineModal, FamilyView, TemplatesView)
+│   │   ├── referentiel/       # جداول المرجعيات المنظمة (TypeView, DesignationView, ZonesView, AddZoneModal, PartTypeView, PartDesignationView, CompFamilyView, CompTemplateView)
+│   │   ├── utilisateurs/      # إدارة حسابات المستخدمين والمشرفين (UtilisateursView, AddUserModal)
+│   │   ├── auth/              # شاشات تسجيل الدخول والـ Splash Screen
+│   │   ├── settings/          # إعدادات النظام المتقدمة (SettingsView)
+│   │   └── system/            # شاشات النظام والتدقيق والروابط الذكية (NexusView, GuideView)
 │   └── router/                # توجيه الصفحات والتنقل السلس (AppRouter)
 │
 ├── hooks/                     # ⚡ منطق وإدارة حالة التطبيق المشتركة

@@ -2,8 +2,8 @@ import React, { useMemo, useDeferredValue, useState } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import CustomSelect from '../../components/common/CustomSelect';
 import SortieEntreeIcon from '../../components/common/SortieEntreeIcon';
-import QuickMovementModal from '../../components/modals/QuickMovementModal';
-import EditArticleModal from '../../components/modals/EditArticleModal';
+import QuickMovementModal from '../warehouse/QuickMovementModal';
+import EditArticleModal from './EditArticleModal';
 import { useSpareParts } from '../../hooks/useSpareParts';
 import StockKPIBar from './components/StockKPIBar';
 import {

@@ -1,9 +1,9 @@
 import React from 'react';
 import Toast from '../components/common/Toast';
-import AddArticleModal from '../components/modals/AddArticleModal';
-import AddMachineModal from '../components/modals/AddMachineModal';
-import AddUserModal from '../components/modals/AddUserModal';
-import AddZoneModal from '../components/modals/AddZoneModal';
+import AddArticleModal from '../pages/stock/AddArticleModal';
+import AddMachineModal from '../pages/machines/AddMachineModal';
+import AddUserModal from '../pages/utilisateurs/AddUserModal';
+import AddZoneModal from '../pages/referentiel/AddZoneModal';
 
 export default function AppModals({
   showAddArticleModal, setShowAddArticleModal,

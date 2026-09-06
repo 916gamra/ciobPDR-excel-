@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, CheckCircle2, X, MapPin, Boxes, Radio, ShieldAlert } from 'lucide-react';
-import CustomSelect from '../common/CustomSelect';
+import CustomSelect from '../../components/common/CustomSelect';
 
 export default function EditArticleModal({
   isOpen,
@@ -10,15 +10,13 @@ export default function EditArticleModal({
   onUpdateArticle,
   onOpenAddTypeModal,
 }) {
-  if (!isOpen || !article) return null;
-
   const [form, setForm] = useState({
-    ref: article.ref || '',
-    designation: article.designation || '',
-    id_type: article.id_type || types[0]?.id_type || '',
-    stockInitial: article.stockInitial ?? 0,
-    seuil: article.seuil ?? 5,
-    emplacement: article.emplacement || 'R1-B01',
+    ref: article?.ref || '',
+    designation: article?.designation || '',
+    id_type: article?.id_type || types[0]?.id_type || '',
+    stockInitial: article?.stockInitial ?? 0,
+    seuil: article?.seuil ?? 5,
+    emplacement: article?.emplacement || 'R1-B01',
   });
 
   useEffect(() => {
@@ -33,6 +31,8 @@ export default function EditArticleModal({
       });
     }
   }, [article, types]);
+
+  if (!isOpen || !article) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();

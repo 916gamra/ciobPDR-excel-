@@ -20,7 +20,7 @@ import {
   Boxes,
   FileSpreadsheet,
 } from 'lucide-react';
-import CustomSelect from '../common/CustomSelect';
+import CustomSelect from '../../components/common/CustomSelect';
 
 export default function QuickMovementModal({
   isOpen,
@@ -35,12 +35,10 @@ export default function QuickMovementModal({
   onAddMouvement,
   onDirectAdjustStock,
 }) {
-  if (!isOpen || !article) return null;
-
   const [flowType, setFlowType] = useState(initialFlow);
   const [actionId, setActionId] = useState(initialAction);
   const [quantite, setQuantite] = useState(1);
-  const [targetStock, setTargetStock] = useState(article.stockActuel ?? 0);
+  const [targetStock, setTargetStock] = useState(article?.stockActuel ?? 0);
   const [adjustMode, setAdjustMode] = useState('DELTA'); // 'DELTA' (Mouvement +/-) | 'DIRECT' (Corriger valeur réelle)
   const [idZone, setIdZone] = useState(zones[0]?.id_zone || '');
   const [idMachine, setIdMachine] = useState(machines[0]?.id_machine_registered || '');
@@ -50,13 +48,17 @@ export default function QuickMovementModal({
 
   // Synchronize when initialFlow or article changes
   useEffect(() => {
-    setFlowType(initialFlow);
-    setActionId(initialAction);
-    setQuantite(1);
-    setTargetStock(article.stockActuel ?? 0);
-    setAdjustMode('DELTA');
-    setCommentaire('');
+    if (article) {
+      setFlowType(initialFlow);
+      setActionId(initialAction);
+      setQuantite(1);
+      setTargetStock(article.stockActuel ?? 0);
+      setAdjustMode('DELTA');
+      setCommentaire('');
+    }
   }, [initialFlow, initialAction, article]);
+
+  if (!isOpen || !article) return null;
 
   // Handle flow change
   const handleFlowChange = (newFlow) => {
