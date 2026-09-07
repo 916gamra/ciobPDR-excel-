@@ -1,4 +1,4 @@
-import React, {
+import {
   useState,
   useMemo,
   useRef,
@@ -7,41 +7,24 @@ import React, {
 } from 'react';
 import * as XLSX from 'xlsx';
 import { useGmaoState } from './hooks/useGmaoState';
-import { useGenericCRUD } from './hooks/useGenericCRUD';
 import initialData from './initialData.json';
 import {
-  INITIAL_TYPES,
-  INITIAL_DIAGNOSTICS,
   INITIAL_FAMILIES,
   INITIAL_TEMPLATES,
-  INITIAL_MACHINES_REGISTERED,
-  INITIAL_ZONES,
-  INITIAL_TECHNICIANS,
-  INITIAL_OPERATIONS,
-  mapItemToTypeAndDiag,
 } from './data/seedData';
 
-import Sidebar from './presentation/components/layout/Sidebar';
-import Header from './presentation/components/layout/Header';
-import LoadingSkeleton from './presentation/components/common/LoadingSkeleton';
 import { SplashScreen, LoginScreen } from './presentation/pages/auth';
 import Toast from './presentation/components/common/Toast';
 import OfflineIndicator from './presentation/components/common/OfflineIndicator';
 
 import { validateImportedData } from './utils/validation';
 import { backupService } from './utils/BackupService';
-import { auditService } from './utils/AuditService';
 import { logger } from './utils/Logger';
 import { monitor } from './utils/PerformanceMonitor';
 
 import { storageService } from './utils/storageService';
 
-import { SparePartApplicationService } from './application/services/SparePartApplicationService.js';
-import { MachineApplicationService } from './application/services/MachineApplicationService.js';
-import { TaskApplicationService } from './application/services/TaskApplicationService.js';
-
 import { sanitizeObject } from './utils/sanitize';
-import { indexedDBService } from './utils/indexedDBService';
 import { safeNum, calculateStockStatus } from './utils/formulaEngine';
 
 import { useAuth } from './context/AuthContext';

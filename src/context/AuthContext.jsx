@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { Container } from '../core/di/Container.js';
 import { accessLogService } from '../utils/AccessLogService';
 

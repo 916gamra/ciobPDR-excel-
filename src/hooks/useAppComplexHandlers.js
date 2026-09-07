@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { SparePartApplicationService } from '../application/services/SparePartApplicationService';
 import { MachineApplicationService } from '../application/services/MachineApplicationService';
 import { TaskApplicationService } from '../application/services/TaskApplicationService';

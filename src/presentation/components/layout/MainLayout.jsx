@@ -1,4 +1,3 @@
-import React from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import Header from '../../components/layout/Header';
 import { useAuth } from '../../../context/AuthContext';

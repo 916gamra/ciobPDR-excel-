@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import SortieEntreeIcon from '../common/SortieEntreeIcon';
 import PWAInstallButton from '../common/PWAInstallButton';
 import {
@@ -22,12 +22,8 @@ import {
   Sun,
   Moon,
   LogOut,
-  FileText,
-  Boxes as BoxesIcon,
   SwatchBook,
 } from 'lucide-react';
-import { Engine } from '../common/icons/Engine';
-import { PlayingCardsFan } from '../common/icons/PlayingCardsFan';
 import { RoboticHand } from '../common/icons/RoboticHand';
 import PartInfoIcon from '../common/icons/PartInfoIcon';
 import ManufacturingIcon from '../common/icons/ManufacturingIcon';

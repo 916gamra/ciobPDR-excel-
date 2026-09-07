@@ -75,8 +75,6 @@ export default function AddMachineModal({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   // Cascading templates according to selected family
   const availableTemplates = form.id_family
     ? templates.filter((t) => t.id_family === form.id_family)
@@ -129,6 +127,8 @@ export default function AddMachineModal({
     });
     return set;
   }, [machines]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();

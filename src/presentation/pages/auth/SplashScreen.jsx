@@ -1,11 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   FileSpreadsheet,
   ShieldCheck,
-  Database,
   ArrowRight,
   Table,
-  CheckCircle2,
   RefreshCw,
 } from 'lucide-react';
 

@@ -109,11 +109,9 @@ export class AuthService {
   getAvailableAccounts() {
     let users;
     try {
-      users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+      const parsed = JSON.parse(localStorage.getItem(USERS_KEY));
+      users = (parsed && Array.isArray(parsed) && parsed.length > 0) ? parsed : this.getDefaultUsersList();
     } catch {
-      users = [];
-    }
-    if (!users.length) {
       users = this.getDefaultUsersList();
     }
     return users.map((u) => ({
@@ -138,11 +136,9 @@ export class AuthService {
 
     let users;
     try {
-      users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+      const parsed = JSON.parse(localStorage.getItem(USERS_KEY));
+      users = (parsed && Array.isArray(parsed) && parsed.length > 0) ? parsed : this.getDefaultUsersList();
     } catch {
-      users = [];
-    }
-    if (!users.length) {
       users = this.getDefaultUsersList();
     }
 
@@ -173,11 +169,9 @@ export class AuthService {
   updateUserProfile(usernameOrId, updates = {}) {
     let users;
     try {
-      users = JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+      const parsed = JSON.parse(localStorage.getItem(USERS_KEY));
+      users = (parsed && Array.isArray(parsed) && parsed.length > 0) ? parsed : this.getDefaultUsersList();
     } catch {
-      users = [];
-    }
-    if (!users.length) {
       users = this.getDefaultUsersList();
     }
 

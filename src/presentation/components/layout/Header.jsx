@@ -1,4 +1,3 @@
-import React from 'react';
 import { Menu, Upload, Download, Link, Save, FileSpreadsheet } from 'lucide-react';
 import PWAInstallButton from '../common/PWAInstallButton';
 

@@ -3,7 +3,6 @@ import { storageService } from '../utils/storageService';
 import { indexedDBService } from '../utils/indexedDBService';
 import initialData from '../initialData.json';
 import {
-  INITIAL_TYPES,
   INITIAL_DIAGNOSTICS,
   INITIAL_FAMILIES,
   INITIAL_TEMPLATES,
