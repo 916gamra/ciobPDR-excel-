@@ -29,6 +29,9 @@ import {
 import { Engine } from '../common/icons/Engine';
 import { PlayingCardsFan } from '../common/icons/PlayingCardsFan';
 import { RoboticHand } from '../common/icons/RoboticHand';
+import PartInfoIcon from '../common/icons/PartInfoIcon';
+import ManufacturingIcon from '../common/icons/ManufacturingIcon';
+import { CubeIcon } from '../common/icons/CubeIcon';
 
 export default function Sidebar({
   currentTab,
@@ -366,7 +369,7 @@ export default function Sidebar({
                 className={getTabClass('comp_families', true)}
               >
                 <span className="flex items-center gap-2">
-                  <Engine
+                  <ManufacturingIcon
                     className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}
                   />
                   <span>Familles (Composants)</span>
@@ -381,7 +384,7 @@ export default function Sidebar({
                 className={getTabClass('comp_templates', true)}
               >
                 <span className="flex items-center gap-2">
-                  <Layers
+                  <CubeIcon
                     className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-teal-300' : 'text-teal-500'}`}
                   />
                   <span>Templates (Composants)</span>
@@ -412,7 +415,7 @@ export default function Sidebar({
                 className={getTabClass('part_designations', true)}
               >
                 <span className="flex items-center gap-2">
-                  <PlayingCardsFan
+                  <PartInfoIcon
                     className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-emerald-300' : 'text-emerald-500'}`}
                   />
                   <span>Désignations (Parts PDR)</span>

@@ -26,6 +26,7 @@ import {
   Globe,
   Crown,
 } from 'lucide-react';
+import SupervisorAccount from '../../components/common/icons/SupervisorAccount';
 import {
   RESPONSABLE_TEMPLATES,
   normalizeTemplateIds,
@@ -846,7 +847,7 @@ export default function UtilisateursView({
                               ) : isOp ? (
                                 <ClipboardList className="w-3.5 h-3.5 text-indigo-600" />
                               ) : (
-                                <Crown className="w-3.5 h-3.5 text-amber-600" />
+                                <SupervisorAccount className="w-3.5 h-3.5 text-amber-600" />
                               )}
                             </div>
                             <div>

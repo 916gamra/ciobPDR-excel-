@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import { Engine } from '../../components/common/icons/Engine';
+import { CubeIcon } from '../../components/common/icons/CubeIcon';
 import {
   Plus,
   Search,
   ArrowRight,
-  Layers,
   Trash2,
   Edit2,
   Warehouse,
@@ -283,7 +283,7 @@ export default function CompFamilyView({
                           className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200 text-xs font-semibold transition group shadow-2xs cursor-pointer"
                           title="Voir les templates de cette famille de composants"
                         >
-                          <Layers className="w-3.5 h-3.5 text-teal-600" />
+                          <CubeIcon className="w-3.5 h-3.5 text-teal-600" />
                           <span>{tCount} templates</span>
                           <ArrowRight className="w-3 h-3 text-teal-600 group-hover:translate-x-0.5 transition-transform" />
                         </button>

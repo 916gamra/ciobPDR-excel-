@@ -47,10 +47,10 @@ import {
   MoreVertical,
   Activity,
   TrendingUp,
-  Puzzle,
   SwatchBook,
 } from 'lucide-react';
 import { Engine } from '../../components/common/icons/Engine';
+import { CubeIcon } from '../../components/common/icons/CubeIcon';
 
 export default function EntrepotView({
   warehouseItems = [],
@@ -1173,7 +1173,7 @@ export default function EntrepotView({
                   <div className="space-y-0.5">
                     {[
                       { id: 'id_warehouse_item', label: 'Code Élément (A)', icon: Tag },
-                      { id: 'nature', label: 'Nature Twin (B)', icon: Puzzle },
+                      { id: 'nature', label: 'Nature Twin (B)', icon: CubeIcon },
                       { id: 'designation', label: 'Désignation (C)', icon: Package },
                       { id: 'status', label: 'Statut Opérationnel (G)', icon: Activity },
                       { id: 'stockActuel', label: 'Stock & Solde (H)', icon: TrendingUp },
@@ -1411,11 +1411,11 @@ export default function EntrepotView({
                 >
                   {isComponentNature(currentNatureFilter) ? (
                     <span className="inline-flex items-center gap-1">
-                      <Layers className="w-3 h-3 text-blue-600" /> Components
+                      <CubeIcon className="w-3 h-3 text-blue-600" /> Components
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1">
-                      <Puzzle className="w-3 h-3 text-indigo-600" /> Parts
+                      <CubeIcon className="w-3 h-3 text-indigo-600" /> Parts
                     </span>
                   )}
                   <button
@@ -1531,13 +1531,13 @@ export default function EntrepotView({
                 >
                   <div className="flex items-center gap-1.5">
                     {currentNatureFilter === 'COMPOSANT' ? (
-                      <Puzzle className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <CubeIcon className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                     ) : currentNatureFilter === 'PARTIE' ? (
                       <Layers className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                     ) : (
                       <div className="flex items-center -space-x-1 shrink-0">
                         <Layers className="w-3 h-3 text-blue-600" />
-                        <Puzzle className="w-3 h-3 text-indigo-600" />
+                        <CubeIcon className="w-3 h-3 text-indigo-600" />
                       </div>
                     )}
                     <span>NATURE (TWIN)</span>{' '}
@@ -1568,7 +1568,7 @@ export default function EntrepotView({
                 >
                   <div className="flex items-center gap-1.5">
                     {currentNatureFilter === 'COMPOSANT' ? (
-                      <Puzzle className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <CubeIcon className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                     ) : (
                       <Boxes className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                     )}
@@ -2302,7 +2302,7 @@ export default function EntrepotView({
                 <div className="p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 space-y-2.5">
                   <div className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <Puzzle className="w-3.5 h-3.5" />
+                      <CubeIcon className="w-3.5 h-3.5" />
                       <span>Classification Part Stock (Twin Model)</span>
                     </div>
                     <span className="px-2 py-0.5 rounded-md text-[9.5px] font-mono font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
@@ -2774,7 +2774,7 @@ export default function EntrepotView({
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-indigo-700">
-                        <Puzzle className="w-3.5 h-3.5 text-indigo-600" />
+                        <CubeIcon className="w-3.5 h-3.5 text-indigo-600" />
                         Part (Stock Twin)
                       </span>
                     )}

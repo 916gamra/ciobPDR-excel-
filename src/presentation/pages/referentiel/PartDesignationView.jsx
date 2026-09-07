@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import { PlayingCardsFan } from '../../components/common/icons/PlayingCardsFan';
+import PartInfoIcon from '../../components/common/icons/PartInfoIcon';
 import {
   Plus,
   Search,
@@ -256,6 +257,7 @@ export default function PartDesignationView({
                   className="py-2.5 px-4 cursor-pointer hover:bg-slate-200/60 transition select-none group"
                 >
                   <div className="flex items-center gap-1.5">
+                    <PartInfoIcon className="w-3.5 h-3.5 text-teal-600" />
                     <span>DÉSIGNATION DE LA PIÈCE</span>
                     {renderSortIcon('designation')}
                   </div>
@@ -313,7 +315,10 @@ export default function PartDesignationView({
                         </span>
                       </td>
                       <td className="py-3 px-4 font-semibold text-slate-800 text-[13px]">
-                        {d.designation}
+                        <div className="flex items-center gap-2">
+                          <PartInfoIcon className="w-4 h-4 text-teal-600 shrink-0" />
+                          <span>{d.designation}</span>
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <button

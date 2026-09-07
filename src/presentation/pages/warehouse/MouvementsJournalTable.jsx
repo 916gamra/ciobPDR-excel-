@@ -1327,7 +1327,7 @@ export default function MouvementsJournalTable({
                 {
                   value: 'WAREHOUSE_COMPOSANT',
                   label: '[C] Composant Révisé',
-                  icon: <Puzzle className="w-3.5 h-3.5 text-indigo-600" />,
+                  icon: <CubeIcon className="w-3.5 h-3.5 text-indigo-600" />,
                 },
               ]}
             />
