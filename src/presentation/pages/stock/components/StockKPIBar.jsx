@@ -1,4 +1,3 @@
-import React from 'react';
 import { Package, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 
 export default function StockKPIBar({

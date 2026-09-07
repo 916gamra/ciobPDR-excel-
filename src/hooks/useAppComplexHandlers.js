@@ -1,4 +1,5 @@
 
+import { startTransition } from 'react';
 import { SparePartApplicationService } from '../application/services/SparePartApplicationService';
 import { MachineApplicationService } from '../application/services/MachineApplicationService';
 import { TaskApplicationService } from '../application/services/TaskApplicationService';
@@ -344,7 +345,7 @@ export function useAppComplexHandlers({
 
   const handleQuickSortie = (article) => {
     // Navigate to Sortie Rapide tab
-    React.startTransition(() => setCurrentTab('sortie'));
+    startTransition(() => setCurrentTab('sortie'));
   };
 
   

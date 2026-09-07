@@ -1,4 +1,3 @@
-import React from 'react';
 
 export function CubeIcon({ className = "w-4 h-4", ...props }) {
   return (

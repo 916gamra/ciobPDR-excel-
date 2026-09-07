@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import {  useState, useMemo, useEffect, useRef  } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import {
   Settings as SettingsIcon,

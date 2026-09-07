@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * SortieEntreeIcon - Unified dual-arrow movement icon for CIOB GMAO Light.

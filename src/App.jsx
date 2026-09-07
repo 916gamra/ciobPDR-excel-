@@ -4,6 +4,7 @@ import {
   useRef,
   useEffect,
   useDeferredValue,
+  startTransition,
 } from 'react';
 import * as XLSX from 'xlsx';
 import { useGmaoState } from './hooks/useGmaoState';
@@ -430,91 +431,91 @@ export default function App() {
   const handleNavigateToStockFiltered = (typeId) => {
     setStockTypeFilter(typeId);
     setStockAlertOnly(false);
-    React.startTransition(() => setCurrentTab('stock'));
+    startTransition(() => setCurrentTab('stock'));
   };
 
   const handleNavigateToStockFilteredByRef = (refVal) => {
     setStockSearch(refVal);
     setStockTypeFilter('ALL');
-    React.startTransition(() => setCurrentTab('stock'));
+    startTransition(() => setCurrentTab('stock'));
   };
 
   const handleNavigateToDesignationsFiltered = (typeId) => {
     setDiagTypeFilter(typeId);
-    React.startTransition(() => setCurrentTab('designations'));
+    startTransition(() => setCurrentTab('designations'));
   };
 
   const handleNavigateToDiagFiltered = handleNavigateToDesignationsFiltered;
 
   const handleNavigateToTemplatesFiltered = (familyId) => {
     setTemplateFamilyFilter(familyId);
-    React.startTransition(() => setCurrentTab('templates'));
+    startTransition(() => setCurrentTab('templates'));
   };
 
   const handleNavigateToMachinesByFamily = (familyId) => {
     setMchFamilyFilter(familyId);
     setMchTemplateFilter('ALL');
-    React.startTransition(() => setCurrentTab('machines'));
+    startTransition(() => setCurrentTab('machines'));
   };
 
   const handleNavigateToMachinesByTemplate = (familyId, templateId) => {
     setMchFamilyFilter(familyId);
     setMchTemplateFilter(templateId);
-    React.startTransition(() => setCurrentTab('machines'));
+    startTransition(() => setCurrentTab('machines'));
   };
 
   const handleNavigateToTechsByZone = (zoneId) => {
     setTechZoneFilter(zoneId);
-    React.startTransition(() => setCurrentTab('technicians'));
+    startTransition(() => setCurrentTab('technicians'));
   };
 
   const handleNavigateToOpsByZone = (zoneId) => {
     setOpZoneFilter(zoneId);
-    React.startTransition(() => setCurrentTab('operations'));
+    startTransition(() => setCurrentTab('operations'));
   };
 
   const handleNavigateToMachinesByZone = (zoneId) => {
     setMchZoneFilter(zoneId);
-    React.startTransition(() => setCurrentTab('machines'));
+    startTransition(() => setCurrentTab('machines'));
   };
 
   // GROUPE ENTREPÔT NAVIGATION HANDLERS
   const handleNavigateToCompTemplates = (familyId) => {
     setCompTemplateFamilyFilter(familyId || '');
-    React.startTransition(() => setCurrentTab('comp_templates'));
+    startTransition(() => setCurrentTab('comp_templates'));
   };
 
   const handleNavigateToCompFamilies = () => {
-    React.startTransition(() => setCurrentTab('comp_families'));
+    startTransition(() => setCurrentTab('comp_families'));
   };
 
   const handleNavigateToPartDesignations = (typeId) => {
     setPartDesignationTypeFilter(typeId || '');
-    React.startTransition(() => setCurrentTab('part_designations'));
+    startTransition(() => setCurrentTab('part_designations'));
   };
 
   const handleNavigateToPartTypes = () => {
-    React.startTransition(() => setCurrentTab('part_types'));
+    startTransition(() => setCurrentTab('part_types'));
   };
 
   const handleNavigateToEntrepotByComp = (familyId, templateId) => {
     setWhFamilyFilter(familyId || 'ALL');
     setWhTemplateFilter(templateId || 'ALL');
     setWhNatureFilter('COMPONENT');
-    React.startTransition(() => setCurrentTab('entrepot'));
+    startTransition(() => setCurrentTab('entrepot'));
   };
 
   const handleNavigateToEntrepotByType = (typeId) => {
     setWhTypeFilter(typeId || 'ALL');
     setWhNatureFilter('PART');
-    React.startTransition(() => setCurrentTab('entrepot'));
+    startTransition(() => setCurrentTab('entrepot'));
   };
 
   const handleNavigateToEntrepotByPart = (refOrPart, typeId) => {
     if (typeId) setWhTypeFilter(typeId);
     setWhSearch(refOrPart || '');
     setWhNatureFilter('PART');
-    React.startTransition(() => setCurrentTab('entrepot'));
+    startTransition(() => setCurrentTab('entrepot'));
   };
 
   // ADD ENTITY HANDLERS
@@ -1007,13 +1008,13 @@ export default function App() {
         props={{
           dashboard: {
             stockItems, machines, warehouseItems: warehouseItemsComputed, mouvements, types, diagnostics, zones, technicians, operations, stockKPIs,
-            onNavigateToStock: () => React.startTransition(() => setCurrentTab('stock')),
-            onNavigateToMachines: () => React.startTransition(() => setCurrentTab('machines')),
-            onNavigateToWarehouse: () => React.startTransition(() => setCurrentTab('entrepot')),
-            onNavigateToSortie: () => React.startTransition(() => setCurrentTab('sortie')),
-            onNavigateToZones: () => React.startTransition(() => setCurrentTab('zones')),
-            onNavigateToUsers: () => React.startTransition(() => setCurrentTab('utilisateurs')),
-            onNavigateToSettings: () => React.startTransition(() => setCurrentTab('settings')),
+            onNavigateToStock: () => startTransition(() => setCurrentTab('stock')),
+            onNavigateToMachines: () => startTransition(() => setCurrentTab('machines')),
+            onNavigateToWarehouse: () => startTransition(() => setCurrentTab('entrepot')),
+            onNavigateToSortie: () => startTransition(() => setCurrentTab('sortie')),
+            onNavigateToZones: () => startTransition(() => setCurrentTab('zones')),
+            onNavigateToUsers: () => startTransition(() => setCurrentTab('utilisateurs')),
+            onNavigateToSettings: () => startTransition(() => setCurrentTab('settings')),
             onQuickSortie: handleQuickSortie, onAddMouvement: handleAddMouvement, onUpdateMouvement: handleUpdateMouvement, onDeleteMouvement: handleDeleteMouvement, onExportExcel: handleExportExcel
           },
           stock: {
@@ -1045,7 +1046,7 @@ export default function App() {
             onOpenAddTech: () => { setAddUserModalType('TECHNICIEN'); setShowAddUserModal(true); },
             onOpenAddChef: () => { setAddUserModalType('RESPONSABLE'); setShowAddUserModal(true); },
             onOpenAddOperator: () => { setAddUserModalType('OPERATEUR'); setShowAddUserModal(true); },
-            onNavigateToWarehouse: () => React.startTransition(() => setCurrentTab('entrepot')),
+            onNavigateToWarehouse: () => startTransition(() => setCurrentTab('entrepot')),
             onNavigateToStockFilteredByRef: handleNavigateToStockFilteredByRef
           },
           entrepot: {
@@ -1057,7 +1058,7 @@ export default function App() {
             types, search: whSearch, setSearch: setWhSearch, onAddType: handleAddType, onUpdateType: handleUpdateType, onDeleteType: handleDeleteType, onNavigateToDesignations: handleNavigateToDesignationsFiltered
           },
           designations: {
-            designations, types, search: whSearch, setSearch: setWhSearch, onAddDesignation: handleAddDesignation, onUpdateDesignation: handleUpdateDesignation, onDeleteDesignation: handleDeleteDesignation, onOpenAddTypeModal: () => React.startTransition(() => setCurrentTab('types')), onNavigateToDiag: handleNavigateToDiagFiltered
+            designations, types, search: whSearch, setSearch: setWhSearch, onAddDesignation: handleAddDesignation, onUpdateDesignation: handleUpdateDesignation, onDeleteDesignation: handleDeleteDesignation, onOpenAddTypeModal: () => startTransition(() => setCurrentTab('types')), onNavigateToDiag: handleNavigateToDiagFiltered
           },
           machines: {
             machines, effectiveFamilies, effectiveTemplates, zones, technicians, search: mchSearch, setSearch: setMchSearch, familyFilter: mchFamilyFilter, setFamilyFilter: setMchFamilyFilter, templateFilter: mchTemplateFilter, setTemplateFilter: setMchTemplateFilter, zoneFilter: mchZoneFilter, setZoneFilter: setMchZoneFilter,
@@ -1067,13 +1068,13 @@ export default function App() {
             compFamilies, search: whSearch, setSearch: setWhSearch, onAddCompFamily: handleAddCompFamily, onUpdateCompFamily: handleUpdateCompFamily, onDeleteCompFamily: handleDeleteCompFamily, onNavigateToCompTemplates: handleNavigateToCompTemplates
           },
           compTemplates: {
-            compTemplates, compFamilies, search: whSearch, setSearch: setWhSearch, familyFilter: compTemplateFamilyFilter, setFamilyFilter: setCompTemplateFamilyFilter, onAddCompTemplate: handleAddCompTemplate, onUpdateCompTemplate: handleUpdateCompTemplate, onDeleteCompTemplate: handleDeleteCompTemplate, onOpenAddFamilyModal: () => React.startTransition(() => setCurrentTab('families')), onNavigateToEntrepotByComp: handleNavigateToEntrepotByComp
+            compTemplates, compFamilies, search: whSearch, setSearch: setWhSearch, familyFilter: compTemplateFamilyFilter, setFamilyFilter: setCompTemplateFamilyFilter, onAddCompTemplate: handleAddCompTemplate, onUpdateCompTemplate: handleUpdateCompTemplate, onDeleteCompTemplate: handleDeleteCompTemplate, onOpenAddFamilyModal: () => startTransition(() => setCurrentTab('families')), onNavigateToEntrepotByComp: handleNavigateToEntrepotByComp
           },
           partTypes: {
             partTypes, search: whSearch, setSearch: setWhSearch, onAddPartType: handleAddPartType, onUpdatePartType: handleUpdatePartType, onDeletePartType: handleDeletePartType, onNavigateToPartDesignations: handleNavigateToPartDesignations
           },
           partDesignations: {
-            partDesignations, partTypes, search: whSearch, setSearch: setWhSearch, typeFilter: partDesignationTypeFilter, setTypeFilter: setPartDesignationTypeFilter, onAddPartDesignation: handleAddPartDesignation, onUpdatePartDesignation: handleUpdatePartDesignation, onDeletePartDesignation: handleDeletePartDesignation, onOpenAddTypeModal: () => React.startTransition(() => setCurrentTab('types')), onNavigateToEntrepotByType: handleNavigateToEntrepotByType
+            partDesignations, partTypes, search: whSearch, setSearch: setWhSearch, typeFilter: partDesignationTypeFilter, setTypeFilter: setPartDesignationTypeFilter, onAddPartDesignation: handleAddPartDesignation, onUpdatePartDesignation: handleUpdatePartDesignation, onDeletePartDesignation: handleDeletePartDesignation, onOpenAddTypeModal: () => startTransition(() => setCurrentTab('types')), onNavigateToEntrepotByType: handleNavigateToEntrepotByType
           },
           families: {
             families: effectiveFamilies,
@@ -1098,11 +1099,11 @@ export default function App() {
             onAddTemplate: handleAddTemplate,
             onUpdateTemplate: handleUpdateTemplate,
             onDeleteTemplate: handleDeleteTemplate,
-            onOpenAddFamilyModal: () => React.startTransition(() => setCurrentTab('families')),
+            onOpenAddFamilyModal: () => startTransition(() => setCurrentTab('families')),
             onNavigateToMachinesByTemplate: handleNavigateToMachinesByTemplate,
             onNavigateToFamilyFiltered: (famId) => {
               setWhSearch(famId || '');
-              React.startTransition(() => setCurrentTab('families'));
+              startTransition(() => setCurrentTab('families'));
             }
           },
           zones: {
@@ -1120,7 +1121,7 @@ export default function App() {
           settings: {
             rawStock, stockItems, machines, mouvements, types, designations, zones, technicians, operations,
             compFamilies, compTemplates, partTypes, partDesignations, families: effectiveFamilies, templates: effectiveTemplates, warehouseItems: warehouseItemsComputed,
-            onNavigateToWarehouse: () => React.startTransition(() => setCurrentTab('entrepot'))
+            onNavigateToWarehouse: () => startTransition(() => setCurrentTab('entrepot'))
           },
           nexus: {
             types, diagnostics, families: effectiveFamilies, templates: effectiveTemplates, zones, technicians, operations, machines, stockItems

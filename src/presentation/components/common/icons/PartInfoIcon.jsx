@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function PartInfoIcon({ className = "w-4 h-4", ...props }) {
   return (

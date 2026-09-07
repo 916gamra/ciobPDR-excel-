@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import {  useState, useMemo  } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import SortieEntreeIcon from '../../components/common/SortieEntreeIcon';
 import DashboardKPIs from './components/DashboardKPIs';

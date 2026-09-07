@@ -1,4 +1,4 @@
-import React from 'react';
+import { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import ErrorBoundary from './presentation/components/common/ErrorBoundary';
@@ -13,13 +13,13 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
-    <React.StrictMode>
+    <StrictMode>
       <ErrorBoundary>
         <AuthProvider>
           <App />
         </AuthProvider>
       </ErrorBoundary>
-    </React.StrictMode>
+    </StrictMode>
   );
 }
 

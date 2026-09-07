@@ -1,4 +1,4 @@
-import React from 'react';
+import { Children } from 'react';
 import { motion } from 'motion/react';
 
 const containerVariants = {
@@ -29,7 +29,7 @@ export default function AnimatedPage({ children, className = 'space-y-4' }) {
       animate="visible"
       className={className}
     >
-      {React.Children.map(children, (child) => {
+      {Children.map(children, (child) => {
         if (!child) return null;
 
         // Check if the child is a modal (usually has 'fixed inset-0' in className)

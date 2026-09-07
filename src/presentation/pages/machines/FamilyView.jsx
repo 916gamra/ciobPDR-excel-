@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import {  useState, useRef, useMemo, useEffect  } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import SequentialCodePicker from '../../components/common/SequentialCodePicker';
 import { RoboticHand } from '../../components/common/icons/RoboticHand';

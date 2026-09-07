@@ -579,7 +579,7 @@ export function useGmaoState() {
     }
     // Only run once on mount
     syncEnterpriseDb();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
   return {
     types,

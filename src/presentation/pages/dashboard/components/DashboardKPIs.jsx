@@ -1,4 +1,3 @@
-import React from 'react';
 import { Package, Boxes, AlertTriangle, Cpu } from 'lucide-react';
 
 export default function DashboardKPIs({

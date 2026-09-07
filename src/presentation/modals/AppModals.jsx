@@ -1,4 +1,4 @@
-import React from 'react';
+import { startTransition } from 'react';
 import Toast from '../components/common/Toast';
 import AddArticleModal from '../pages/stock/AddArticleModal';
 import AddMachineModal from '../pages/machines/AddMachineModal';
@@ -25,7 +25,7 @@ export default function AppModals({
         onAddArticle={handleAddArticle}
         onOpenAddTypeModal={() => {
           setShowAddArticleModal(false);
-          React.startTransition(() => setCurrentTab('types'));
+          startTransition(() => setCurrentTab('types'));
         }}
       />
 
@@ -42,11 +42,11 @@ export default function AppModals({
         onDeleteMachine={handleDeleteMachine}
         onOpenAddFamilyModal={() => {
           setShowAddMachineModal(false);
-          React.startTransition(() => setCurrentTab('families'));
+          startTransition(() => setCurrentTab('families'));
         }}
         onOpenAddTemplateModal={() => {
           setShowAddMachineModal(false);
-          React.startTransition(() => setCurrentTab('templates'));
+          startTransition(() => setCurrentTab('templates'));
         }}
         onOpenAddZoneModal={() => {
           setShowAddMachineModal(false);

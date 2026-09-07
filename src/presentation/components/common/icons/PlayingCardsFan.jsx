@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * PlayingCardsFan Icon - Compatible with Lucide React icon standard

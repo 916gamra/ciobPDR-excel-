@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import {  useState, useMemo, useRef, useEffect  } from 'react';
 import { LayoutGrid, Check, X, RotateCcw, Sparkles } from 'lucide-react';
 
 /**

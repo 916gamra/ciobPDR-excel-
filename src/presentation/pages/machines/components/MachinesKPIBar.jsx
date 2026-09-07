@@ -1,4 +1,3 @@
-import React from 'react';
 import { Factory, CheckCircle2, AlertTriangle, Activity } from 'lucide-react';
 
 export default function MachinesKPIBar({

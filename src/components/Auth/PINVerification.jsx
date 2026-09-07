@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from 'react';
 import { Lock } from 'lucide-react';
 
 export default function PINVerification({ onVerify, onCancel }) {

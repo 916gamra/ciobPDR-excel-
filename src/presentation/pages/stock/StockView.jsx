@@ -1,4 +1,4 @@
-import React, { useMemo, useDeferredValue, useState } from 'react';
+import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import CustomSelect from '../../components/common/CustomSelect';
 import SortieEntreeIcon from '../../components/common/SortieEntreeIcon';
@@ -117,53 +117,53 @@ export default function StockView({
   }, [stockItems, stockTypeFilter, stockAlertOnly, deferredStockSearch]);
 
   
-  const [pageSize, setPageSize] = React.useState(100);
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const [sortField, setSortField] = React.useState('ref');
-  const [sortOrder, setSortOrder] = React.useState('asc');
-  const [showSortMenu, setShowSortMenu] = React.useState(false);
-  const [activeKpiFilter, setActiveKpiFilter] = React.useState('ALL'); // ALL | 'OK' | 'ALERTE' | 'RUPTURE'
+  const [pageSize, setPageSize] = useState(100);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState('ref');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [activeKpiFilter, setActiveKpiFilter] = useState('ALL'); // ALL | 'OK' | 'ALERTE' | 'RUPTURE'
 
   // Dropdown actions popover menu state for table rows
-  const [activeActionMenuRef, setActiveActionMenuRef] = React.useState(null);
+  const [activeActionMenuRef, setActiveActionMenuRef] = useState(null);
 
   // Modals state
-  const [quickModalState, setQuickModalState] = React.useState({
+  const [quickModalState, setQuickModalState] = useState({
     isOpen: false,
     article: null,
     initialFlow: 'Sortie Interne',
     initialAction: 'CORRECTIVE',
   });
 
-  const [editArticleModalState, setEditArticleModalState] = React.useState({
+  const [editArticleModalState, setEditArticleModalState] = useState({
     isOpen: false,
     article: null,
   });
 
-  const sortMenuRef = React.useRef(null);
+  const sortMenuRef = useRef(null);
 
   // Debounce state for high-performance stock searching
-  const [localSearch, setLocalSearch] = React.useState(stockSearch);
+  const [localSearch, setLocalSearch] = useState(stockSearch);
 
   // Sync from parent in case a smart link modifies stockSearch externally
-  React.useEffect(() => {
+  useEffect(() => {
     setLocalSearch(stockSearch);
   }, [stockSearch]);
 
   // Debounce propagation of search input to setStockSearch
-  React.useEffect(() => {
+  useEffect(() => {
     const handler = setTimeout(() => {
       setStockSearch(localSearch);
     }, 200);
     return () => clearTimeout(handler);
   }, [localSearch, setStockSearch]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [stockSearch, stockTypeFilter, stockAlertOnly, activeKpiFilter, sortField, sortOrder]);
 
   // Close menus on outside click
-  React.useEffect(() => {
+  useEffect(() => {
     function handleClickOutside(event) {
       if (sortMenuRef.current && !sortMenuRef.current.contains(event.target)) {
         setShowSortMenu(false);
@@ -186,12 +186,12 @@ export default function StockView({
   };
 
   // Pre-filter with active KPI status card if clicked
-  const effectiveFiltered = React.useMemo(() => {
+  const effectiveFiltered = useMemo(() => {
     if (activeKpiFilter === 'ALL') return filteredStock;
     return filteredStock.filter((item) => item.alerte === activeKpiFilter);
   }, [filteredStock, activeKpiFilter]);
 
-  const sortedStock = React.useMemo(() => {
+  const sortedStock = useMemo(() => {
     if (!sortField) return effectiveFiltered;
     const list = [...effectiveFiltered];
     return list.sort((a, b) => {

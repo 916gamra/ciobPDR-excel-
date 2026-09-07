@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Factory, Plus, X, Boxes, Layers, MapPin, Users, Radio, Cpu } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 import SequentialCodePicker from '../../components/common/SequentialCodePicker';

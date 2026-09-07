@@ -1,4 +1,3 @@
-import React from 'react';
 
 /**
  * Engine Icon - Exact match to the uploaded engine.svg reference
