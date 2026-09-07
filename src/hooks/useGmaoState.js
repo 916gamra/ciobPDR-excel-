@@ -316,37 +316,41 @@ export function useGmaoState() {
         }
 
         let stockInitial = 0;
+        let hasExplicitInitial = false;
         if (s.stockInitial != null && s.stockInitial !== '' && !isNaN(Number(s.stockInitial))) {
           stockInitial = Number(s.stockInitial);
+          hasExplicitInitial = true;
         } else if (s['Stock Initial'] != null && s['Stock Initial'] !== '' && !isNaN(Number(s['Stock Initial']))) {
           stockInitial = Number(s['Stock Initial']);
+          hasExplicitInitial = true;
         } else if (s['Stock Actuel'] != null && s['Stock Actuel'] !== '' && !isNaN(Number(s['Stock Actuel']))) {
           stockInitial = Number(s['Stock Actuel']);
+          hasExplicitInitial = true;
         } else if (typeof s.Type === 'number' && !isNaN(s.Type)) {
           stockInitial = s.Type;
         } else if (s.Type != null && !isNaN(Number(s.Type)) && s.Type !== '' && typeof s.Type !== 'string') {
           stockInitial = Number(s.Type);
         }
 
-        // If stored quantity was 0, null, or lost, restore from authentic Excel baseline data
-        if (stockInitial <= 0 && baseline && baseline.qty > 0) {
+        // If stored quantity was null or completely missing, fallback to authentic Excel baseline data
+        if (!hasExplicitInitial && baseline && baseline.qty > 0) {
           stockInitial = baseline.qty;
         }
 
         const finalRef = itemRef || (baseline ? baseline.ref : `ART${String(idx + 1).padStart(3, '0')}`);
         
-        // Fix for mixed up designation and type:
-        // If this item is in the baseline, we strongly prefer the baseline's designation and type 
-        // to recover the lost information.
         let finalDesignation = itemDesig;
         let finalType = s.type || s.id_type || s['Désignation'];
         
-        if (baseline) {
-           finalDesignation = baseline.designation;
-           finalType = baseline.type;
+        if (s.designation && String(s.designation).trim() !== '') {
+          finalDesignation = String(s.designation).trim();
+          finalType = s.type || s.id_type || (baseline ? baseline.type : 'Divers');
+        } else if (baseline) {
+          finalDesignation = baseline.designation;
+          finalType = baseline.type;
         } else {
-           finalDesignation = finalDesignation || finalRef;
-           finalType = finalType || 'Divers';
+          finalDesignation = finalDesignation || finalRef;
+          finalType = finalType || 'Divers';
         }
 
         const finalSeuil =

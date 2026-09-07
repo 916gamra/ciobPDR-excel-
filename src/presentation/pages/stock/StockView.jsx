@@ -66,6 +66,7 @@ function getTypeStyle(typeStr) {
 }
 
 export default function StockView({
+  stockItems: propStockItems = [],
   stockSearch = '',
   setStockSearch = () => {},
   stockTypeFilter = 'ALL',
@@ -77,14 +78,20 @@ export default function StockView({
   machines = [],
   technicians = [],
   operations = [],
+  mouvements = [],
   onOpenAddArticle = () => {},
   onQuickSortie = () => {},
   onAddMouvement = () => {},
-  
+  onUpdateArticle: propOnUpdateArticle,
+  onDirectAdjustStock: propOnDirectAdjustStock,
   stockKPIs = { total: 0, alertes: 0, ruptures: 0, ok: 0, totalSorties: 0, totalEntrees: 0 },
   onNavigateToType = () => {},
 }) {
-  const { stockItems, loading, updateArticle: onUpdateArticle, directAdjustStock: onDirectAdjustStock } = useSpareParts();
+  const { stockItems: dbStockItems, updateArticle: dbUpdateArticle, directAdjustStock: dbDirectAdjustStock } = useSpareParts();
+
+  const stockItems = propStockItems && propStockItems.length > 0 ? propStockItems : dbStockItems;
+  const onUpdateArticle = propOnUpdateArticle || dbUpdateArticle;
+  const onDirectAdjustStock = propOnDirectAdjustStock || dbDirectAdjustStock;
   
   const deferredStockSearch = useDeferredValue(stockSearch);
   const filteredStock = useMemo(() => {
@@ -1100,6 +1107,7 @@ export default function StockView({
         machines={machines}
         technicians={technicians}
         operations={operations}
+        mouvements={mouvements}
         onAddMouvement={onAddMouvement}
         onDirectAdjustStock={onDirectAdjustStock}
       />

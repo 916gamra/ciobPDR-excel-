@@ -256,25 +256,53 @@ export function useAppComplexHandlers({
   
   const handleUpdateArticle = async (id, updatedArt) => {
     const service = new SparePartApplicationService();
-    const saved = await service.updateSparePart(id, updatedArt);
-    setRawStock(prev => prev.map(a => a.id === id ? saved : a));
+    try {
+      await service.updateSparePart(id, updatedArt);
+    } catch (err) {
+      console.warn('SparePart update warning:', err);
+    }
+    setRawStock((prev) =>
+      prev.map((a) =>
+        a.id === id || a.ref === id || (updatedArt && updatedArt.ref && a.ref === updatedArt.ref)
+          ? { ...a, ...updatedArt }
+          : a
+      )
+    );
   };
   const handleDeleteArticle = async (id) => {
     const service = new SparePartApplicationService();
-    await service.deleteSparePart(id);
-    setRawStock(prev => prev.filter(a => a.id !== id));
+    try {
+      await service.deleteSparePart(id);
+    } catch (err) {
+      console.warn('SparePart delete warning:', err);
+    }
+    setRawStock((prev) => prev.filter((a) => a.id !== id && a.ref !== id));
   };
 
   
   const handleUpdateMouvement = async (id, updatedMvt) => {
     const service = new TaskApplicationService();
-    const saved = await service.updateTask(id, updatedMvt);
-    setMouvements(prev => prev.map(m => m.id === id ? saved : m));
+    try {
+      await service.updateTask(id, updatedMvt);
+    } catch (err) {
+      console.warn('Task update warning:', err);
+    }
+    setMouvements((prev) =>
+      prev.map((m) =>
+        m.id === id || m.code_bon === id || (updatedMvt && updatedMvt.code_bon && m.code_bon === updatedMvt.code_bon)
+          ? { ...m, ...updatedMvt }
+          : m
+      )
+    );
   };
   const handleDeleteMouvement = async (id) => {
     const service = new TaskApplicationService();
-    await service.deleteTask(id);
-    setMouvements(prev => prev.filter(m => m.id !== id));
+    try {
+      await service.deleteTask(id);
+    } catch (err) {
+      console.warn('Task delete warning:', err);
+    }
+    setMouvements((prev) => prev.filter((m) => m.id !== id && m.code_bon !== id));
   };
 
 

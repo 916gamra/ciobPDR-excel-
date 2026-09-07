@@ -25,8 +25,10 @@ import {
   Hash,
   Globe,
   Crown,
+  X,
 } from 'lucide-react';
 import SupervisorAccount from '../../components/common/icons/SupervisorAccount';
+import UserCodePicker from '../../components/common/UserCodePicker';
 import {
   RESPONSABLE_TEMPLATES,
   normalizeTemplateIds,
@@ -132,7 +134,46 @@ export default function UtilisateursView({
     templates: ['RMT'],
     template_id: 'RMT',
     specialite: '',
+    customCode: '',
   });
+
+  const modalAutoNextId = useMemo(() => getNextId(form.type), [form.type, technicians, operations]);
+
+  const modalPrefix = form.type === 'TECHNICIEN' ? 'TECH-' : form.type === 'OPERATEUR' ? 'OP-' : 'RESP-';
+
+  const modalTakenNumbers = useMemo(() => {
+    const set = new Set();
+    if (form.type === 'TECHNICIEN') {
+      (technicians || []).forEach((t) => {
+        const m = String(t.id_technician || t.id || '').match(/TECH-(\d+)/i);
+        if (m) set.add(parseInt(m[1], 10));
+      });
+    } else if (form.type === 'OPERATEUR') {
+      (operations || []).forEach((o) => {
+        if (
+          o.type_profil === 'OPERATEUR' &&
+          !String(o.id_operation || '').startsWith('RESP') &&
+          !String(o.id_operation || '').startsWith('CHEF')
+        ) {
+          const m = String(o.id_operation || o.id || '').match(/OP-(\d+)/i);
+          if (m) set.add(parseInt(m[1], 10));
+        }
+      });
+    } else {
+      (operations || []).forEach((o) => {
+        if (
+          o.type_profil === 'RESPONSABLE' ||
+          o.type_profil === 'CHEF' ||
+          String(o.id_operation || '').startsWith('RESP') ||
+          String(o.id_operation || '').startsWith('CHEF')
+        ) {
+          const m = String(o.id_operation || o.id || '').match(/(?:RESP|CHEF)-(\d+)/i);
+          if (m) set.add(parseInt(m[1], 10));
+        }
+      });
+    }
+    return set;
+  }, [form.type, technicians, operations]);
 
   // Calculate combined users list with full multi-template metadata
   const combinedUsers = useMemo(() => {
@@ -301,8 +342,8 @@ export default function UtilisateursView({
       }
       setUserToEdit(null);
     } else {
-      // Add mode - Auto calculate ID on submission
-      const nextId = getNextId(form.type);
+      // Add mode - Auto calculate ID on submission or use picked custom code
+      const nextId = form.customCode || getNextId(form.type);
       if (form.type === 'TECHNICIEN') {
         onAddTechnician({
           id_technician: nextId,
@@ -348,6 +389,7 @@ export default function UtilisateursView({
       templates: ['RMT'],
       template_id: 'RMT',
       specialite: '',
+      customCode: '',
     });
   };
 
@@ -406,6 +448,7 @@ export default function UtilisateursView({
                 templates: ['RMT'],
                 template_id: 'RMT',
                 specialite: '',
+                customCode: getNextId('TECHNICIEN'),
               });
               setUserToEdit(null);
               setShowAddModal(true);
@@ -1043,14 +1086,22 @@ export default function UtilisateursView({
         {/* Manual Add / Edit Modal */}
         {showAddModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-              <div className="bg-slate-50 border-b border-slate-100 px-5 py-4 flex items-center justify-between shrink-0">
-                <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between shrink-0">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                   <Users className="w-4 h-4 text-indigo-600" />
                   {userToEdit
                     ? 'Modifier la Fiche Utilisateur'
                     : 'Enregistrer un nouvel Utilisateur'}
                 </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
+                  aria-label="Fermer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
               <form onSubmit={handleSave} className="p-5 space-y-4 overflow-y-auto">
@@ -1059,41 +1110,60 @@ export default function UtilisateursView({
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                     Type de Profil / Rôle
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/60 rounded-xl border border-slate-200/80">
                     {[
-                      { key: 'TECHNICIEN', label: 'Technicien (TECH)' },
-                      { key: 'OPERATEUR', label: 'Opérateur (OP)' },
-                      { key: 'RESPONSABLE', label: 'Responsable (RESP)' },
+                      { key: 'TECHNICIEN', label: 'Technicien', sub: '(TECH)' },
+                      { key: 'OPERATEUR', label: 'Opérateur', sub: '(OP)' },
+                      { key: 'RESPONSABLE', label: 'Responsable', sub: '(RESP)' },
                     ].map((item) => (
                       <button
                         key={item.key}
                         type="button"
                         disabled={!!userToEdit}
-                        onClick={() => setForm({ ...form, type: item.key })}
-                        className={`py-2 px-3 text-center text-xs font-bold rounded-xl border transition ${
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            type: item.key,
+                            customCode: getNextId(item.key),
+                          })
+                        }
+                        className={`py-2 px-2 text-center text-xs font-bold rounded-lg transition flex items-center justify-center gap-1 cursor-pointer ${
                           form.type === item.key
-                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
-                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                            ? 'bg-white text-slate-900 shadow-xs border border-slate-200/60'
+                            : 'text-slate-600 hover:text-slate-900'
                         } disabled:opacity-50`}
                       >
-                        {item.label}
+                        <span className="truncate">{item.label}</span>
+                        <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">{item.sub}</span>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {/* Generated ID Field */}
-                <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    Identifiant Unique (ID)
-                  </label>
-                  <div className="w-full h-10 px-3 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-700 flex items-center shadow-2xs">
-                    {userToEdit ? userToEdit.id : getNextId(form.type)}
+                {/* ID Field with UserCodePicker when adding, or readonly box when editing */}
+                {userToEdit ? (
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                      Identifiant Unique (ID)
+                    </label>
+                    <div className="w-full h-10 px-3 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-700 flex items-center shadow-2xs">
+                      {userToEdit.id}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Identifiant permanent non modifiable en mode édition.
+                    </p>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Généré automatiquement selon le profil choisi ({form.type}).
-                  </p>
-                </div>
+                ) : (
+                  <UserCodePicker
+                    prefix={modalPrefix}
+                    currentCode={form.customCode || modalAutoNextId}
+                    onChangeCode={(code) => setForm((prev) => ({ ...prev, customCode: code }))}
+                    autoGeneratedCode={modalAutoNextId}
+                    takenNumbers={modalTakenNumbers}
+                    label="Code Utilisateur"
+                    helperText={`Généré automatiquement selon le profil (${form.type}) avec choix libre de numéro (01-99)`}
+                  />
+                )}
 
                 {/* Template Selection for RESPONSABLE (Multi-Select) */}
                 {form.type === 'RESPONSABLE' && (

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
+import { CubeIcon } from '../../components/common/icons/CubeIcon';
 import {
   FileSpreadsheet,
   Layers,

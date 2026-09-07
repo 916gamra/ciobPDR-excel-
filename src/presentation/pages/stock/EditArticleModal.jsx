@@ -38,8 +38,10 @@ export default function EditArticleModal({
     e.preventDefault();
     if (!form.designation) return;
 
-    onUpdateArticle(article.id, {
+    const targetId = article.id || article.ref;
+    onUpdateArticle(targetId, {
       ...article,
+      id: targetId,
       designation: form.designation.trim(),
       id_type: form.id_type,
       stockInitial: Number(form.stockInitial) || 0,

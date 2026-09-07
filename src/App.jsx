@@ -259,8 +259,10 @@ export default function App() {
         mvtSummary[itemRefKey]?.sorties ||
         (itemDesigKey ? mvtSummary[itemDesigKey]?.sorties || 0 : 0);
 
-      let stockInitial = safeNum(item.stockInitial, 0);
-      if (stockInitial <= 0) {
+      let stockInitial = 0;
+      if (item.stockInitial !== undefined && item.stockInitial !== null && item.stockInitial !== '' && !isNaN(Number(item.stockInitial))) {
+        stockInitial = Number(item.stockInitial);
+      } else {
         const baseline =
           INITIAL_STOCK_LOOKUP.get(itemRefKey) ||
           (itemDesigKey ? INITIAL_STOCK_LOOKUP.get(itemDesigKey) : null);
@@ -1032,7 +1034,7 @@ export default function App() {
             onQuickSortie: handleQuickSortie, onAddMouvement: handleAddMouvement, onUpdateMouvement: handleUpdateMouvement, onDeleteMouvement: handleDeleteMouvement, onExportExcel: handleExportExcel
           },
           stock: {
-            stockItems, stockSearch, setStockSearch, stockTypeFilter, setStockTypeFilter, stockAlertOnly, setStockAlertOnly, types, zones, machines, technicians, operations,
+            stockItems, mouvements, stockSearch, setStockSearch, stockTypeFilter, setStockTypeFilter, stockAlertOnly, setStockAlertOnly, types, zones, machines, technicians, operations,
             onOpenAddArticle: () => setShowAddArticleModal(true),
             onQuickSortie: handleQuickSortie, onAddMouvement: handleAddMouvement, onUpdateArticle: handleUpdateArticle, onDirectAdjustStock: handleDirectAdjustStock, stockKPIs, onNavigateToType: handleNavigateToStockFiltered
           },
@@ -1064,7 +1066,7 @@ export default function App() {
             onNavigateToStockFilteredByRef: handleNavigateToStockFilteredByRef
           },
           entrepot: {
-            warehouseItems: warehouseItemsComputed, compFamilies, compTemplates, partTypes, partDesignations, machines, whSearch, setWhSearch, whFamilyFilter, setWhFamilyFilter, whTemplateFilter, setWhTemplateFilter, whTypeFilter, setWhTypeFilter, whNatureFilter, setWhNatureFilter,
+            warehouseItems: warehouseItemsComputed, mouvements, compFamilies, compTemplates, partTypes, partDesignations, machines, whSearch, setWhSearch, whFamilyFilter, setWhFamilyFilter, whTemplateFilter, setWhTemplateFilter, whTypeFilter, setWhTypeFilter, whNatureFilter, setWhNatureFilter,
             onAddWarehouseItem: handleAddWarehouseItem, onUpdateWarehouseItem: handleUpdateWarehouseItem, onDeleteWarehouseItem: handleDeleteWarehouseItem,
             onNavigateToCompFamilies: handleNavigateToCompFamilies, onNavigateToCompTemplates: handleNavigateToCompTemplates, onNavigateToPartTypes: handleNavigateToPartTypes, onNavigateToPartDesignations: handleNavigateToPartDesignations, onNavigateToEntrepotByPart: handleNavigateToEntrepotByPart
           },

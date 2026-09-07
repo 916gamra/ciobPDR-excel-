@@ -2862,6 +2862,7 @@ export default function EntrepotView({
         zones={zones}
         machines={machines}
         technicians={technicians}
+        mouvements={mouvements}
         onAddMouvement={onAddMouvement}
       />
     </AnimatedPage>

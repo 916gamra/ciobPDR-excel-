@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UserCheck, Plus, X, Wrench, ShieldCheck, ClipboardList, Check, MapPin } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
+import UserCodePicker from '../../components/common/UserCodePicker';
 import {
   RESPONSABLE_TEMPLATES,
-  getTemplateById,
   formatTemplateLabels,
 } from '../../../data/responsableTemplates';
 
@@ -24,6 +24,7 @@ export default function AddUserModal({
   const [profileType, setProfileType] = useState(normalizedInitialType);
   const [selectedTemplates, setSelectedTemplates] = useState(['RMT']);
   const [selectedZones, setSelectedZones] = useState(['ALL']);
+  const [customCode, setCustomCode] = useState('');
 
   const [form, setForm] = useState({
     nom: '',
@@ -78,12 +79,56 @@ export default function AddUserModal({
     return '';
   };
 
+  const autoNextId = useMemo(() => getNextId(profileType), [profileType, technicians, operations]);
+
+  const currentPrefix =
+    profileType === 'TECHNICIEN'
+      ? 'TECH-'
+      : profileType === 'OPERATEUR'
+        ? 'OP-'
+        : 'RESP-';
+
+  const takenNumbers = useMemo(() => {
+    const set = new Set();
+    if (profileType === 'TECHNICIEN') {
+      (technicians || []).forEach((t) => {
+        const m = String(t.id_technician || t.id || '').match(/TECH-(\d+)/i);
+        if (m) set.add(parseInt(m[1], 10));
+      });
+    } else if (profileType === 'OPERATEUR') {
+      (operations || []).forEach((o) => {
+        if (
+          o.type_profil === 'OPERATEUR' &&
+          !String(o.id_operation || '').startsWith('RESP') &&
+          !String(o.id_operation || '').startsWith('CHEF')
+        ) {
+          const m = String(o.id_operation || o.id || '').match(/OP-(\d+)/i);
+          if (m) set.add(parseInt(m[1], 10));
+        }
+      });
+    } else {
+      (operations || []).forEach((o) => {
+        if (
+          o.type_profil === 'RESPONSABLE' ||
+          o.type_profil === 'CHEF' ||
+          String(o.id_operation || '').startsWith('RESP') ||
+          String(o.id_operation || '').startsWith('CHEF')
+        ) {
+          const m = String(o.id_operation || o.id || '').match(/(?:RESP|CHEF)-(\d+)/i);
+          if (m) set.add(parseInt(m[1], 10));
+        }
+      });
+    }
+    return set;
+  }, [profileType, technicians, operations]);
+
   useEffect(() => {
     if (isOpen) {
       const initP = initialType === 'CHEF' ? 'RESPONSABLE' : initialType || 'TECHNICIEN';
       setProfileType(initP);
       setSelectedTemplates(['RMT']);
       setSelectedZones(['ALL']);
+      setCustomCode(getNextId(initP));
       setForm({
         nom: '',
         id_zone: zones[0]?.id_zone || '',
@@ -97,6 +142,20 @@ export default function AddUserModal({
       setError('');
     }
   }, [isOpen, initialType, zones]);
+
+  const handleSelectProfileType = (newType) => {
+    setProfileType(newType);
+    setCustomCode(getNextId(newType));
+    setForm((prev) => ({
+      ...prev,
+      specialite:
+        newType === 'TECHNICIEN'
+          ? 'Mécanique / Électrique'
+          : newType === 'RESPONSABLE'
+            ? 'Responsable Maintenance'
+            : 'Opérateur de Ligne',
+    }));
+  };
 
   // Handle template selection toggle (Multi-select)
   const handleToggleTemplate = (tplId) => {
@@ -135,8 +194,6 @@ export default function AddUserModal({
 
   if (!isOpen) return null;
 
-  const currentId = getNextId(profileType);
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.nom.trim()) {
@@ -144,13 +201,15 @@ export default function AddUserModal({
       return;
     }
 
+    const finalId = customCode || autoNextId;
+
     if (profileType === 'TECHNICIEN') {
       if (technicians.some((t) => t.nom.toLowerCase().trim() === form.nom.toLowerCase().trim())) {
         setError('Un technicien portant ce nom existe déjà.');
         return;
       }
       onAddTechnician({
-        id_technician: currentId,
+        id_technician: finalId,
         nom: form.nom.trim(),
         id_zone: form.id_zone,
         specialite: form.specialite.trim() || 'Spécialiste GMAO',
@@ -161,7 +220,7 @@ export default function AddUserModal({
         return;
       }
       onAddOperation({
-        id_operation: currentId,
+        id_operation: finalId,
         nom: form.nom.trim(),
         id_zone: form.id_zone,
         type_profil: 'OPERATEUR',
@@ -183,7 +242,7 @@ export default function AddUserModal({
       const zoneString = isAll ? 'ALL' : selectedZones.join(', ');
 
       onAddOperation({
-        id_operation: currentId,
+        id_operation: finalId,
         nom: form.nom.trim(),
         id_zone: zoneString,
         zones: isAll ? ['ALL'] : selectedZones,
@@ -200,15 +259,15 @@ export default function AddUserModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto animate-fadeIn">
-      <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col my-6">
+      <div className="bg-white rounded-2xl max-w-xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col my-4 sm:my-6">
         {/* Header */}
-        <div className="p-4 sm:p-5 bg-white border-b border-slate-200 flex items-center justify-between">
+        <div className="px-5 py-4 bg-white border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 shadow-2xs font-bold shrink-0">
               <UserCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-slate-900 leading-tight">
+              <h3 className="font-bold text-sm sm:text-base text-slate-900 leading-tight">
                 {profileType === 'TECHNICIEN'
                   ? 'Nouveau Technicien'
                   : profileType === 'RESPONSABLE'
@@ -224,94 +283,84 @@ export default function AddUserModal({
             type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
+            aria-label="Fermer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Profile Switcher Tabs */}
-        <div className="p-4 bg-slate-50 border-b border-slate-200">
-          <label className="text-[11px] font-bold text-slate-700 block mb-1.5 uppercase tracking-wider">
-            Famille de Profil (Prefix Code)
+        <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200">
+          <label className="text-[10.5px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider">
+            Famille de Profil / Rôle
           </label>
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/70 rounded-xl border border-slate-200/80">
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/60 rounded-xl border border-slate-200/80">
             <button
               type="button"
-              onClick={() => {
-                setProfileType('TECHNICIEN');
-                setForm((prev) => ({ ...prev, specialite: 'Mécanique / Électrique' }));
-              }}
+              onClick={() => handleSelectProfileType('TECHNICIEN')}
               className={`py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 profileType === 'TECHNICIEN'
-                  ? 'bg-white text-blue-900 shadow-xs'
+                  ? 'bg-white text-blue-900 shadow-xs border border-slate-200/60'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <Wrench className="w-3.5 h-3.5 text-blue-600" />
-              <span>Technicien (TECH)</span>
+              <Wrench className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span className="truncate">Technicien</span>
+              <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">(TECH)</span>
             </button>
 
             <button
               type="button"
-              onClick={() => {
-                setProfileType('OPERATEUR');
-                setForm((prev) => ({ ...prev, specialite: 'Opérateur de Ligne' }));
-              }}
+              onClick={() => handleSelectProfileType('OPERATEUR')}
               className={`py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 profileType === 'OPERATEUR'
-                  ? 'bg-white text-indigo-900 shadow-xs'
+                  ? 'bg-white text-indigo-900 shadow-xs border border-slate-200/60'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <ClipboardList className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Opérateur (OP)</span>
+              <ClipboardList className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span className="truncate">Opérateur</span>
+              <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">(OP)</span>
             </button>
 
             <button
               type="button"
-              onClick={() => {
-                setProfileType('RESPONSABLE');
-                setForm((prev) => ({ ...prev, specialite: 'Responsable' }));
-              }}
+              onClick={() => handleSelectProfileType('RESPONSABLE')}
               className={`py-2 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer ${
                 profileType === 'RESPONSABLE'
-                  ? 'bg-white text-rose-900 shadow-xs'
+                  ? 'bg-white text-rose-900 shadow-xs border border-slate-200/60'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
-              <span>Responsable (RESP)</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+              <span className="truncate">Responsable</span>
+              <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">(RESP)</span>
             </button>
           </div>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 text-xs overflow-y-auto max-h-[70vh]">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs overflow-y-auto max-h-[70vh]">
           {error && (
             <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
               {error}
             </div>
           )}
 
-          {/* Generated ID */}
-          <div className="bg-slate-50 border border-slate-200/80 p-3 rounded-xl flex items-center justify-between">
-            <div>
-              <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider block">
-                Identifiant Auto-Généré
-              </span>
-              <span className="font-mono text-base font-black text-slate-900 mt-0.5 block">
-                {currentId}
-              </span>
-              <p className="text-[10px] text-slate-400 mt-0.5">
-                {profileType === 'RESPONSABLE'
-                  ? 'Code séquentiel RESP-xx selon l’ordre d’ajout global'
-                  : 'Généré automatiquement selon le profil choisi'}
-              </p>
-            </div>
-            <div className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-mono font-bold text-indigo-700 shadow-2xs">
-              {profileType}
-            </div>
-          </div>
+          {/* User Code with 01-99 Pick Popover */}
+          <UserCodePicker
+            prefix={currentPrefix}
+            currentCode={customCode || autoNextId}
+            onChangeCode={(code) => setCustomCode(code)}
+            autoGeneratedCode={autoNextId}
+            takenNumbers={takenNumbers}
+            label="Code Utilisateur"
+            helperText={
+              profileType === 'RESPONSABLE'
+                ? 'Code séquentiel RESP-xx selon l’ordre d’ajout global'
+                : 'Généré automatiquement selon le profil choisi'
+            }
+          />
 
           {/* SECTION: RESPONSABLE TEMPLATES (Fixed System Templates - Multi-Select) */}
           {profileType === 'RESPONSABLE' && (
