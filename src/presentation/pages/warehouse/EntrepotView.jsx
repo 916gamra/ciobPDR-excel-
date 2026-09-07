@@ -34,7 +34,6 @@ import {
   ShieldCheck,
   Tag,
   Hash,
-  Info,
   Clock,
   Check,
   X,
@@ -48,6 +47,7 @@ import {
   Activity,
   TrendingUp,
   SwatchBook,
+  Info,
 } from 'lucide-react';
 import { Engine } from '../../components/common/icons/Engine';
 import { CubeIcon } from '../../components/common/icons/CubeIcon';

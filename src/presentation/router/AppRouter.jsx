@@ -1,30 +1,31 @@
+import { lazy, Suspense } from 'react';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
 
-import DashboardView from '../pages/dashboard/DashboardView';
-import StockView from '../pages/stock/StockView';
-import TypeView from '../pages/referentiel/TypeView';
-import DesignationView from '../pages/referentiel/DesignationView';
-import MachinesRegisteredView from '../pages/machines/MachinesRegisteredView';
-import EntrepotView from '../pages/warehouse/EntrepotView';
-import CompFamilyView from '../pages/referentiel/CompFamilyView';
-import CompTemplateView from '../pages/referentiel/CompTemplateView';
-import PartTypeView from '../pages/referentiel/PartTypeView';
-import PartDesignationView from '../pages/referentiel/PartDesignationView';
-import FamilyView from '../pages/machines/FamilyView';
-import TemplatesView from '../pages/machines/TemplatesView';
-import ZonesView from '../pages/referentiel/ZonesView';
-import UtilisateursView from '../pages/utilisateurs/UtilisateursView';
-import SortieRapideView from '../pages/movements/SortieRapideView';
-import SettingsView from '../pages/settings/SettingsView';
-import NexusView from '../pages/system/NexusView';
-import GuideView from '../pages/system/GuideView';
+const DashboardView = lazy(() => import('../pages/dashboard/DashboardView'));
+const StockView = lazy(() => import('../pages/stock/StockView'));
+const TypeView = lazy(() => import('../pages/referentiel/TypeView'));
+const DesignationView = lazy(() => import('../pages/referentiel/DesignationView'));
+const MachinesRegisteredView = lazy(() => import('../pages/machines/MachinesRegisteredView'));
+const EntrepotView = lazy(() => import('../pages/warehouse/EntrepotView'));
+const CompFamilyView = lazy(() => import('../pages/referentiel/CompFamilyView'));
+const CompTemplateView = lazy(() => import('../pages/referentiel/CompTemplateView'));
+const PartTypeView = lazy(() => import('../pages/referentiel/PartTypeView'));
+const PartDesignationView = lazy(() => import('../pages/referentiel/PartDesignationView'));
+const FamilyView = lazy(() => import('../pages/machines/FamilyView'));
+const TemplatesView = lazy(() => import('../pages/machines/TemplatesView'));
+const ZonesView = lazy(() => import('../pages/referentiel/ZonesView'));
+const UtilisateursView = lazy(() => import('../pages/utilisateurs/UtilisateursView'));
+const SortieRapideView = lazy(() => import('../pages/movements/SortieRapideView'));
+const SettingsView = lazy(() => import('../pages/settings/SettingsView'));
+const NexusView = lazy(() => import('../pages/system/NexusView'));
+const GuideView = lazy(() => import('../pages/system/GuideView'));
 
 export default function AppRouter({
-  currentTab, setCurrentTab, props
+  currentTab, setCurrentTab: _setCurrentTab, props
 }) {
   return (
-    <>
+    <Suspense fallback={<LoadingSkeleton currentTab={currentTab} />}>
       {currentTab === 'dashboard' && (
         <ErrorBoundary>
           <DashboardView {...props.dashboard} />
@@ -132,6 +133,6 @@ export default function AppRouter({
           <GuideView {...props.guide} />
         </ErrorBoundary>
       )}
-    </>
+    </Suspense>
   );
 }

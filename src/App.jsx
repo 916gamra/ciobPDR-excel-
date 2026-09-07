@@ -3,7 +3,6 @@ import {
   useMemo,
   useRef,
   useEffect,
-  useDeferredValue,
   startTransition,
 } from 'react';
 import * as XLSX from 'xlsx';
@@ -15,7 +14,6 @@ import {
 } from './data/seedData';
 
 import { SplashScreen, LoginScreen } from './presentation/pages/auth';
-import Toast from './presentation/components/common/Toast';
 import OfflineIndicator from './presentation/components/common/OfflineIndicator';
 
 import { validateImportedData } from './utils/validation';
@@ -91,7 +89,7 @@ const INITIAL_STOCK_LOOKUP = new Map();
 });
 
 export default function App() {
-  const { user: currentUser, logout } = useAuth();
+  const { user: currentUser } = useAuth();
 
   // Splash & Auth States - Always display splash screen on application start/reload
   const [showSplash, setShowSplash] = useState(true);
@@ -126,7 +124,7 @@ export default function App() {
       if (currentTab) {
         localStorage.setItem('gmao_active_tab', currentTab);
       }
-    } catch (_e) {
+    } catch {
       /* ignore storage error */
     }
   }, [currentTab]);
@@ -367,12 +365,10 @@ export default function App() {
 
   // Filter States
   const [stockSearch, setStockSearch] = useState('');
-  const deferredStockSearch = useDeferredValue(stockSearch);
   const [stockTypeFilter, setStockTypeFilter] = useState('ALL');
   const [stockAlertOnly, setStockAlertOnly] = useState(false);
 
   const [mchSearch, setMchSearch] = useState('');
-  const deferredMchSearch = useDeferredValue(mchSearch);
   const [mchFamilyFilter, setMchFamilyFilter] = useState('ALL');
   const [mchTemplateFilter, setMchTemplateFilter] = useState('ALL');
   const [mchZoneFilter, setMchZoneFilter] = useState('ALL');
@@ -553,8 +549,6 @@ export default function App() {
     setDesignations((prev) => [newItem, ...(prev || [])]);
   };
 
-  const handleAddDiagnostic = handleAddDesignation;
-
   const handleAddFamily = (newFam) => {
     setFamilies((prev) => [...prev, newFam]);
   };
@@ -575,7 +569,6 @@ export default function App() {
     handleUpdateMachine, handleDeleteMachine,
     handleUpdateType, handleDeleteType,
     handleUpdateDesignation, handleDeleteDesignation,
-    handleUpdateDiagnostic, handleDeleteDiagnostic,
     handleUpdateFamily, handleDeleteFamily,
     handleUpdateCompFamily, handleDeleteCompFamily,
     handleUpdateCompTemplate, handleDeleteCompTemplate,
@@ -584,7 +577,7 @@ export default function App() {
     handleUpdateTemplate, handleDeleteTemplate,
     handleAddTechnician, handleUpdateTechnician, handleDeleteTechnician,
     handleAddOperation, handleAddMachine, handleAddArticle, handleAddMouvement,
-    handleUpdateArticle, handleDeleteArticle,
+    handleUpdateArticle,
     handleUpdateMouvement, handleDeleteMouvement,
     handleAddWarehouseItem, handleUpdateWarehouseItem, handleDeleteWarehouseItem,
     handleDirectAdjustStock, handleQuickSortie

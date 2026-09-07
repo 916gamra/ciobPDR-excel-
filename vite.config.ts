@@ -120,6 +120,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -127,8 +128,14 @@ export default defineConfig({
             if (id.includes('xlsx')) {
               return 'vendor-xlsx';
             }
-            if (id.includes('bcryptjs') || id.includes('crypto-js')) {
+            if (id.includes('bcryptjs') || id.includes('crypto-js') || id.includes('lz-string')) {
               return 'vendor-crypto';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-lucide';
+            }
+            if (id.includes('motion')) {
+              return 'vendor-motion';
             }
             if (id.includes('zod')) {
               return 'vendor-zod';

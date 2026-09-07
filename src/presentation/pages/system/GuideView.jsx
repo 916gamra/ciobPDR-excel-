@@ -1,8 +1,6 @@
 import AnimatedPage from '../../components/common/AnimatedPage';
 import {
   BookOpen,
-  CheckCircle2,
-  ArrowRight,
   Zap,
   Database,
   Layers,

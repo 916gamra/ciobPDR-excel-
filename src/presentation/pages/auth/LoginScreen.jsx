@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   ShieldCheck,
   Key,
@@ -14,9 +14,9 @@ import {
   Hash,
   LogIn,
   Users,
+  Shield,
   Package,
   Wrench,
-  Shield,
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';

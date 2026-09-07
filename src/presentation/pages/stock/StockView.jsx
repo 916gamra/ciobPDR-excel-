@@ -1,21 +1,17 @@
 import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import CustomSelect from '../../components/common/CustomSelect';
-import SortieEntreeIcon from '../../components/common/SortieEntreeIcon';
 import QuickMovementModal from '../warehouse/QuickMovementModal';
 import EditArticleModal from './EditArticleModal';
 import { useSpareParts } from '../../hooks/useSpareParts';
 import StockKPIBar from './components/StockKPIBar';
 import {
   Search,
-  Filter,
   Plus,
   AlertTriangle,
   CheckCircle2,
   XCircle,
   Package,
-  Layers,
-  ArrowRight,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -30,19 +26,11 @@ import {
   TrendingDown,
   TrendingUp,
   Boxes,
-  ShieldCheck,
   X,
   Radio,
-  FileSpreadsheet,
-  Zap,
   MoreVertical,
   Edit,
-  RotateCcw,
   Inbox,
-  Wrench,
-  Clock,
-  Sparkles,
-  Users,
 } from 'lucide-react';
 
 const TYPE_STYLES = {
@@ -80,12 +68,12 @@ export default function StockView({
   operations = [],
   mouvements = [],
   onOpenAddArticle = () => {},
-  onQuickSortie = () => {},
+  onQuickSortie: _onQuickSortie = () => {},
   onAddMouvement = () => {},
   onUpdateArticle: propOnUpdateArticle,
   onDirectAdjustStock: propOnDirectAdjustStock,
   stockKPIs = { total: 0, alertes: 0, ruptures: 0, ok: 0, totalSorties: 0, totalEntrees: 0 },
-  onNavigateToType = () => {},
+  onNavigateToType: _onNavigateToType = () => {},
 }) {
   const { stockItems: dbStockItems, updateArticle: dbUpdateArticle, directAdjustStock: dbDirectAdjustStock } = useSpareParts();
 

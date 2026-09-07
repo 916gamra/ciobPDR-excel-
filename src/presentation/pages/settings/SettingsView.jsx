@@ -6,8 +6,6 @@ import {
   Database,
   HardDrive,
   RefreshCw,
-  SlidersHorizontal,
-  ArrowUpDown,
   Check,
   AlertTriangle,
   FileSpreadsheet,
@@ -20,7 +18,6 @@ import {
   RotateCcw,
   FolderOpen,
   CheckCircle2,
-  Play,
   FileCode,
   Trash2,
   ChevronRight,
@@ -44,10 +41,10 @@ import {
   LogOut as LogOutIcon,
   Laptop,
   ShieldCheck,
-  Gauge,
   Zap,
   Wifi,
   WifiOff,
+  Gauge,
 } from 'lucide-react';
 
 import {

@@ -3,7 +3,6 @@ import * as XLSX from 'xlsx';
 import SequentialCodePicker from '../../components/common/SequentialCodePicker';
 import {
   FileSpreadsheet,
-  Layers,
   Search,
   Check,
   AlertTriangle,
@@ -20,8 +19,6 @@ import {
   MapPin,
   Users,
   Building2,
-  Truck,
-  DollarSign,
   Boxes,
   HelpCircle,
   X,
@@ -33,8 +30,6 @@ import {
   CalendarRange,
   ChevronLeft,
   ChevronRight,
-  ArrowUpAZ,
-  ArrowDownAZ,
   Crown,
   UserCheck,
   ExternalLink,
@@ -57,14 +52,15 @@ import {
   Send,
   CornerDownRight,
   Split,
-  ChevronsUp,
   RefreshCw,
   Scale,
   ArrowUpRight,
   ArrowDownLeft,
-  Gauge,
   ShieldCheck,
   Hammer,
+  Truck,
+  Gauge,
+  Layers,
 } from 'lucide-react';
 
 import { validateMovementWithContext } from '../../../utils/formulaEngine';

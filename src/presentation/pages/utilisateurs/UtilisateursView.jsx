@@ -23,8 +23,8 @@ import {
   ShieldCheck,
   Check,
   Hash,
-  Globe,
   Crown,
+  Globe,
   X,
 } from 'lucide-react';
 import SupervisorAccount from '../../components/common/icons/SupervisorAccount';
