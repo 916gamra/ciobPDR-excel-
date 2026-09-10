@@ -551,22 +551,22 @@ export function useGmaoState() {
     }
     lastSavedState.current = currentStateStr;
 
-    // Save unified state to LocalStorage and IndexedDB
+    // Save unified state to LocalStorage
     storageService.setItem('gmao_full_state_v1', fullState);
-    indexedDBService.setItem('gmao_full_state_v1', fullState);
-
-    // Dedicated keys for Entrepôt isolation & Blueprints
     storageService.setItem('gmao_blueprints_v1', blueprints);
     storageService.setItem('gmao_comp_families_v1', compFamilies);
     storageService.setItem('gmao_comp_templates_v1', compTemplates);
     storageService.setItem('gmao_part_types_v1', partTypes);
     storageService.setItem('gmao_part_designations_v1', partDesignations);
 
-    // Keep individual DB backups for compatibility with export/import tools
-    indexedDBService.setItem('gmao_blueprints_v1', blueprints);
-    indexedDBService.setItem('gmao_warehouse_items_v1', warehouseItems);
-    indexedDBService.setItem('gmao_mouvements', mouvements);
-    indexedDBService.setItem('gmao_raw_stock_v6', rawStock);
+    // High performance single-transaction batch save to IndexedDB
+    indexedDBService.setItemsBatch({
+      gmao_full_state_v1: fullState,
+      gmao_blueprints_v1: blueprints,
+      gmao_warehouse_items_v1: warehouseItems,
+      gmao_mouvements: mouvements,
+      gmao_raw_stock_v6: rawStock,
+    });
   }, [
     types,
     designations,

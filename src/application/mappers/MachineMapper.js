@@ -7,6 +7,7 @@ export class MachineMapper {
       designation: entity.designation,
       id_family: entity.id_family,
       id_templates: entity.id_templates,
+      id_blueprint: entity.id_blueprint || '',
       id_zone_default: entity.id_zone_default,
       technician: entity.technician,
       status: entity.status,

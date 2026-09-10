@@ -1142,6 +1142,7 @@ export default function App() {
             machines,
             families: effectiveFamilies,
             templates: effectiveTemplates,
+            blueprints,
             zones,
             technicians,
             mouvements,
@@ -1160,6 +1161,7 @@ export default function App() {
             onNavigateToFamily: handleNavigateToFamilyFiltered,
             onNavigateToTemplate: handleNavigateToTemplatesFiltered,
             onNavigateToZone: handleNavigateToMachinesByZone,
+            onNavigateToBlueprints: handleNavigateToBlueprintsFiltered,
           },
           compFamilies: {
             compFamilies, search: whSearch, setSearch: setWhSearch, onAddCompFamily: handleAddCompFamily, onUpdateCompFamily: handleUpdateCompFamily, onDeleteCompFamily: handleDeleteCompFamily, onNavigateToCompTemplates: handleNavigateToCompTemplates
@@ -1260,7 +1262,7 @@ export default function App() {
         showAddMachineModal={showAddMachineModal} setShowAddMachineModal={setShowAddMachineModal}
         showAddUserModal={showAddUserModal} setShowAddUserModal={setShowAddUserModal} addUserModalType={addUserModalType} setAddUserModalType={setAddUserModalType}
         showAddZoneModal={showAddZoneModal} setShowAddZoneModal={setShowAddZoneModal}
-        types={types} stockItems={stockItems} effectiveFamilies={effectiveFamilies} effectiveTemplates={effectiveTemplates} zones={zones} technicians={technicians} machines={machines} operations={operations}
+        types={types} stockItems={stockItems} effectiveFamilies={effectiveFamilies} effectiveTemplates={effectiveTemplates} blueprints={blueprints} zones={zones} technicians={technicians} machines={machines} operations={operations}
         handleAddArticle={handleAddArticle} handleAddMachine={handleAddMachine} handleUpdateMachine={handleUpdateMachine} handleDeleteMachine={handleDeleteMachine}
         handleAddTechnician={handleAddTechnician} handleAddOperation={handleAddOperation} handleAddZone={handleAddZone}
         setCurrentTab={setCurrentTab}

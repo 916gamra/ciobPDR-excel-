@@ -5,6 +5,7 @@ import QuickMovementModal from '../warehouse/QuickMovementModal';
 import EditArticleModal from './EditArticleModal';
 import { useSpareParts } from '../../hooks/useSpareParts';
 import StockKPIBar from './components/StockKPIBar';
+import { multiTokenSearch } from '../../../utils/searchUtils';
 import {
   Search,
   Plus,
@@ -101,13 +102,7 @@ export default function StockView({
 
       // Filter by search
       if (deferredStockSearch) {
-        const searchLower = deferredStockSearch.toLowerCase();
-        const refMatch = (item.ref || '').toLowerCase().includes(searchLower);
-        const desigMatch = (item.designation || '').toLowerCase().includes(searchLower);
-        const emplMatch = (item.emplacement || '').toLowerCase().includes(searchLower);
-        const typeMatch = (item.type || item.id_type || '').toLowerCase().includes(searchLower);
-
-        return refMatch || desigMatch || emplMatch || typeMatch;
+        return multiTokenSearch(item, ['ref', 'designation', 'emplacement', 'type', 'id_type'], deferredStockSearch);
       }
 
       return true;

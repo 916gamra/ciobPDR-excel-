@@ -10,7 +10,7 @@ export default function AppModals({
   showAddMachineModal, setShowAddMachineModal,
   showAddUserModal, setShowAddUserModal, addUserModalType, setAddUserModalType,
   showAddZoneModal, setShowAddZoneModal,
-  types, stockItems, effectiveFamilies, effectiveTemplates, zones, technicians, machines, operations,
+  types, stockItems, effectiveFamilies, effectiveTemplates, blueprints = [], zones, technicians, machines, operations,
   handleAddArticle, handleAddMachine, handleUpdateMachine, handleDeleteMachine,
   handleAddTechnician, handleAddOperation, handleAddZone,
   setCurrentTab,
@@ -35,6 +35,7 @@ export default function AppModals({
         onClose={() => setShowAddMachineModal(false)}
         families={effectiveFamilies}
         templates={effectiveTemplates}
+        blueprints={blueprints}
         zones={zones}
         technicians={technicians}
         machines={machines}
@@ -48,6 +49,10 @@ export default function AppModals({
         onOpenAddTemplateModal={() => {
           setShowAddMachineModal(false);
           startTransition(() => setCurrentTab('templates'));
+        }}
+        onOpenAddBlueprintModal={() => {
+          setShowAddMachineModal(false);
+          startTransition(() => setCurrentTab('blueprints'));
         }}
         onOpenAddZoneModal={() => {
           setShowAddMachineModal(false);

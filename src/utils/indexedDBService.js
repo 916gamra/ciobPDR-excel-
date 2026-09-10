@@ -131,6 +131,90 @@ export const indexedDBService = {
   },
 
   /**
+   * Batch save multiple items in a single readwrite transaction
+   * @param {Object|Array<[string, any]>} entries - Key-value map or array of [key, val] tuples
+   */
+  async setItemsBatch(entries) {
+    try {
+      const db = await getDB();
+      const entriesList = Array.isArray(entries)
+        ? entries
+        : Object.entries(entries);
+
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('app_data', 'readwrite');
+          const store = tx.objectStore('app_data');
+
+          for (const [key, value] of entriesList) {
+            store.put(value, key);
+          }
+
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = (e) => {
+            console.warn('[IndexedDB] setItemsBatch transaction error:', e);
+            resolve(false);
+          };
+        } catch (e) {
+          console.warn('[IndexedDB] setItemsBatch error:', e);
+          resolve(false);
+        }
+      });
+    } catch (e) {
+      console.warn('[IndexedDB] Fallback setItemsBatch error:', e);
+      return false;
+    }
+  },
+
+  /**
+   * Batch read multiple keys in a single readonly transaction
+   * @param {string[]} keys - Array of keys to retrieve
+   * @returns {Promise<Object>} Map of key -> value
+   */
+  async getItemsBatch(keys) {
+    try {
+      const db = await getDB();
+      return new Promise((resolve) => {
+        try {
+          const tx = db.transaction('app_data', 'readonly');
+          const store = tx.objectStore('app_data');
+          const results = {};
+          let completed = 0;
+
+          if (!keys || keys.length === 0) {
+            return resolve(results);
+          }
+
+          for (const key of keys) {
+            const req = store.get(key);
+            req.onsuccess = () => {
+              if (req.result !== undefined) {
+                results[key] = req.result;
+              }
+              completed++;
+              if (completed === keys.length) {
+                resolve(results);
+              }
+            };
+            req.onerror = () => {
+              completed++;
+              if (completed === keys.length) {
+                resolve(results);
+              }
+            };
+          }
+        } catch (e) {
+          console.warn('[IndexedDB] getItemsBatch error:', e);
+          resolve({});
+        }
+      });
+    } catch (e) {
+      console.warn('[IndexedDB] Fallback getItemsBatch error:', e);
+      return {};
+    }
+  },
+
+  /**
    * Close connection
    */
   async close() {

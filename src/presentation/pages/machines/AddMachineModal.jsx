@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Factory, Plus, X, MapPin, Users, Radio, Cpu } from 'lucide-react';
+import { Factory, Plus, X, MapPin, Users, Radio, Cpu, FileText } from 'lucide-react';
 import { HubIcon } from '../../components/common/icons/HubIcon';
 import { CategoryIcon } from '../../components/common/icons/CategoryIcon';
 import CustomSelect from '../../components/common/CustomSelect';
@@ -37,12 +37,14 @@ export default function AddMachineModal({
   onClose,
   families = [],
   templates = [],
+  blueprints = [],
   zones = [],
   technicians = [],
   machines = [],
   onAddMachine,
   onOpenAddFamilyModal,
   onOpenAddTemplateModal,
+  onOpenAddBlueprintModal,
   onOpenAddZoneModal,
   onOpenAddTechModal,
 }) {
@@ -51,6 +53,7 @@ export default function AddMachineModal({
     designation: '',
     id_family: families[0]?.id_family || '',
     id_templates: templates[0]?.id_templates || '',
+    id_blueprint: '',
     id_zone_default: zones[0]?.id_zone || '',
     technician: technicians[0]?.id_technician || '',
     status: 'En Service',
@@ -70,6 +73,7 @@ export default function AddMachineModal({
         designation: '',
         id_family: initialFam,
         id_templates: initialTpl,
+        id_blueprint: '',
         id_zone_default: zones[0]?.id_zone || '',
         technician: technicians[0]?.id_technician || '',
         status: 'En Service',
@@ -82,23 +86,76 @@ export default function AddMachineModal({
     ? templates.filter((t) => t.id_family === form.id_family)
     : templates;
 
+  // Cascading blueprints according to selected template / family
+  const availableBlueprints = useMemo(() => {
+    if (form.id_templates) {
+      const byTpl = blueprints.filter((b) => b.id_templates === form.id_templates);
+      if (byTpl.length > 0) return byTpl;
+    }
+    if (form.id_family) {
+      const byFam = blueprints.filter((b) => b.id_family === form.id_family);
+      if (byFam.length > 0) return byFam;
+    }
+    return blueprints;
+  }, [blueprints, form.id_templates, form.id_family]);
+
+  // Format blueprint options with clean non-selected default
+  const blueprintOptions = useMemo(() => {
+    const list = [
+      {
+        value: '',
+        label: '— Non sélectionné (Optionnel) —',
+        sublabel: 'Aucun schéma ou plan technique assigné',
+      },
+    ];
+
+    availableBlueprints.forEach((b) => {
+      list.push({
+        value: b.id_blueprint,
+        label: `${b.id_blueprint} • ${b.libelle || b.ref_plan || ''}`,
+        sublabel: `${b.ref_plan ? `Plan: ${b.ref_plan}` : ''} ${b.revision ? `(${b.revision})` : ''} • ${b.type_schema || ''}`,
+        badge: b.type_schema || 'Schéma',
+        badgeColor:
+          b.type_schema === 'Mécanique'
+            ? 'bg-blue-100 text-blue-800'
+            : b.type_schema === 'Électrique'
+              ? 'bg-amber-100 text-amber-800'
+              : b.type_schema === 'Hydraulique'
+                ? 'bg-indigo-100 text-indigo-800'
+                : 'bg-slate-100 text-slate-800',
+      });
+    });
+
+    return list;
+  }, [availableBlueprints]);
+
   const handleFamilyChange = (newFam) => {
     const relTpl = templates.filter((t) => t.id_family === newFam);
     const newTpl = relTpl[0]?.id_templates || '';
     const autoCode = generateMachineCode(newTpl, machines);
+    
+    // Check if current blueprint belongs to the new family
+    const relBps = blueprints.filter((b) => b.id_family === newFam);
+    const keepBp = relBps.some((b) => b.id_blueprint === form.id_blueprint);
+
     setForm((prev) => ({
       ...prev,
       id_family: newFam,
       id_templates: newTpl,
+      id_blueprint: keepBp ? prev.id_blueprint : '',
       id_machine_registered: autoCode,
     }));
   };
 
   const handleTemplateChange = (newTpl) => {
     const autoCode = generateMachineCode(newTpl, machines);
+    const relBps = blueprints.filter((b) => b.id_templates === newTpl);
+    const keepBp = relBps.some((b) => b.id_blueprint === form.id_blueprint);
+
     setForm((prev) => ({
       ...prev,
       id_templates: newTpl,
+      id_blueprint: keepBp ? prev.id_blueprint : '',
       id_machine_registered: autoCode,
     }));
   };
@@ -141,6 +198,7 @@ export default function AddMachineModal({
       designation: form.designation.trim(),
       id_family: form.id_family,
       id_templates: form.id_templates || availableTemplates[0]?.id_templates || '',
+      id_blueprint: form.id_blueprint || '',
       id_zone_default: form.id_zone_default,
       technician: form.technician,
       status: form.status,
@@ -265,6 +323,39 @@ export default function AddMachineModal({
                 placeholder="-- Choisir Modèle --"
               />
             </div>
+          </div>
+
+          {/* Blueprint / Plan Schéma Technique (Optionnel) */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
+                <FileText className="w-3 h-3 text-cyan-600" />
+                <span>Blueprint / Schéma Machine</span>
+                <span className="text-[10px] font-normal text-slate-400 lowercase italic">(optionnel)</span>
+              </label>
+              {onOpenAddBlueprintModal && (
+                <button
+                  type="button"
+                  onClick={onOpenAddBlueprintModal}
+                  className="text-[11px] text-cyan-700 hover:text-cyan-900 font-bold inline-flex items-center gap-0.5 cursor-pointer bg-cyan-50 px-1.5 py-0.5 rounded border border-cyan-200/60"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Nouveau Blueprint</span>
+                </button>
+              )}
+            </div>
+            <CustomSelect
+              value={form.id_blueprint}
+              onChange={(val) => setForm({ ...form, id_blueprint: val })}
+              options={blueprintOptions}
+              placeholder="— Non sélectionné —"
+            />
+            {form.id_blueprint && (
+              <p className="mt-1 text-[11px] text-cyan-700 font-medium flex items-center gap-1">
+                <FileText className="w-3 h-3" />
+                <span>Plan lié : {blueprintOptions.find((o) => o.value === form.id_blueprint)?.label}</span>
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3.5">

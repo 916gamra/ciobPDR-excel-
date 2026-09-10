@@ -33,6 +33,7 @@ import {
   Radio,
   FileSpreadsheet,
   Zap,
+  FileText,
 } from 'lucide-react';
 
 // Helper to find a zone object from any zone/sector reference (id_zone, code_zone, code, or libelle)
@@ -93,6 +94,7 @@ export default function MachinesRegisteredView({
   effectiveFamilies = [],
   templates: passedTemplates = [],
   effectiveTemplates = [],
+  blueprints = [],
   zones = [],
   technicians = [],
   mouvements = [],
@@ -111,6 +113,7 @@ export default function MachinesRegisteredView({
   onNavigateToFamily = () => {},
   onNavigateToTemplate = () => {},
   onNavigateToZone = () => {},
+  onNavigateToBlueprints = () => {},
 }) {
   const { machines: dbMachines, updateMachine: dbUpdateMachine, deleteMachine: dbDeleteMachine } = useMachines();
 
@@ -237,21 +240,25 @@ export default function MachinesRegisteredView({
         const techName = techObj ? `${techObj.nom} ${techObj.id_technician || ''}`.toLowerCase() : '';
         const znObj = getZoneByRef(m.id_zone_default, zones);
         const znName = znObj ? `${znObj.libelle} ${znObj.code_zone || ''} ${znObj.id_zone || ''}`.toLowerCase() : '';
+        const bpObj = blueprints.find((b) => b.id_blueprint === m.id_blueprint);
+        const bpName = bpObj ? `${bpObj.id_blueprint} ${bpObj.libelle || ''} ${bpObj.ref_plan || ''} ${bpObj.revision || ''}`.toLowerCase() : '';
 
         return (
           String(m.id_machine_registered || '').toLowerCase().includes(q) ||
           String(m.designation || '').toLowerCase().includes(q) ||
           String(m.id_family || '').toLowerCase().includes(q) ||
           String(m.id_templates || '').toLowerCase().includes(q) ||
+          String(m.id_blueprint || '').toLowerCase().includes(q) ||
           String(m.id_zone_default || '').toLowerCase().includes(q) ||
           String(m.technician || '').toLowerCase().includes(q) ||
           techName.includes(q) ||
-          znName.includes(q)
+          znName.includes(q) ||
+          bpName.includes(q)
         );
       }
       return true;
     });
-  }, [machines, mchFamilyFilter, mchTemplateFilter, mchZoneFilter, statusFilter, mchSearch, technicians, zones]);
+  }, [machines, mchFamilyFilter, mchTemplateFilter, mchZoneFilter, statusFilter, mchSearch, technicians, zones, blueprints]);
 
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
@@ -592,6 +599,7 @@ export default function MachinesRegisteredView({
                     { key: 'designation', label: 'Désignation (C)' },
                     { key: 'id_family', label: 'Famille (D)' },
                     { key: 'id_templates', label: 'Template Modèle (E)' },
+                    { key: 'id_blueprint', label: 'Blueprint / Schéma' },
                     { key: 'id_zone_default', label: 'Zone Défaut (F)' },
                     { key: 'technician', label: 'Technicien Assigné (G)' },
                     { key: 'status', label: 'Statut Opérationnel (H)' },
@@ -678,7 +686,7 @@ export default function MachinesRegisteredView({
                 {/* FAMILLE & TEMPLATE (D + E) */}
                 <th
                   onClick={() => handleSort('id_family')}
-                  className="py-3 px-3.5 cursor-pointer select-none hover:bg-slate-200/80 transition group min-w-[220px]"
+                  className="py-3 px-3.5 cursor-pointer select-none hover:bg-slate-200/80 transition group min-w-[200px]"
                   title="Cliquer pour trier par Famille & Modèle"
                 >
                   <div className="flex items-center gap-1.5">
@@ -689,6 +697,20 @@ export default function MachinesRegisteredView({
                     <span>FAMILLE & TEMPLATE</span>
                     <span className="text-slate-400 font-normal text-[10px]">(D+E)</span>
                     {renderSortIcon('id_family')}
+                  </div>
+                </th>
+
+                {/* BLUEPRINT (Plan / Schéma) */}
+                <th
+                  onClick={() => handleSort('id_blueprint')}
+                  className="py-3 px-3.5 cursor-pointer select-none hover:bg-slate-200/80 transition group min-w-[170px]"
+                  title="Cliquer pour trier par Blueprint / Schéma"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                    <span>BLUEPRINT</span>
+                    <span className="text-slate-400 font-normal text-[10px]">(Plan)</span>
+                    {renderSortIcon('id_blueprint')}
                   </div>
                 </th>
 
@@ -748,7 +770,7 @@ export default function MachinesRegisteredView({
             <tbody className="divide-y divide-slate-200/80">
               {displayedData.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-slate-500 font-medium">
+                  <td colSpan="9" className="py-12 text-center text-slate-500 font-medium">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Factory className="w-8 h-8 text-slate-300" />
                       <span>Aucune machine ne correspond aux critères de recherche.</span>
@@ -759,6 +781,7 @@ export default function MachinesRegisteredView({
                 displayedData.map((m, idx) => {
                   const fam = families.find((f) => f.id_family === m.id_family);
                   const tpl = templates.find((t) => t.id_templates === m.id_templates);
+                  const bp = blueprints.find((b) => b.id_blueprint === m.id_blueprint);
                   const zn = getZoneByRef(m.id_zone_default, zones);
                   const tech = technicians.find(
                     (t) => t.id_technician === m.technician || t.nom === m.technician
@@ -837,6 +860,37 @@ export default function MachinesRegisteredView({
                             )}
                           </button>
                         </div>
+                      </td>
+
+                      {/* Blueprint Column */}
+                      <td className="py-2.5 px-3.5 whitespace-nowrap">
+                        {m.id_blueprint ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNavigateToBlueprints(m.id_family, m.id_templates);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-teal-50 text-teal-800 border border-teal-200/80 text-[11px] font-semibold hover:bg-teal-100 hover:border-teal-300 transition cursor-pointer shadow-2xs group"
+                            title="Voir le schéma / plan technique dans Blueprints"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-teal-600 shrink-0 group-hover:scale-110 transition-transform" />
+                            <span className="font-mono font-bold">{m.id_blueprint}</span>
+                            {bp?.revision && (
+                              <span className="text-[9.5px] px-1 py-0.2 bg-teal-200/60 text-teal-900 rounded font-bold font-mono">
+                                {bp.revision}
+                              </span>
+                            )}
+                            {bp?.libelle && (
+                              <span className="text-teal-700 font-normal text-[10px] max-w-[120px] truncate">
+                                • {bp.libelle}
+                              </span>
+                            )}
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-slate-400 font-mono text-[11px] italic bg-slate-50 border border-slate-200/50">
+                            — Non sélectionné —
+                          </span>
+                        )}
                       </td>
 
                       {/* Unified Zone & Technicien (F + G) */}
@@ -1078,6 +1132,34 @@ export default function MachinesRegisteredView({
                       .map((t) => ({ value: t.id_templates, label: `${t.libelle} (${t.id_templates})` }))}
                   />
                 </div>
+              </div>
+
+              {/* Blueprint / Plan Schéma Technique (Optionnel) */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <FileText className="w-3 h-3 text-cyan-600" />
+                    <span>Blueprint / Schéma Machine</span>
+                  </span>
+                  <span className="text-[10px] font-normal text-slate-400 lowercase italic">(optionnel)</span>
+                </label>
+                <CustomSelect
+                  value={toEdit.id_blueprint || ''}
+                  onChange={(val) => setToEdit({ ...toEdit, id_blueprint: val })}
+                  options={[
+                    { value: '', label: '— Non sélectionné (Optionnel) —' },
+                    ...blueprints
+                      .filter(
+                        (b) =>
+                          (!toEdit.id_templates || b.id_templates === toEdit.id_templates) &&
+                          (!toEdit.id_family || b.id_family === toEdit.id_family)
+                      )
+                      .map((b) => ({
+                        value: b.id_blueprint,
+                        label: `${b.id_blueprint} • ${b.libelle || b.ref_plan || ''} ${b.revision ? `(${b.revision})` : ''}`,
+                      })),
+                  ]}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">

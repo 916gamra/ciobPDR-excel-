@@ -580,9 +580,13 @@ export default function BlueprintMachineView({
                 displayedData.map((b) => {
                   const matchingFamily = families.find((f) => f.id_family === b.id_family);
                   const matchingTemplate = templates.find((t) => t.id_templates === b.id_templates);
-                  const relatedMachinesCount = machines.filter(
+                  const directlyLinkedCount = machines.filter(
+                    (m) => m.id_blueprint === b.id_blueprint
+                  ).length;
+                  const templateLinkedCount = machines.filter(
                     (m) => m.id_templates === b.id_templates
                   ).length;
+                  const relatedMachinesCount = directlyLinkedCount > 0 ? directlyLinkedCount : templateLinkedCount;
 
                   return (
                     <tr

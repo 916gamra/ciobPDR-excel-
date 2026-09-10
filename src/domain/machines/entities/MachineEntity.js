@@ -5,6 +5,7 @@ export class MachineEntity {
     designation,
     id_family,
     id_templates,
+    id_blueprint,
     id_zone_default,
     technician,
     status
@@ -14,6 +15,7 @@ export class MachineEntity {
     this.designation = designation || '';
     this.id_family = id_family || '';
     this.id_templates = id_templates || '';
+    this.id_blueprint = id_blueprint || '';
     this.id_zone_default = id_zone_default || '';
     this.technician = technician || '';
     this.status = status || 'En service'; // En service, En maintenance, Arrêt
