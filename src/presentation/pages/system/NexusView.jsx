@@ -1,4 +1,6 @@
 import AnimatedPage from '../../components/common/AnimatedPage';
+import { HubIcon } from '../../components/common/icons/HubIcon';
+import { CategoryIcon } from '../../components/common/icons/CategoryIcon';
 import {
   GitBranch,
   Layers,
@@ -120,7 +122,7 @@ export default function NexusView({
           <div className="space-y-3 text-xs">
             <div className="p-3 rounded-xl bg-cyan-50/60 border border-cyan-200">
               <div className="font-bold text-cyan-900 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-cyan-600" />
+                <HubIcon className="w-3.5 h-3.5 text-cyan-600" />
                 <span>Niveau 1 : Family ({families.length})</span>
               </div>
               <div className="text-[11.5px] text-cyan-800 mt-1">
@@ -138,7 +140,7 @@ export default function NexusView({
 
             <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200">
               <div className="font-bold text-amber-900 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-amber-600" />
+                <CategoryIcon className="w-3.5 h-3.5 text-amber-600" />
                 <span>Niveau 2 : Templates ({templates.length})</span>
               </div>
               <div className="text-[11.5px] text-amber-800 mt-1">

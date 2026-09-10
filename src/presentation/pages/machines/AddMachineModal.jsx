@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Factory, Plus, X, Boxes, Layers, MapPin, Users, Radio, Cpu } from 'lucide-react';
+import { Factory, Plus, X, MapPin, Users, Radio, Cpu } from 'lucide-react';
+import { HubIcon } from '../../components/common/icons/HubIcon';
+import { CategoryIcon } from '../../components/common/icons/CategoryIcon';
 import CustomSelect from '../../components/common/CustomSelect';
 import SequentialCodePicker from '../../components/common/SequentialCodePicker';
 
@@ -208,7 +210,7 @@ export default function AddMachineModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
-                  <Boxes className="w-3 h-3 text-cyan-600" />
+                  <HubIcon className="w-3 h-3 text-cyan-600" />
                   <span>Famille (D)</span>
                 </label>
                 {onOpenAddFamilyModal && (
@@ -237,7 +239,7 @@ export default function AddMachineModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
-                  <Layers className="w-3 h-3 text-amber-600" />
+                  <CategoryIcon className="w-3 h-3 text-amber-600" />
                   <span>Template (E)</span>
                 </label>
                 {onOpenAddTemplateModal && (
@@ -271,7 +273,7 @@ export default function AddMachineModal({
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-purple-600" />
-                  <span>Zone Défaut (F)</span>
+                  <span>Secteur / Zone Défaut (F)</span>
                 </label>
                 {onOpenAddZoneModal && (
                   <button
@@ -280,18 +282,23 @@ export default function AddMachineModal({
                     className="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold inline-flex items-center gap-0.5 cursor-pointer bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60"
                   >
                     <Plus className="w-3 h-3" />
-                    <span>Nouvelle</span>
+                    <span>Nouveau</span>
                   </button>
                 )}
               </div>
               <CustomSelect
                 value={form.id_zone_default}
                 onChange={(val) => setForm({ ...form, id_zone_default: val })}
-                options={zones.map((z) => ({
-                  value: z.id_zone,
-                  label: `${z.libelle} (${z.id_zone})`,
-                }))}
-                placeholder="-- Choisir Zone --"
+                options={zones.map((z) => {
+                  const codeZ = z.code_zone || z.code || z.id_zone;
+                  const idZ = z.id_zone;
+                  const showDual = idZ && idZ !== codeZ;
+                  return {
+                    value: codeZ,
+                    label: `${z.code_zone ? z.code_zone + ' • ' : ''}${z.libelle}${showDual ? ` (${idZ})` : ''}`,
+                  };
+                })}
+                placeholder="-- Choisir Secteur / Zone --"
               />
             </div>
 

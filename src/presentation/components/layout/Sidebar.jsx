@@ -22,12 +22,14 @@ import {
   Sun,
   Moon,
   LogOut,
-  SwatchBook,
+  FingerprintPattern,
 } from 'lucide-react';
-import { RoboticHand } from '../common/icons/RoboticHand';
+import { HubIcon } from '../common/icons/HubIcon';
+import { CategoryIcon } from '../common/icons/CategoryIcon';
 import PartInfoIcon from '../common/icons/PartInfoIcon';
-import ManufacturingIcon from '../common/icons/ManufacturingIcon';
+import { SpokeIcon } from '../common/icons/SpokeIcon';
 import { CubeIcon } from '../common/icons/CubeIcon';
+import { LayersIcon } from '../common/icons/LayersIcon';
 
 export default function Sidebar({
   currentTab,
@@ -318,7 +320,7 @@ export default function Sidebar({
               {/* Families (Machines) */}
               <button onClick={() => navTo('families')} className={getTabClass('families', true)}>
                 <span className="flex items-center gap-2">
-                  <RoboticHand
+                  <HubIcon
                     className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`}
                   />
                   <span>Familles Machines</span>
@@ -329,20 +331,31 @@ export default function Sidebar({
               {/* Templates (Machines) */}
               <button onClick={() => navTo('templates')} className={getTabClass('templates', true)}>
                 <span className="flex items-center gap-2">
-                  <Layers
+                  <CategoryIcon
                     className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}
                   />
                   <span>Templates Machines</span>
                 </span>
                 <span className={getBadgeClass('templates')}>{counts.templates || 0}</span>
               </button>
+
+              {/* Blueprint Machine (Level 3) */}
+              <button onClick={() => navTo('blueprints')} className={getTabClass('blueprints', true)}>
+                <span className="flex items-center gap-2">
+                  <FingerprintPattern
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}
+                  />
+                  <span>Blueprint Machine</span>
+                </span>
+                <span className={getBadgeClass('blueprints')}>{counts.blueprints || 0}</span>
+              </button>
             </div>
           </div>
 
           {/* GROUPE 3: GROUPE ENTREPÔT (COMPONENTS & PARTS) */}
           <div>
-            <div className="px-3 mb-1.5 text-[10px] font-bold tracking-wider text-teal-500 uppercase flex items-center gap-1.5">
-              <Warehouse className="w-3.5 h-3.5 text-teal-500" />
+            <div className="px-3 mb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
+              <Warehouse className="w-3.5 h-3.5 text-slate-400" />
               <span>Groupe Entrepôt</span>
             </div>
             <div className="space-y-1">
@@ -350,7 +363,7 @@ export default function Sidebar({
               <button onClick={() => navTo('entrepot')} className={getTabClass('entrepot')}>
                 <span className="flex items-center gap-2.5">
                   <Warehouse
-                    className={`w-4 h-4 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}
+                    className={`w-4 h-4 shrink-0 ${isDark ? 'text-indigo-400' : 'text-indigo-600'}`}
                   />
                   <span>Entrepôt (Inventaire)</span>
                 </span>
@@ -365,8 +378,8 @@ export default function Sidebar({
                 className={getTabClass('comp_families', true)}
               >
                 <span className="flex items-center gap-2">
-                  <ManufacturingIcon
-                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-teal-400' : 'text-teal-600'}`}
+                  <SpokeIcon
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`}
                   />
                   <span>Familles (Composants)</span>
                 </span>
@@ -381,7 +394,7 @@ export default function Sidebar({
               >
                 <span className="flex items-center gap-2">
                   <CubeIcon
-                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-teal-300' : 'text-teal-500'}`}
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-purple-400' : 'text-purple-600'}`}
                   />
                   <span>Templates (Composants)</span>
                 </span>
@@ -396,10 +409,10 @@ export default function Sidebar({
                 className={getTabClass('part_types', true)}
               >
                 <span className="flex items-center gap-2">
-                  <SwatchBook
+                  <LayersIcon
                     className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}
                   />
-                  <span>Types (Parts PDR)</span>
+                  <span>Types (Parts)</span>
                 </span>
                 <span className={getBadgeClass('part_types')}>
                   {counts.partTypes || 0}
@@ -412,9 +425,9 @@ export default function Sidebar({
               >
                 <span className="flex items-center gap-2">
                   <PartInfoIcon
-                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-emerald-300' : 'text-emerald-500'}`}
+                    className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}
                   />
-                  <span>Désignations (Parts PDR)</span>
+                  <span>Désignations (Parts)</span>
                 </span>
                 <span className={getBadgeClass('part_designations')}>
                   {counts.partDesignations || 0}

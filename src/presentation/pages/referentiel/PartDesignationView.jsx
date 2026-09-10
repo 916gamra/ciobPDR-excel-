@@ -2,11 +2,11 @@ import {  useState, useMemo  } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import { PlayingCardsFan } from '../../components/common/icons/PlayingCardsFan';
 import PartInfoIcon from '../../components/common/icons/PartInfoIcon';
+import { LayersIcon } from '../../components/common/icons/LayersIcon';
 import {
   Plus,
   Search,
   ArrowRight,
-  SwatchBook,
   Trash2,
   Edit2,
   Warehouse,
@@ -205,7 +205,7 @@ export default function PartDesignationView({
           </div>
 
           <div className="md:col-span-4 flex items-center gap-2">
-            <SwatchBook className="w-4 h-4 text-slate-400 shrink-0" />
+            <LayersIcon className="w-4 h-4 text-slate-400 shrink-0" />
             <select
               value={partDesignationTypeFilter}
               onChange={(e) =>
@@ -257,7 +257,7 @@ export default function PartDesignationView({
                   className="py-2.5 px-4 cursor-pointer hover:bg-slate-200/60 transition select-none group"
                 >
                   <div className="flex items-center gap-1.5">
-                    <PartInfoIcon className="w-3.5 h-3.5 text-teal-600" />
+                    <PartInfoIcon className="w-3.5 h-3.5 text-blue-600" />
                     <span>DÉSIGNATION DE LA PIÈCE</span>
                     {renderSortIcon('designation')}
                   </div>
@@ -316,7 +316,7 @@ export default function PartDesignationView({
                       </td>
                       <td className="py-3 px-4 font-semibold text-slate-800 text-[13px]">
                         <div className="flex items-center gap-2">
-                          <PartInfoIcon className="w-4 h-4 text-teal-600 shrink-0" />
+                          <PartInfoIcon className="w-4 h-4 text-blue-600 shrink-0" />
                           <span>{d.designation}</span>
                         </div>
                       </td>
@@ -328,7 +328,7 @@ export default function PartDesignationView({
                           className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-semibold transition cursor-pointer"
                           title="Voir le type de part parent"
                         >
-                          <SwatchBook className="w-3 h-3 text-emerald-600" />
+                          <LayersIcon className="w-3 h-3 text-emerald-600" />
                           <span className="font-mono">{d.id_type}</span>
                           {typeObj && (
                             <span className="text-slate-500 font-normal">({typeObj.libelle})</span>

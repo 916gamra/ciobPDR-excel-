@@ -1,12 +1,12 @@
 import {  useState, useRef, useMemo, useEffect  } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import SequentialCodePicker from '../../components/common/SequentialCodePicker';
-import { RoboticHand } from '../../components/common/icons/RoboticHand';
+import { HubIcon } from '../../components/common/icons/HubIcon';
+import { CategoryIcon } from '../../components/common/icons/CategoryIcon';
 import {
   Plus,
   Search,
   ArrowRight,
-  Layers,
   Cpu,
   Trash2,
   Edit2,
@@ -164,7 +164,7 @@ export default function FamilyView({
       <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 sm:gap-4 w-full">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
-            <RoboticHand className="w-5 h-5 text-teal-700" />
+            <HubIcon className="w-5 h-5 text-teal-700" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 tracking-tight">
@@ -423,7 +423,7 @@ export default function FamilyView({
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-50 text-cyan-800 hover:bg-cyan-100 border border-cyan-200 text-xs font-semibold transition group shadow-2xs"
                       title="Voir les templates de cette famille"
                     >
-                      <Layers className="w-3.5 h-3.5 text-cyan-600" />
+                      <CategoryIcon className="w-3.5 h-3.5 text-cyan-600" />
                       <span>{tCount} templates</span>
                       <ArrowRight className="w-3 h-3 text-cyan-600 group-hover:translate-x-0.5 transition-transform" />
                     </button>

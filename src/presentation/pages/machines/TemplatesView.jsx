@@ -1,9 +1,9 @@
 import {  useState, useRef, useMemo, useEffect  } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import CustomSelect from '../../components/common/CustomSelect';
-import { RoboticHand } from '../../components/common/icons/RoboticHand';
+import { HubIcon } from '../../components/common/icons/HubIcon';
+import { CategoryIcon } from '../../components/common/icons/CategoryIcon';
 import {
-  Layers,
   Plus,
   Search,
   ArrowRight,
@@ -142,7 +142,7 @@ export default function TemplatesView({
       <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 sm:gap-4 w-full">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
-            <Layers className="w-5 h-5 text-amber-700" />
+            <CategoryIcon className="w-5 h-5 text-amber-700" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 tracking-tight">
@@ -395,7 +395,7 @@ export default function TemplatesView({
         {/* Top Info Header Bar inside Card */}
         <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
           <div className="font-bold text-slate-800 text-[13px] flex items-center gap-2">
-            <Layers className="w-4 h-4 text-amber-600" />
+            <CategoryIcon className="w-4 h-4 text-amber-600" />
             <span>Tableau Templates • Colonnes B → E</span>
           </div>
           <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
@@ -456,7 +456,7 @@ export default function TemplatesView({
                       className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200 text-xs font-mono font-bold hover:bg-cyan-100 transition"
                       title="Voir cette Famille Parente"
                     >
-                      <RoboticHand className="w-3 h-3 text-cyan-600" />
+                      <HubIcon className="w-3 h-3 text-cyan-600" />
                       <span>{fam?.libelle ? `${fam.libelle} (${t.id_family})` : t.id_family}</span>
                     </button>
                   </td>

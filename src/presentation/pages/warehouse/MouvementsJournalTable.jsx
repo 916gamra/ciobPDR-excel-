@@ -242,7 +242,7 @@ export const resolveDestinationInfo = (
       };
     }
 
-    // Check if legacy comment has machine information (e.g. DET-08, DET-05, MCH-001)
+    // Check if legacy comment has machine information (e.g. ZONE-DET-08, ZONE-DET-05, MCH-001)
     if (rawComment) {
       const commentStr = String(rawComment).trim().toLowerCase();
       const matchRegistered = machines.find(
@@ -261,13 +261,13 @@ export const resolveDestinationInfo = (
         };
       }
 
-      // Detect legacy machine identifiers (e.g. DET-08, DET-05, LIGNE-2, PRS-01)
+      // Detect legacy machine identifiers (e.g. ZONE-DET-08, ZONE-DET-05, LIGNE-2, PRS-01)
       const rawCommentStr = String(rawComment).trim();
-      if (/^(DET-\d+|MCH-\d+|LIGNE-\d+|PRESSE|TOUR|CNC|ENSACHEUSE|RCF)/i.test(rawCommentStr)) {
+      if (/^(ZONE-DET-\d+|MCH-\d+|LIGNE-\d+|PRESSE|TOUR|CNC|ENSACHEUSE|RCF)/i.test(rawCommentStr)) {
         return {
           code: rawCommentStr,
           designation: `${rawCommentStr} (Non assignée)`,
-          zone: rawCommentStr.startsWith('DET-') ? 'ZONE-DET' : '',
+          zone: rawCommentStr.startsWith('ZONE-DET-') ? 'ZONE-DET' : '',
           isRegistered: false,
           isLegacyHint: true,
         };
@@ -388,7 +388,7 @@ export const resolveDestinationInfo = (
  * 1. Role / Type de compte (Top: 10px uppercase tracking-wide text-slate-400)
  *    e.g. TECHNICIEN GMAO, SUPERVISEUR / CHEF, OPÉRATEUR, FOURNISSEUR / TIERS, DEMANDEUR
  * 2. Name / Account Name (Middle: 12px font-bold text-slate-900)
- *    e.g. Rachid, Karim, Anas - DET
+ *    e.g. Rachid, Karim, Anas - ZONE-DET
  * 3. Unique ID / Code (Bottom: 11px font-mono font-bold text-indigo-700)
  *    e.g. TECH-01, CHEF-02, OP-01
  * 4. isUnknown flag for incomplete legacy records with clean INCONNU message

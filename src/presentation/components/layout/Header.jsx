@@ -138,12 +138,12 @@ export default function Header({
       case 'part_types':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Part_Types',
-          desc: "Nomenclature des catégories de pièces détachées (PDR) gérées en entrepôt",
+          desc: "Nomenclature des types et catégories de pièces et parts d'entrepôt (Distinctes du Stock)",
         };
       case 'part_designations':
         return {
           source: '/mnt/data/gmao_light_data.json • Feuille: Part_Designations',
-          desc: "Catalogue des références et désignations de pièces détachées rattachées aux types de parts",
+          desc: "Catalogue des références et désignations de pièces d'entrepôt rattachées aux types de parts",
         };
       case 'nexus':
         return {

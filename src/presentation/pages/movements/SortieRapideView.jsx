@@ -826,7 +826,7 @@ export default function SortieRapideView({
 
   // Dynamic Supplier Options
   const supplierOptions = useMemo(() => {
-    const list = ['Fournisseur Central Industriel', 'SKF Maroc / France', 'Schneider Electric', 'SMC Pneumatics', 'Festo Automation', 'Atelier Bobinage & Usinage'];
+    const list = ['Fournisseur Central Industriel', 'SKF Maroc / France', 'Schneider Electric', 'ZONE-ATELC Pneumatics', 'Festo Automation', 'Atelier Bobinage & Usinage'];
     mouvements.forEach((m) => {
       if (m.fournisseur && !list.includes(m.fournisseur)) {
         list.push(m.fournisseur);

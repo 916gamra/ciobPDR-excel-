@@ -19,6 +19,12 @@ import {
   ChevronDown,
   ArrowDown,
   ArrowUp,
+  AlignLeft,
+  Tag,
+  Hash,
+  Key,
+  Shield,
+  User,
 } from 'lucide-react';
 
 export default function ZonesView({
@@ -29,9 +35,9 @@ export default function ZonesView({
   onAddZone,
   onUpdateZone,
   onDeleteZone,
-  onNavigateToTechsByZone,
-  onNavigateToOpsByZone,
-  onNavigateToMachinesByZone,
+  onNavigateToTechs,
+  onNavigateToOps,
+  onNavigateToMachines,
 }) {
   const [localSearch, setLocalSearch] = useState('');
   const [search, setSearch] = useState('');
@@ -44,7 +50,7 @@ export default function ZonesView({
   }, [localSearch]);
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [form, setForm] = useState({ id_zone: '', libelle: '' });
+  const [form, setForm] = useState({ code_zone: '', id_zone: '', libelle: '', type: 'FINITION', description: '' });
   const [toEdit, setToEdit] = useState(null);
   const [toDelete, setToDelete] = useState(null);
 
@@ -53,11 +59,12 @@ export default function ZonesView({
   const safeOps = Array.isArray(operations) ? operations : [];
   const safeMachines = Array.isArray(machines) ? machines : [];
 
-  // Auto-calculation of next Zone ID (e.g. ZONE-06)
-  const autoZoneId = useMemo(() => {
+  // Auto-calculation of next Code Zone (e.g. ZONE-01)
+  const autoCodeZone = useMemo(() => {
     const nums = safeZones
       .map((z) => {
-        const m = String(z.id_zone || '').match(/ZONE-(\d+)/i);
+        const val = z.code_zone || z.code || z.id_zone || '';
+        const m = String(val).match(/ZONE-(\d+)/i);
         return m ? parseInt(m[1], 10) : 0;
       })
       .filter((n) => !isNaN(n));
@@ -68,7 +75,8 @@ export default function ZonesView({
   const takenZoneNumbers = useMemo(() => {
     const set = new Set();
     safeZones.forEach((z) => {
-      const m = String(z.id_zone || '').match(/(\d+)$/);
+      const val = z.code_zone || z.code || z.id_zone || '';
+      const m = String(val).match(/(\d+)$/);
       if (m) set.add(parseInt(m[1], 10));
     });
     return set;
@@ -78,17 +86,21 @@ export default function ZonesView({
     if (showAddModal) {
       setForm((prev) => ({
         ...prev,
-        id_zone: prev.id_zone || autoZoneId,
+        code_zone: prev.code_zone || autoCodeZone,
+        id_zone: prev.id_zone || '',
       }));
     }
-  }, [showAddModal, autoZoneId]);
+  }, [showAddModal, autoCodeZone]);
 
   const filtered = safeZones.filter((z) => {
     if (!search) return true;
     const q = search.toLowerCase();
     return (
+      String(z?.code_zone || z?.code || '').toLowerCase().includes(q) ||
       String(z?.id_zone || '').toLowerCase().includes(q) ||
-      String(z?.libelle || '').toLowerCase().includes(q)
+      String(z?.libelle || '').toLowerCase().includes(q) ||
+      String(z?.type || '').toLowerCase().includes(q) ||
+      String(z?.description || '').toLowerCase().includes(q)
     );
   });
 
@@ -164,9 +176,15 @@ export default function ZonesView({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.id_zone || !form.libelle) return;
-    onAddZone(form);
-    setForm({ id_zone: '', libelle: '' });
+    if (!form.code_zone || !form.id_zone || !form.libelle) return;
+    onAddZone({
+      code_zone: form.code_zone.trim().toUpperCase(),
+      id_zone: form.id_zone.trim().toUpperCase(),
+      libelle: form.libelle.trim(),
+      type: form.type,
+      description: form.description || '',
+    });
+    setForm({ code_zone: '', id_zone: '', libelle: '', type: 'FINITION', description: '' });
     setShowAddModal(false);
   };
 
@@ -374,10 +392,10 @@ export default function ZonesView({
         <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
           <div className="font-bold text-slate-800 text-[13px] flex items-center gap-2">
             <MapPin className="w-4 h-4 text-purple-600" />
-            <span>Tableau Zones • Colonnes B → F</span>
+            <span>Tableau Zones • Code Système & ID Utilisateur</span>
           </div>
           <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
-            id_zone (B) | libelle (C) | nb_techniciens (D) | nb_operations (E) | nb_machines (F)
+            code_zone (B.1) | id_zone (B.2) | libelle (C) | nb_techniciens (D) | nb_operations (E) | nb_machines (F)
           </div>
         </div>
 
@@ -387,83 +405,196 @@ export default function ZonesView({
               <th className="py-2.5 px-3 text-center w-12 text-slate-500 font-mono text-[10px] bg-slate-200/60 border-r border-slate-200 shrink-0">
                 N°
               </th>
-              <th className="py-2.5 px-4">
-                <span>CODE ZONE</span>{' '}
-                <span className="text-slate-400 font-normal text-[10px]">(B)</span>
+              <th
+                onClick={() => handleSort('code_zone')}
+                className="py-2.5 px-3 min-w-[160px] cursor-pointer select-none hover:bg-slate-200/70 transition group"
+                title="Trier par Code / ID"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>IDENTIFIANTS (CODE / ID)</span>
+                  <span className="text-slate-400 font-normal text-[10px]">(b.1/b.2)</span>
+                  {renderSortIcon('code_zone')}
+                </div>
               </th>
-              <th className="py-2.5 px-4">
-                <span>LIBELLÉ SECTEUR / ATELIER</span>{' '}
-                <span className="text-slate-400 font-normal text-[10px]">(C) primary</span>
+              <th
+                onClick={() => handleSort('libelle')}
+                className="py-2.5 px-4 min-w-[250px] cursor-pointer select-none hover:bg-slate-200/70 transition group"
+                title="Trier par Libellé"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>LIBELLÉ SECTEUR / ATELIER</span>
+                  <span className="text-slate-400 font-normal text-[10px]">(C)</span>
+                  {renderSortIcon('libelle')}
+                </div>
               </th>
-              <th className="py-2.5 px-4">
-                <span>TECHNICIENS AFFECTÉS</span>{' '}
-                <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+              <th className="py-2.5 px-3 min-w-[200px]">
+                <span>UTILISATEURS (ÉQUIPE)</span>{' '}
+                <span className="text-slate-400 font-normal text-[10px]">(D/E)</span>
               </th>
-              <th className="py-2.5 px-4">
-                <span>OPÉRATIONS DÉFINIES</span>{' '}
-                <span className="text-slate-400 font-normal text-[10px]">(E)</span>
-              </th>
-              <th className="py-2.5 px-4">
-                <span>MACHINES INSTALLÉES</span>{' '}
+              <th className="py-2.5 px-3">
+                <span>MACHINES</span>{' '}
                 <span className="text-slate-400 font-normal text-[10px]">(F)</span>
+              </th>
+              <th className="py-2.5 px-3 text-center">
+                <span>ACTIONS</span>
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200/80">
             {displayedData.map((z, idx) => {
-              const tCount = safeTechs.filter((t) => t.id_zone === z.id_zone).length;
-              const opCount = safeOps.filter((op) => op.id_zone === z.id_zone).length;
-              const mCount = safeMachines.filter((m) => m.id_zone_default === z.id_zone).length;
+              const codeVal = z.code_zone || z.code || z.id_zone || `ZONE-${String(idx + 1).padStart(2, '0')}`;
+              const idVal = z.id_zone || z.code_zone || z.code;
+
+              const mCount = safeMachines.filter((m) => {
+                const mZ = String(m.id_zone_default || '').trim().toLowerCase();
+                const idZ = String(z.id_zone || '').trim().toLowerCase();
+                const codeZ = String(z.code_zone || z.code || '').trim().toLowerCase();
+                const libZ = String(z.libelle || '').trim().toLowerCase();
+                return mZ && (mZ === idZ || mZ === codeZ || mZ === libZ);
+              }).length;
+
+              const zoneOps = safeOps.filter((op) => op.id_zone === z.id_zone || op.id_zone === z.code_zone);
+              const zoneTechs = safeTechs.filter((t) => t.id_zone === z.id_zone || t.id_zone === z.code_zone);
+              
+              const responsables = zoneOps.filter(op => op.type_profil === 'CHEF' || op.type_profil === 'SUPERVISEUR' || op.type_profil === 'RESPONSABLE');
+              const operateursCount = zoneOps.filter(op => op.type_profil === 'OPERATEUR' || !op.type_profil).length;
 
               return (
                 <tr
-                  key={z.id_zone}
+                  key={z.code_zone || z.id_zone || idx}
                   className="even:bg-slate-50/80 odd:bg-white hover:bg-slate-100/70 border-b border-slate-200/70 transition-colors"
                 >
                   {/* Row N° Column */}
                   <td className="py-3 px-3 text-center font-mono text-[11px] font-bold text-slate-400 bg-slate-100/40 border-r border-slate-200/80 shrink-0">
-                    {idx + 1}
+                    {startIndex + idx + 1}
                   </td>
-                  <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                    <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
-                      {z.id_zone}
-                    </span>
+                  {/* IDENTIFIANTS Column */}
+                  <td className="py-2.5 px-3 min-w-[160px]">
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Hash className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                        <span className="font-mono text-[11px] font-bold text-cyan-800 bg-cyan-50 border border-cyan-200 px-1.5 py-0.5 rounded shadow-2xs leading-none">
+                          {codeVal}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Key className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span className="font-mono text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded shadow-2xs leading-none">
+                          {idVal}
+                        </span>
+                      </div>
+                    </div>
                   </td>
-                  <td className="py-3 px-4 font-semibold text-slate-800 text-[13px]">
-                    {z.libelle}
+                  <td className="py-2.5 px-3 min-w-[200px]">
+                    <div className="flex flex-col gap-0.5">
+                      {/* Libellé */}
+                      <div className="flex items-start gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                        <span className="text-[12px] font-bold text-slate-900 leading-snug break-words">
+                          {z.libelle}
+                        </span>
+                      </div>
+                      
+                      {/* Description */}
+                      {z.description && (
+                        <div className="flex items-start gap-1.5">
+                          <AlignLeft className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                          <span className="text-[11px] text-slate-500 font-medium leading-snug line-clamp-2" title={z.description}>
+                            {z.description}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Type */}
+                      {z.type && (
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] font-semibold tracking-wide uppercase text-indigo-600">
+                          <Tag className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                          <span className="truncate max-w-[180px]" title={z.type}>{z.type}</span>
+                        </div>
+                      )}
+                    </div>
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-2.5 px-3 min-w-[200px]">
+                    <div className="flex flex-col gap-2">
+                      {/* Responsables */}
+                      {responsables.length > 0 && (
+                        <div className="flex flex-col gap-1.5">
+                          {responsables.map((resp, i) => (
+                            <div key={i} className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide uppercase text-slate-400">
+                                <Shield className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span className="truncate" title={resp.type_profil || 'RESPONSABLE'}>{resp.type_profil || 'RESPONSABLE'}</span>
+                              </div>
+                              <div className="flex items-start gap-1.5 pl-[1.125rem]">
+                                <User className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
+                                <span className="text-[11.5px] font-bold text-slate-900 leading-snug break-words">
+                                  {resp.nom}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Techniciens */}
+                      {zoneTechs.length > 0 && (
+                        <div className="flex flex-col gap-0.5 mt-0.5">
+                          <div className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide uppercase text-slate-400">
+                            <Wrench className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span>TECHNICIEN{zoneTechs.length > 1 ? 'S' : ''}</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5 pl-[1.125rem] mt-0.5">
+                            {zoneTechs.map((tech, i) => (
+                              <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700 shadow-2xs">
+                                {tech.id_technician || tech.code || 'TECH'}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Opérateurs */}
+                      {operateursCount > 0 && (
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] font-semibold tracking-wide uppercase text-slate-500">
+                          <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>{operateursCount} OPÉRATEUR{operateursCount > 1 ? 'S' : ''}</span>
+                        </div>
+                      )}
+
+                      {/* Fallback */}
+                      {responsables.length === 0 && zoneTechs.length === 0 && operateursCount === 0 && (
+                        <span className="text-[11px] text-slate-400 italic">Aucun utilisateur</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 px-3">
                     <button
-                      onClick={() => onNavigateToTechsByZone(z.id_zone)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 text-blue-800 hover:bg-blue-100 border border-blue-200 text-xs font-semibold transition group shadow-2xs"
-                      title="Voir les techniciens de cette zone"
-                    >
-                      <Users className="w-3.5 h-3.5 text-blue-600" />
-                      <span>{tCount} techs</span>
-                      <ArrowRight className="w-3 h-3 text-blue-600 group-hover:translate-x-0.5 transition-transform" />
-                    </button>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button
-                      onClick={() => onNavigateToOpsByZone(z.id_zone)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200 text-xs font-semibold transition group shadow-2xs"
-                      title="Voir les opérations de cette zone"
-                    >
-                      <Wrench className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>{opCount} ops</span>
-                      <ArrowRight className="w-3 h-3 text-indigo-600 group-hover:translate-x-0.5 transition-transform" />
-                    </button>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button
-                      onClick={() => onNavigateToMachinesByZone(z.id_zone)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold transition group shadow-2xs"
+                      onClick={() => onNavigateToMachines(z.code_zone || z.id_zone)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 text-xs font-semibold transition group shadow-2xs"
                       title="Voir les machines installées dans cette zone"
                     >
                       <Cpu className="w-3.5 h-3.5 text-emerald-600" />
                       <span>{mCount} machines</span>
                       <ArrowRight className="w-3 h-3 text-emerald-600 group-hover:translate-x-0.5 transition-transform" />
                     </button>
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => setToEdit(z)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition"
+                        title="Modifier la zone"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setToDelete(z)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
+                        title="Supprimer la zone"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -532,103 +663,194 @@ export default function ZonesView({
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200 flex flex-col max-h-screen">
             <h3 className="font-bold text-base text-slate-900 mb-1">+ Nouvelle Zone / Atelier</h3>
             <p className="text-xs text-slate-500 mb-4">
               Créez une zone géographique ou un secteur d&apos;usine.
             </p>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div>
-                <SequentialCodePicker
-                  prefix="ZONE-"
-                  currentCode={form.id_zone}
-                  onChangeCode={(newCode) => setForm((prev) => ({ ...prev, id_zone: newCode }))}
-                  autoGeneratedCode={autoZoneId}
-                  takenNumbers={takenZoneNumbers}
-                  label="Code Zone (ex: ZONE-01)"
-                  helperText="Code séquentiel de la zone avec choix libre du numéro"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  Libellé Secteur / Atelier
-                </label>
-                <input
-                  type="text"
-                  placeholder="Atelier Finition & Peinture..."
-                  value={form.libelle}
-                  onChange={(e) => setForm({ ...form, libelle: e.target.value })}
-                  className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs"
-                  required
-                />
-              </div>
-              <div className="flex gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-medium"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 h-10 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold"
-                >
-                  Enregistrer
-                </button>
-              </div>
-            </form>
+            <div className="overflow-y-auto pr-1">
+              <form onSubmit={handleSubmit} className="space-y-3">
+                {/* Code Zone (Automatic Picker) */}
+                <div>
+                  <SequentialCodePicker
+                    prefix="ZONE-"
+                    currentCode={form.code_zone}
+                    onChangeCode={(newCode) => setForm((prev) => ({ ...prev, code_zone: newCode }))}
+                    autoGeneratedCode={autoCodeZone}
+                    takenNumbers={takenZoneNumbers}
+                    label="Code Zone (ex: ZONE-01) *"
+                    helperText="Code séquentiel système avec choix libre du numéro"
+                  />
+                </div>
+
+                {/* ID Zone (Manual Input) */}
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                    ID Zone (ex: POL, DET, AMBO) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ex: POL, DET, AMBO..."
+                    value={form.id_zone}
+                    onChange={(e) => setForm({ ...form, id_zone: e.target.value.toUpperCase() })}
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-bold focus:outline-none focus:border-purple-500 focus:bg-white"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">Identifiant manuel utilisateur (ex: DET, POL, SAT, AMBO)</p>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    Libellé Secteur / Atelier
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Atelier Finition & Peinture..."
+                    value={form.libelle}
+                    onChange={(e) => setForm({ ...form, libelle: e.target.value })}
+                    className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:outline-none"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Type de Zone</label>
+                  <select
+                    value={form.type}
+                    onChange={(e) => setForm({ ...form, type: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:outline-none"
+                  >
+                    <option value="FINITION">FINITION</option>
+                    <option value="DECOUPE">DECOUPE</option>
+                    <option value="SUPPORT">SUPPORT</option>
+                    <option value="FORMAGE">FORMAGE</option>
+                    <option value="ASSEMBLAGE_FINAL">ASSEMBLAGE FINAL</option>
+                    <option value="STOCK">STOCK</option>
+                    <option value="AUTRE">AUTRE</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Description (Philosophie Industrielle)</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Principe physique et mécanique de l'opération..."
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:outline-none resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="flex-1 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-medium"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 h-10 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold"
+                  >
+                    Enregistrer
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
       {toEdit && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200 flex flex-col max-h-screen">
             <h3 className="font-bold text-base text-slate-900 mb-1">Modifier Zone</h3>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                onUpdateZone(toEdit.id_zone, toEdit);
-                setToEdit(null);
-              }}
-              className="space-y-3"
-            >
-              <div>
-                <label className="text-[11px] font-bold text-slate-500">ID Zone</label>
-                <input
-                  type="text"
-                  value={toEdit.id_zone}
-                  disabled
-                  className="mt-1 w-full h-10 px-3 rounded-xl bg-slate-100 text-slate-500 text-xs font-mono"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-bold text-slate-500">Libellé</label>
-                <input
-                  type="text"
-                  value={toEdit.libelle}
-                  onChange={(e) => setToEdit({ ...toEdit, libelle: e.target.value })}
-                  required
-                  className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs"
-                />
-              </div>
-              <div className="flex gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setToEdit(null)}
-                  className="flex-1 h-10 rounded-xl bg-slate-100 text-xs font-medium"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 h-10 rounded-xl bg-blue-600 text-white text-xs font-semibold"
-                >
-                  Enregistrer
-                </button>
-              </div>
-            </form>
+            <div className="overflow-y-auto pr-1">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  onUpdateZone(toEdit.id_zone, toEdit);
+                  setToEdit(null);
+                }}
+                className="space-y-3"
+              >
+                <div>
+                  <SequentialCodePicker
+                    prefix="ZONE-"
+                    currentCode={toEdit.code_zone || toEdit.code || toEdit.id_zone}
+                    onChangeCode={(newCode) => setToEdit((prev) => ({ ...prev, code_zone: newCode }))}
+                    autoGeneratedCode={toEdit.code_zone || toEdit.code || toEdit.id_zone}
+                    takenNumbers={takenZoneNumbers}
+                    label="Code Zone (B.1)"
+                    disabled={true}
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">ID Zone (B.2)</label>
+                  <input
+                    type="text"
+                    value={toEdit.id_zone || ''}
+                    onChange={(e) => setToEdit({ ...toEdit, id_zone: e.target.value.toUpperCase() })}
+                    required
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs font-mono font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500">Libellé</label>
+                  <input
+                    type="text"
+                    value={toEdit.libelle}
+                    onChange={(e) => setToEdit({ ...toEdit, libelle: e.target.value })}
+                    required
+                    className="mt-1 w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Type de Zone</label>
+                  <select
+                    value={toEdit.type || 'FINITION'}
+                    onChange={(e) => setToEdit({ ...toEdit, type: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:outline-none"
+                  >
+                    <option value="FINITION">FINITION</option>
+                    <option value="DECOUPE">DECOUPE</option>
+                    <option value="SUPPORT">SUPPORT</option>
+                    <option value="FORMAGE">FORMAGE</option>
+                    <option value="ASSEMBLAGE_FINAL">ASSEMBLAGE FINAL</option>
+                    <option value="STOCK">STOCK</option>
+                    <option value="AUTRE">AUTRE</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-slate-500 block mb-1">Description (Philosophie Industrielle)</label>
+                  <textarea
+                    rows={3}
+                    value={toEdit.description || ''}
+                    onChange={(e) => setToEdit({ ...toEdit, description: e.target.value })}
+                    className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs focus:outline-none resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setToEdit(null)}
+                    className="flex-1 h-10 rounded-xl bg-slate-100 text-xs font-medium"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 h-10 rounded-xl bg-blue-600 text-white text-xs font-semibold"
+                  >
+                    Enregistrer
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

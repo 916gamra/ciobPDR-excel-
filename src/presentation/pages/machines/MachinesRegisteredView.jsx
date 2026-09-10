@@ -1,7 +1,8 @@
 import {  useState, useRef, useMemo, useEffect  } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import CustomSelect from '../../components/common/CustomSelect';
-import { RoboticHand } from '../../components/common/icons/RoboticHand';
+import { HubIcon } from '../../components/common/icons/HubIcon';
+import { CategoryIcon } from '../../components/common/icons/CategoryIcon';
 import { useMachines } from '../../hooks/useMachines';
 import MachinesKPIBar from './components/MachinesKPIBar';
 import {
@@ -34,9 +35,64 @@ import {
   Zap,
 } from 'lucide-react';
 
+// Helper to find a zone object from any zone/sector reference (id_zone, code_zone, code, or libelle)
+const getZoneByRef = (ref, zonesList = []) => {
+  if (!ref || !Array.isArray(zonesList)) return null;
+  const str = String(ref).trim().toLowerCase();
+  return (
+    zonesList.find((z) => {
+      const idZ = String(z?.id_zone || '').trim().toLowerCase();
+      const codeZ = String(z?.code_zone || z?.code || '').trim().toLowerCase();
+      const libZ = String(z?.libelle || '').trim().toLowerCase();
+      return (idZ && idZ === str) || (codeZ && codeZ === str) || (libZ && libZ === str);
+    }) || null
+  );
+};
+
+// Check if a machine matches the zone/sector filter
+const matchesZoneFilter = (machineZoneRef, filterVal, zonesList = []) => {
+  if (!filterVal || filterVal === 'ALL') return true;
+  if (!machineZoneRef) return false;
+
+  const mRef = String(machineZoneRef).trim().toLowerCase();
+  const fRef = String(filterVal).trim().toLowerCase();
+
+  // 1. Direct string match
+  if (mRef === fRef) return true;
+
+  // 2. Lookup zone objects
+  const fZone = getZoneByRef(filterVal, zonesList);
+  const mZone = getZoneByRef(machineZoneRef, zonesList);
+
+  if (fZone && mZone) {
+    const fId = String(fZone.id_zone || '').trim().toLowerCase();
+    const fCode = String(fZone.code_zone || fZone.code || '').trim().toLowerCase();
+    const mId = String(mZone.id_zone || '').trim().toLowerCase();
+    const mCode = String(mZone.code_zone || mZone.code || '').trim().toLowerCase();
+    return (fId && fId === mId) || (fCode && fCode === mCode);
+  }
+
+  if (fZone) {
+    const fId = String(fZone.id_zone || '').trim().toLowerCase();
+    const fCode = String(fZone.code_zone || fZone.code || '').trim().toLowerCase();
+    return (fId && fId === mRef) || (fCode && fCode === mRef);
+  }
+
+  if (mZone) {
+    const mId = String(mZone.id_zone || '').trim().toLowerCase();
+    const mCode = String(mZone.code_zone || mZone.code || '').trim().toLowerCase();
+    return (mId && mId === fRef) || (mCode && mCode === fRef);
+  }
+
+  return false;
+};
+
 export default function MachinesRegisteredView({
-  families = [],
-  templates = [],
+  machines: propMachines = [],
+  families: passedFamilies = [],
+  effectiveFamilies = [],
+  templates: passedTemplates = [],
+  effectiveTemplates = [],
   zones = [],
   technicians = [],
   mouvements = [],
@@ -48,13 +104,48 @@ export default function MachinesRegisteredView({
   setMchZoneFilter = () => {},
   mchSearch = '',
   setMchSearch = () => {},
+  onAddMachine: propAddMachine,
+  onUpdateMachine: propUpdateMachine,
+  onDeleteMachine: propDeleteMachine,
   onOpenAddMachine = () => {},
   onNavigateToFamily = () => {},
   onNavigateToTemplate = () => {},
   onNavigateToZone = () => {},
-  
 }) {
-  const { machines, loading, updateMachine: onUpdateMachine, deleteMachine: onDeleteMachine } = useMachines();
+  const { machines: dbMachines, updateMachine: dbUpdateMachine, deleteMachine: dbDeleteMachine } = useMachines();
+
+  const machines = useMemo(() => {
+    if (Array.isArray(propMachines) && propMachines.length > 0) {
+      return propMachines;
+    }
+    if (Array.isArray(dbMachines) && dbMachines.length > 0) {
+      return dbMachines;
+    }
+    return [];
+  }, [propMachines, dbMachines]);
+
+  const families = useMemo(() => {
+    if (Array.isArray(passedFamilies) && passedFamilies.length > 0) return passedFamilies;
+    if (Array.isArray(effectiveFamilies) && effectiveFamilies.length > 0) return effectiveFamilies;
+    return [];
+  }, [passedFamilies, effectiveFamilies]);
+
+  const templates = useMemo(() => {
+    if (Array.isArray(passedTemplates) && passedTemplates.length > 0) return passedTemplates;
+    if (Array.isArray(effectiveTemplates) && effectiveTemplates.length > 0) return effectiveTemplates;
+    return [];
+  }, [passedTemplates, effectiveTemplates]);
+
+  const onUpdateMachine = (id, data) => {
+    if (propUpdateMachine) propUpdateMachine(id, data);
+    if (dbUpdateMachine) dbUpdateMachine(id, data).catch(() => {});
+  };
+
+  const onDeleteMachine = (id) => {
+    if (propDeleteMachine) propDeleteMachine(id);
+    if (dbDeleteMachine) dbDeleteMachine(id).catch(() => {});
+  };
+
   const [toEdit, setToEdit] = useState(null);
   const [toDelete, setToDelete] = useState(null);
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL | 'En Service' | 'En Maintenance' | 'Arrêt'
@@ -133,7 +224,7 @@ export default function MachinesRegisteredView({
     return machines.filter((m) => {
       if (mchFamilyFilter !== 'ALL' && m.id_family !== mchFamilyFilter) return false;
       if (mchTemplateFilter !== 'ALL' && m.id_templates !== mchTemplateFilter) return false;
-      if (mchZoneFilter !== 'ALL' && m.id_zone_default !== mchZoneFilter) return false;
+      if (!matchesZoneFilter(m.id_zone_default, mchZoneFilter, zones)) return false;
       if (statusFilter !== 'ALL') {
         const st = String(m.status || 'En Service').toLowerCase();
         if (statusFilter === 'En Service' && !st.includes('service')) return false;
@@ -143,9 +234,9 @@ export default function MachinesRegisteredView({
       if (mchSearch) {
         const q = String(mchSearch).trim().toLowerCase();
         const techObj = technicians.find((t) => t.id_technician === m.technician || t.nom === m.technician);
-        const techName = techObj ? techObj.nom.toLowerCase() : '';
-        const znObj = zones.find((z) => z.id_zone === m.id_zone_default);
-        const znName = znObj ? znObj.libelle.toLowerCase() : '';
+        const techName = techObj ? `${techObj.nom} ${techObj.id_technician || ''}`.toLowerCase() : '';
+        const znObj = getZoneByRef(m.id_zone_default, zones);
+        const znName = znObj ? `${znObj.libelle} ${znObj.code_zone || ''} ${znObj.id_zone || ''}`.toLowerCase() : '';
 
         return (
           String(m.id_machine_registered || '').toLowerCase().includes(q) ||
@@ -434,20 +525,31 @@ export default function MachinesRegisteredView({
             />
           </div>
 
-          {/* Zone Filter (F) */}
+          {/* Zone & Secteur Filter (F) */}
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Zone par Défaut (F)
+              Secteur / Zone Défaut (F)
             </label>
             <CustomSelect
-              value={mchZoneFilter}
+              value={
+                mchZoneFilter === 'ALL'
+                  ? 'ALL'
+                  : (getZoneByRef(mchZoneFilter, zones)?.code_zone ||
+                     getZoneByRef(mchZoneFilter, zones)?.id_zone ||
+                     mchZoneFilter)
+              }
               onChange={(val) => setMchZoneFilter(val)}
               options={[
-                { value: 'ALL', label: `Toutes Zones (${zones.length})` },
-                ...zones.map((z) => ({
-                  value: z.id_zone,
-                  label: `[F] ${z.libelle} (${z.id_zone})`,
-                })),
+                { value: 'ALL', label: `Tous Secteurs & Zones (${zones.length})` },
+                ...zones.map((z) => {
+                  const codeZ = z.code_zone || z.code || z.id_zone;
+                  const idZ = z.id_zone;
+                  const showDual = idZ && idZ !== codeZ;
+                  return {
+                    value: codeZ,
+                    label: `[F] ${z.code_zone ? z.code_zone + ' • ' : ''}${z.libelle}${showDual ? ` (${idZ})` : ''}`,
+                  };
+                }),
               ]}
             />
           </div>
@@ -529,10 +631,10 @@ export default function MachinesRegisteredView({
         <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
           <div className="font-bold text-slate-800 text-[13px] flex items-center gap-2">
             <Factory className="w-4 h-4 text-emerald-600" />
-            <span>Tableau Machines_Registered • Colonnes B → H</span>
+            <span>Tableau Machines_Registered • Ordre Excel Row 3 : B → H</span>
           </div>
           <div className="font-mono text-[11px] text-slate-400 hidden lg:block">
-            id_machine_registered (B) | designation (C) | id_family (D) | id_templates (E) | id_zone_default (F) | technician (G) | status (H)
+            N° | Code Machine (B) | Désignation (C) | Famille & Template (D+E) | Zone & Technicien (F+G) | Statut (H) | Flux
           </div>
         </div>
 
@@ -545,10 +647,10 @@ export default function MachinesRegisteredView({
                   N°
                 </th>
 
-                {/* CDE CODE (B) */}
+                {/* CODE MACHINE (B) */}
                 <th
                   onClick={() => handleSort('id_machine_registered')}
-                  className="py-3 px-4 cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                  className="py-3 px-3.5 cursor-pointer select-none hover:bg-slate-200/80 transition group"
                   title="Cliquer pour trier par Code Machine"
                 >
                   <div className="flex items-center gap-1.5">
@@ -562,7 +664,7 @@ export default function MachinesRegisteredView({
                 {/* DÉSIGNATION (C) */}
                 <th
                   onClick={() => handleSort('designation')}
-                  className="py-3 px-4 cursor-pointer select-none hover:bg-slate-200/80 transition group min-w-[200px]"
+                  className="py-3 px-3.5 cursor-pointer select-none hover:bg-slate-200/80 transition group min-w-[200px]"
                   title="Cliquer pour trier par Désignation"
                 >
                   <div className="flex items-center gap-1.5">
@@ -573,59 +675,37 @@ export default function MachinesRegisteredView({
                   </div>
                 </th>
 
-                {/* FAMILY (D) */}
+                {/* FAMILLE & TEMPLATE (D + E) */}
                 <th
                   onClick={() => handleSort('id_family')}
-                  className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
-                  title="Cliquer pour trier par Famille"
+                  className="py-3 px-3.5 cursor-pointer select-none hover:bg-slate-200/80 transition group min-w-[220px]"
+                  title="Cliquer pour trier par Famille & Modèle"
                 >
                   <div className="flex items-center gap-1.5">
-                    <RoboticHand className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
-                    <span>FAMILLE</span>
-                    <span className="text-slate-400 font-normal text-[10px]">(D)</span>
+                    <div className="flex items-center -space-x-1">
+                      <HubIcon className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                      <CategoryIcon className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    </div>
+                    <span>FAMILLE & TEMPLATE</span>
+                    <span className="text-slate-400 font-normal text-[10px]">(D+E)</span>
                     {renderSortIcon('id_family')}
                   </div>
                 </th>
 
-                {/* TEMPLATE (E) */}
-                <th
-                  onClick={() => handleSort('id_templates')}
-                  className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
-                  title="Cliquer pour trier par Template"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                    <span>TEMPLATE</span>
-                    <span className="text-slate-400 font-normal text-[10px]">(E)</span>
-                    {renderSortIcon('id_templates')}
-                  </div>
-                </th>
-
-                {/* ZONE DÉFAUT (F) */}
+                {/* ZONE & TECHNICIEN (F + G) */}
                 <th
                   onClick={() => handleSort('id_zone_default')}
-                  className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
-                  title="Cliquer pour trier par Zone"
+                  className="py-3 px-3.5 cursor-pointer select-none hover:bg-slate-200/80 transition group min-w-[210px]"
+                  title="Cliquer pour trier par Zone & Technicien"
                 >
                   <div className="flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                    <span>ZONE DÉFAUT</span>
-                    <span className="text-slate-400 font-normal text-[10px]">(F)</span>
+                    <div className="flex items-center -space-x-1">
+                      <MapPin className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                      <Users className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    </div>
+                    <span>ZONE & TECHNICIEN</span>
+                    <span className="text-slate-400 font-normal text-[10px]">(F+G)</span>
                     {renderSortIcon('id_zone_default')}
-                  </div>
-                </th>
-
-                {/* TECHNICIEN (G) */}
-                <th
-                  onClick={() => handleSort('technician')}
-                  className="py-3 px-3 cursor-pointer select-none hover:bg-slate-200/80 transition group"
-                  title="Cliquer pour trier par Technicien"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>TECHNICIEN</span>
-                    <span className="text-slate-400 font-normal text-[10px]">(G)</span>
-                    {renderSortIcon('technician')}
                   </div>
                 </th>
 
@@ -635,10 +715,12 @@ export default function MachinesRegisteredView({
                   className="py-3 px-3 text-center cursor-pointer select-none hover:bg-slate-200/80 transition group"
                   title="Cliquer pour trier par Statut"
                 >
-                  <div className="flex items-center justify-center gap-1.5">
-                    <Radio className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                    <span>STATUT</span>
-                    <span className="text-slate-400 font-normal text-[10px]">(H)</span>
+                  <div className="flex items-center justify-center gap-1">
+                    <Radio className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <div>
+                      <div>STATUT</div>
+                      <div className="text-[9.5px] text-slate-400 font-normal">(H)</div>
+                    </div>
                     {renderSortIcon('status')}
                   </div>
                 </th>
@@ -646,26 +728,27 @@ export default function MachinesRegisteredView({
                 {/* INTERVENTIONS */}
                 <th
                   onClick={() => handleSort('sorties')}
-                  className="py-3 px-4 text-right cursor-pointer select-none hover:bg-slate-200/80 transition group"
+                  className="py-3 px-3 text-right cursor-pointer select-none hover:bg-slate-200/80 transition group"
                   title="Cliquer pour trier par Nombre d'Interventions"
                 >
-                  <div className="flex items-center justify-end gap-1.5">
+                  <div className="flex items-center justify-end gap-1">
                     <Activity className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                    <span>INTERVENTIONS</span>
+                    <div>
+                      <div>INTERVENTIONS</div>
+                      <div className="text-[9.5px] text-slate-400 font-normal">(Flux)</div>
+                    </div>
                     {renderSortIcon('sorties')}
                   </div>
                 </th>
 
                 {/* ACTIONS */}
-                <th className="py-3 px-4 text-right">
-                  <span>ACTIONS</span>
-                </th>
+                <th className="py-3 px-3.5 text-center min-w-[100px]">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/80">
               {displayedData.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="py-12 text-center text-slate-500 font-medium">
+                  <td colSpan="8" className="py-12 text-center text-slate-500 font-medium">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Factory className="w-8 h-8 text-slate-300" />
                       <span>Aucune machine ne correspond aux critères de recherche.</span>
@@ -676,13 +759,15 @@ export default function MachinesRegisteredView({
                 displayedData.map((m, idx) => {
                   const fam = families.find((f) => f.id_family === m.id_family);
                   const tpl = templates.find((t) => t.id_templates === m.id_templates);
-                  const zn = zones.find((z) => z.id_zone === m.id_zone_default);
+                  const zn = getZoneByRef(m.id_zone_default, zones);
                   const tech = technicians.find(
                     (t) => t.id_technician === m.technician || t.nom === m.technician
                   );
                   const sortiesCount = sortiesCountMap[m.id_machine_registered] || 0;
                   const isService = String(m.status || 'En Service').toLowerCase().includes('service');
-                  const isMaintenance = String(m.status || '').toLowerCase().includes('maint') || String(m.status || '').toLowerCase().includes('panne');
+                  const isMaintenance =
+                    String(m.status || '').toLowerCase().includes('maint') ||
+                    String(m.status || '').toLowerCase().includes('panne');
 
                   return (
                     <tr
@@ -694,129 +779,151 @@ export default function MachinesRegisteredView({
                         {startIndex + idx + 1}
                       </td>
 
-                      {/* Cde Machine (B) */}
-                      <td className="py-3 px-4 whitespace-nowrap">
+                      {/* Code Machine (B) */}
+                      <td className="py-3 px-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200/80 flex items-center justify-center font-mono text-[11px] font-black shrink-0">
-                            <Factory className="w-3.5 h-3.5 text-emerald-600" />
-                          </div>
-                          <div>
-                            <span className="font-mono font-bold text-slate-900 text-xs px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
-                              {m.id_machine_registered}
-                            </span>
-                          </div>
+                          <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-900 shadow-2xs">
+                            {m.id_machine_registered}
+                          </span>
                         </div>
                       </td>
 
                       {/* Désignation (C) */}
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="font-bold text-slate-900 text-[13px]">{m.designation}</div>
-                        <div className="text-[10.5px] text-slate-400 font-mono">
-                          {tpl?.libelle ? `${tpl.libelle} • ` : ''}{fam?.libelle || m.id_family}
+                      <td className="py-3 px-3.5 whitespace-nowrap min-w-[200px]">
+                        <div className="font-bold text-slate-900 text-xs">{m.designation}</div>
+                        <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
+                          <span>Réf: {m.id_machine_registered}</span>
                         </div>
                       </td>
 
-                      {/* Family (D) */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <button
-                          onClick={() => {
-                            setMchFamilyFilter(m.id_family);
-                            setMchTemplateFilter('ALL');
-                          }}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-800 border border-cyan-200 text-[11px] font-mono font-bold hover:bg-cyan-100 hover:border-cyan-300 transition cursor-pointer shadow-2xs"
-                          title="Filtrer par cette Famille"
-                        >
-                          <RoboticHand className="w-3 h-3 text-cyan-600" />
-                          <span>{m.id_family}</span>
-                        </button>
+                      {/* Unified Family & Template (D + E) */}
+                      <td className="py-2.5 px-3.5 whitespace-nowrap">
+                        <div className="flex flex-col gap-1 items-start">
+                          {/* Family Badge */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMchFamilyFilter(m.id_family);
+                              setMchTemplateFilter('ALL');
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200/70 text-[11px] font-semibold hover:bg-cyan-100 hover:border-cyan-300 transition cursor-pointer shadow-2xs group"
+                            title="Filtrer par cette Famille"
+                          >
+                            <HubIcon className="w-3 h-3 text-cyan-600 shrink-0" />
+                            <span className="font-mono font-bold">{m.id_family}</span>
+                            {fam?.libelle && (
+                              <span className="text-cyan-700 font-normal text-[10px] max-w-[130px] truncate">
+                                • {fam.libelle}
+                              </span>
+                            )}
+                          </button>
+
+                          {/* Template Badge */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMchFamilyFilter(m.id_family);
+                              setMchTemplateFilter(m.id_templates);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200/70 text-[11px] font-semibold hover:bg-amber-100 hover:border-amber-300 transition cursor-pointer shadow-2xs group"
+                            title="Filtrer par ce Template Modèle"
+                          >
+                            <CategoryIcon className="w-3 h-3 text-amber-600 shrink-0" />
+                            <span className="font-mono font-bold text-[10.5px]">{m.id_templates}</span>
+                            {tpl?.libelle && (
+                              <span className="text-amber-700 font-normal text-[10px] max-w-[140px] truncate">
+                                • {tpl.libelle}
+                              </span>
+                            )}
+                          </button>
+                        </div>
                       </td>
 
-                      {/* Template (E) */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <button
-                          onClick={() => {
-                            setMchFamilyFilter(m.id_family);
-                            setMchTemplateFilter(m.id_templates);
-                          }}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-bold hover:bg-amber-100 hover:border-amber-300 transition cursor-pointer shadow-2xs"
-                          title="Filtrer par ce Template"
-                        >
-                          <Layers className="w-3 h-3 text-amber-600" />
-                          <span>{tpl ? tpl.libelle : m.id_templates}</span>
-                        </button>
-                      </td>
+                      {/* Unified Zone & Technicien (F + G) */}
+                      <td className="py-2.5 px-3.5 whitespace-nowrap">
+                        <div className="flex flex-col gap-1 items-start">
+                          {/* Zone Badge */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMchZoneFilter(m.id_zone_default);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-purple-50 text-purple-800 border border-purple-200/70 text-[11px] font-semibold hover:bg-purple-100 hover:border-purple-300 transition cursor-pointer shadow-2xs group"
+                            title="Filtrer par cette Zone"
+                          >
+                            <MapPin className="w-3 h-3 text-purple-600 shrink-0" />
+                            <span className="font-mono font-bold">{m.id_zone_default || 'ZONE-N/A'}</span>
+                            {zn?.libelle && (
+                              <span className="text-purple-700 font-normal text-[10px] max-w-[120px] truncate">
+                                • {zn.libelle}
+                              </span>
+                            )}
+                          </button>
 
-                      {/* Zone Défaut (F) */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <button
-                          onClick={() => setMchZoneFilter(m.id_zone_default)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-800 border border-purple-200 text-[11px] font-semibold hover:bg-purple-100 hover:border-purple-300 transition cursor-pointer shadow-2xs"
-                          title="Filtrer par cette Zone"
-                        >
-                          <MapPin className="w-3 h-3 text-purple-600" />
-                          <span>{zn ? zn.libelle : m.id_zone_default || 'Magasin Central'}</span>
-                        </button>
-                      </td>
-
-                      {/* Technicien (G) */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[11px] font-semibold">
-                          <Users className="w-3 h-3 text-blue-600" />
-                          <span>
-                            {tech
-                              ? `${tech.nom} (${tech.id_technician})`
-                              : m.technician || 'Non assigné'}
-                          </span>
+                          {/* Technician Badge */}
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200/70 text-[11px] font-semibold shadow-2xs">
+                            <Users className="w-3 h-3 text-blue-600 shrink-0" />
+                            <span className="font-bold text-slate-800">
+                              {tech ? tech.nom : m.technician || 'Non assigné'}
+                            </span>
+                            {tech?.id_technician && (
+                              <span className="font-mono text-[10px] text-blue-600 bg-blue-100/70 px-1 rounded">
+                                {tech.id_technician}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
                       {/* Status (H) */}
                       <td className="py-3 px-3 text-center whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold border shadow-2xs ${
                             isService
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                               : isMaintenance
-                                ? 'bg-amber-50 text-amber-700 border border-amber-300'
-                                : 'bg-slate-100 text-slate-700 border border-slate-300'
+                                ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                : 'bg-rose-50 text-rose-800 border-rose-300'
                           }`}
                         >
                           {isService ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          ) : isMaintenance ? (
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                           ) : (
-                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                           )}
                           <span>{m.status || 'En Service'}</span>
                         </span>
                       </td>
 
                       {/* Interventions Count */}
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <td className="py-3 px-3 text-right whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2 py-0.5 rounded-md ${
+                          className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2.5 py-1 rounded-lg border ${
                             sortiesCount > 0
-                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80'
-                              : 'text-slate-400'
+                              ? 'bg-indigo-50 text-indigo-800 border-indigo-200 shadow-2xs'
+                              : 'bg-slate-50 text-slate-400 border-slate-200/60'
                           }`}
                         >
-                          <Activity className="w-3 h-3 text-indigo-500" />
-                          <span>{sortiesCount} sortie{sortiesCount > 1 ? 's' : ''}</span>
+                          <Activity className="w-3 h-3 text-indigo-500 shrink-0" />
+                          <span>{sortiesCount} {sortiesCount > 1 ? 'sorties' : 'sortie'}</span>
                         </span>
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
-                        <div className="flex justify-end items-center gap-1.5">
+                      <td className="py-3 px-3.5 text-center whitespace-nowrap">
+                        <div className="flex justify-center items-center gap-1">
                           <button
                             onClick={() => setToEdit({ ...m })}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-transparent hover:border-blue-200 transition cursor-pointer"
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-slate-200/60 hover:border-blue-200 transition cursor-pointer shadow-2xs"
                             title="Modifier la machine"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => setToDelete(m)}
-                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-transparent hover:border-rose-200 transition cursor-pointer"
+                            className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-slate-200/60 hover:border-rose-200 transition cursor-pointer shadow-2xs"
                             title="Supprimer la machine"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -976,12 +1083,24 @@ export default function MachinesRegisteredView({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                    Zone par Défaut (F)
+                    Secteur / Zone par Défaut (F)
                   </label>
                   <CustomSelect
-                    value={toEdit.id_zone_default}
+                    value={
+                      getZoneByRef(toEdit.id_zone_default, zones)?.code_zone ||
+                      getZoneByRef(toEdit.id_zone_default, zones)?.id_zone ||
+                      toEdit.id_zone_default
+                    }
                     onChange={(val) => setToEdit({ ...toEdit, id_zone_default: val })}
-                    options={zones.map((z) => ({ value: z.id_zone, label: `${z.libelle} (${z.id_zone})` }))}
+                    options={zones.map((z) => {
+                      const codeZ = z.code_zone || z.code || z.id_zone;
+                      const idZ = z.id_zone;
+                      const showDual = idZ && idZ !== codeZ;
+                      return {
+                        value: codeZ,
+                        label: `${z.code_zone ? z.code_zone + ' • ' : ''}${z.libelle}${showDual ? ` (${idZ})` : ''}`,
+                      };
+                    })}
                   />
                 </div>
                 <div>

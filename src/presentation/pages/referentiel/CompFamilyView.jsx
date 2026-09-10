@@ -1,6 +1,6 @@
 import {  useState, useMemo  } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
-import { Engine } from '../../components/common/icons/Engine';
+import { SpokeIcon } from '../../components/common/icons/SpokeIcon';
 import { CubeIcon } from '../../components/common/icons/CubeIcon';
 import {
   Plus,
@@ -121,7 +121,7 @@ export default function CompFamilyView({
       <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 sm:gap-4 w-full">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
-            <Engine className="w-5 h-5 text-teal-700" />
+            <SpokeIcon className="w-5 h-5 text-teal-700" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 tracking-tight">
@@ -192,7 +192,7 @@ export default function CompFamilyView({
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
         <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
           <div className="font-bold text-slate-800 text-[13px] flex items-center gap-2">
-            <Engine className="w-4 h-4 text-teal-600" />
+            <SpokeIcon className="w-4 h-4 text-teal-600" />
             <span>Tableau Familles de Composants (Entrepôt)</span>
           </div>
           <div className="font-mono text-[11px] text-slate-400 hidden lg:block">

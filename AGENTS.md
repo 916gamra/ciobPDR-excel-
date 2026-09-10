@@ -81,10 +81,15 @@
   - البطاقات العلوية (`Top Banners`): خلفية بيضاء (`bg-white border-slate-200 shadow-xs`) لتطابق شريط الفلاتر والجداول.
 - **الأيقونات المعبرة:**
   - `Machines Registered`: أيقونة المصنع والمنشأة الصناعية (`Factory`).
-  - `Families`: أيقونة المجموعات الصندوقية (`Boxes`).
+  - `Families`: أيقونة `hub` (`HubIcon` Google Material Symbols Outlined SVG أوفلاين 100%).
+  - `Templates`: أيقونة `category` (`CategoryIcon` Google Material Icons Outlined SVG أوفلاين 100%).
+  - `Familles (Composants)`: أيقونة `spoke` (`SpokeIcon` Google Material Symbols Outlined SVG أوفلاين 100%).
+  - `Types (Parts)`: أيقونة `layers` (`LayersIcon` Google Material Symbols Outlined SVG أوفلاين 100%).
   - `Operations`: أيقونة قائمة المهام والإجراءات الميدانية (`ClipboardList`).
   - استخدام أيقونات SVG حصراً (أوفلاين 100%) من مكتبة `lucide-react` وشعار التطبيق SVG مدمج.
   - يمنع استخدام الرموز التعبيرية (Emojis) كأيقونات أساسية في عناصر التحكم أو القوائم.
+  - **الفصل التام بين بيانات المستودع (Entrepôt Parts) والمخزون (Stock PDR):**
+    صفحات `Part Types` و `Part Designations` مخصصة حصراً لقطع وأجزاء المستودع (`Entrepôt`) وتمتلك قاعدة بيانات وجداول مستقلة (`Part_Types`, `Part_Designations`) تماماً عن جداول المخزون العام (`Stock_Actuel / Types / Diagnostics`). يمنع الخلط بينهما أو استخدام مسمى PDR لقطع المستودع.
 
 ---
 

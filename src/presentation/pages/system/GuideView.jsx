@@ -5,6 +5,16 @@ import {
   Database,
   Layers,
   ShieldCheck,
+  MapPin,
+  Users,
+  Factory,
+  Package,
+  Boxes,
+  FileSpreadsheet,
+  ArrowRight,
+  CheckCircle2,
+  Sparkles,
+  Wrench,
 } from 'lucide-react';
 
 export default function GuideView() {
@@ -17,9 +27,189 @@ export default function GuideView() {
           <span>Manuel d'Utilisation, Règles d'Intégrité & Formules Excel</span>
         </h2>
         <p className="text-xs text-slate-500 mt-1 max-w-3xl">
-          Retrouvez les principes des tables miroirs (Twins), la gouvernance des liens intelligents,
-          et la syntaxe exacte des formules de calcul Excel du modèle GMAO Light.
+          Retrouvez la méthodologie industrielle de remplissage des données GMAO PDR, les principes des
+          tables miroirs (Excel Twins), la gouvernance des liens intelligents et la syntaxe exacte des formules.
         </p>
+      </div>
+
+      {/* Industrial Deployment Sequence / Roadmap (Workflow PDR Réel) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-slate-900">
+                Méthodologie Industrielle : L'Ordre Chronologique de Saisie (Workflow PDR)
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                Comment configurer une usine de A à Z sans conflits de clés et avec intégrité relationnelle totale.
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 self-start sm:self-auto">
+            <CheckCircle2 className="w-3.5 h-3.5" /> 6 Étapes Standards
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Step 1: Zones */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:shadow-xs transition-all space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-cyan-100 text-cyan-800">
+                Étape 1 • Socle Spatial
+              </span>
+              <MapPin className="w-4 h-4 text-cyan-600" />
+            </div>
+            <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+              <span>Les Zones Industrielles (`Zones`)</span>
+            </h4>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Dans le monde réel, vous délimitez d'abord le bâtiment et les ateliers physiques (ex:{' '}
+              <span className="font-mono font-medium text-slate-800">Tissage</span>,{' '}
+              <span className="font-mono font-medium text-slate-800">Teinture</span>,{' '}
+              <span className="font-mono font-medium text-slate-800">Magasin PDR</span>,{' '}
+              <span className="font-mono font-medium text-slate-800">Chaudière</span>).
+              Sans Zone, aucun équipement ni collaborateur ne peut être géographiquement rattaché.
+            </p>
+            <div className="text-[10px] font-mono text-cyan-700 bg-cyan-50/80 p-1.5 rounded-lg border border-cyan-100">
+              Format type : ZONE-01, ZONE-TIS, ZONE-MAG
+            </div>
+          </div>
+
+          {/* Step 2: Users */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:shadow-xs transition-all space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800">
+                Étape 2 • Équipe & Rôles
+              </span>
+              <Users className="w-4 h-4 text-indigo-600" />
+            </div>
+            <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+              <span>Utilisateurs & Intervenants</span>
+            </h4>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              L'encadrement et la main-d'œuvre qui animent les zones. Saisis dans l'ordre hiérarchique :
+              <br />
+              1. <b>Responsables</b> (<span className="font-mono text-[10px]">RESP-PDR</span> Magasinier, <span className="font-mono text-[10px]">RESP-MT</span> Maintenance).
+              <br />
+              2. <b>Techniciens</b> (<span className="font-mono text-[10px]">TECH-01...</span>) assignés à leurs zones.
+              <br />
+              3. <b>Opérateurs</b> (<span className="font-mono text-[10px]">OP-01...</span>) demandeurs des consommables.
+            </p>
+            <div className="text-[10px] font-mono text-indigo-700 bg-indigo-50/80 p-1.5 rounded-lg border border-indigo-100">
+              Auto-ID : TECH-01, OP-01, CHEF-01
+            </div>
+          </div>
+
+          {/* Step 3: Machines */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:shadow-xs transition-all space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-100 text-blue-800">
+                Étape 3 • Parc Machines
+              </span>
+              <Factory className="w-4 h-4 text-blue-600" />
+            </div>
+            <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+              <span>Arborescence des Machines</span>
+            </h4>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Installation des équipements de production en cascade à 3 niveaux :
+              <br />
+              • <b>Familles</b> : Familles technologiques (Tissage, Finition...).
+              <br />
+              • <b>Templates</b> : Modèles standards réutilisables.
+              <br />
+              • <b>Machines Enregistrées</b> : Les unités physiques en service, rattachées directement à leur{' '}
+              <b>Zone</b> et <b>Technicien référent</b>.
+            </p>
+            <div className="text-[10px] font-mono text-blue-700 bg-blue-50/80 p-1.5 rounded-lg border border-blue-100">
+              Code machine : MCH-001, CNC-01, DTA-08
+            </div>
+          </div>
+
+          {/* Step 4: Stock PDR */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:shadow-xs transition-all space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-100 text-amber-800">
+                Étape 4 • Cœur du Réacteur
+              </span>
+              <Package className="w-4 h-4 text-amber-600" />
+            </div>
+            <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+              <span>Catalogue & Stock Actuel PDR</span>
+            </h4>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Pour maintenir les machines en rotation continue, le magasin PDR référence les organes d'usure :
+              <br />
+              • <b>Types</b> : Roulements, Visserie, Courroies, Pneumatique...
+              <br />
+              • <b>Désignations & Diagnostics</b> associés.
+              <br />
+              • <b>Articles de Stock</b> : Réf unique, Emplacement physique (ex: Rayon B-04), Stock Initial et Seuil d'Alerte.
+            </p>
+            <div className="text-[10px] font-mono text-amber-700 bg-amber-50/80 p-1.5 rounded-lg border border-amber-100">
+              Formule : Actuel = Initial + Entrées - Sorties
+            </div>
+          </div>
+
+          {/* Step 5: Warehouse Components & Parts */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:shadow-xs transition-all space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-purple-100 text-purple-800">
+                Étape 5 • Nomenclatures
+              </span>
+              <Boxes className="w-4 h-4 text-purple-600" />
+            </div>
+            <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+              <span>Entrepôt (Composants & Parts)</span>
+            </h4>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Au fur et à mesure de l'exploitation, l'entrepôt s'étoffe en arborescence fine :
+              <br />
+              • <b>COMPONENTS</b> : Ensembles et sous-systèmes lourds (Moteurs électriques, Pompes hydrauliques, Réducteurs avec code suivi).
+              <br />
+              • <b>PARTS</b> : Pièces spécifiques rattachées à une machine, une zone ou conservées en magasin général.
+            </p>
+            <div className="text-[10px] font-mono text-purple-700 bg-purple-50/80 p-1.5 rounded-lg border border-purple-100">
+              Codes : MOT-01-01, CYL-02, FIX-01
+            </div>
+          </div>
+
+          {/* Step 6: Mouvements & Bons */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:shadow-xs transition-all space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
+                Étape 6 • Flux Quotidiens
+              </span>
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            </div>
+            <h4 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+              <span>Mouvements & Bons de Sortie</span>
+            </h4>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              La vie quotidienne du magasin PDR :
+              <br />
+              • <b>Sortie</b> : Enregistrement avec N° de Bon (ex: Bon-012), Réf article, Quantité, Demandeur (Technicien ou Opérateur) et Machine réceptrice.
+              <br />
+              • <b>Entrée</b> : Réapprovisionnements fournisseurs avec mise à jour immédiate des niveaux et recalcul du statut (OK, ALERTE, RUPTURE).
+            </p>
+            <div className="text-[10px] font-mono text-emerald-700 bg-emerald-50/80 p-1.5 rounded-lg border border-emerald-100">
+              Traçabilité 100% Hors-ligne & Export Excel
+            </div>
+          </div>
+        </div>
+
+        {/* Industrial Focus Notice */}
+        <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
+          <Wrench className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+          <div className="leading-relaxed">
+            <b className="font-semibold">Règle d'or du système GMAO Light PDR :</b> Nous focalisons 100% de l'application sur la{' '}
+            <span className="font-semibold underline">Gestion Rigoureuse des Pièces de Rechange (PDR)</span> et la cohérence des stocks jumeaux (Excel Twin). 
+            Les lourds workflows de billetterie ou de préventif complexe sont volontairement exclus pour garantir une rapidité d'exécution, une clarté totale pour le magasinier et une synchronisation parfaite avec les fichiers Excel d'usine.
+          </div>
+        </div>
       </div>
 
       {/* Guide Cards */}

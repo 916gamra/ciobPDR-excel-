@@ -10,7 +10,7 @@ export default function AppModals({
   showAddMachineModal, setShowAddMachineModal,
   showAddUserModal, setShowAddUserModal, addUserModalType, setAddUserModalType,
   showAddZoneModal, setShowAddZoneModal,
-  types, effectiveFamilies, effectiveTemplates, zones, technicians, machines, operations,
+  types, stockItems, effectiveFamilies, effectiveTemplates, zones, technicians, machines, operations,
   handleAddArticle, handleAddMachine, handleUpdateMachine, handleDeleteMachine,
   handleAddTechnician, handleAddOperation, handleAddZone,
   setCurrentTab,
@@ -22,6 +22,7 @@ export default function AppModals({
         isOpen={showAddArticleModal}
         onClose={() => setShowAddArticleModal(false)}
         types={types}
+        stockItems={stockItems}
         onAddArticle={handleAddArticle}
         onOpenAddTypeModal={() => {
           setShowAddArticleModal(false);

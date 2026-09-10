@@ -6,6 +6,7 @@ import {
   INITIAL_DIAGNOSTICS,
   INITIAL_FAMILIES,
   INITIAL_TEMPLATES,
+  INITIAL_BLUEPRINTS,
   INITIAL_COMP_FAMILIES,
   INITIAL_COMP_TEMPLATES,
   INITIAL_PART_TYPES,
@@ -23,11 +24,23 @@ import { MachineApplicationService } from '../application/services/MachineApplic
 import { TaskApplicationService } from '../application/services/TaskApplicationService.js';
 
 
-// Build a fast lookup dictionary from initial baseline stock data to ensure original quantities are never lost
+// Build a fast lookup dictionary from initial baseline stock data to ensure original quantities and type-based references are never lost
 const INITIAL_STOCK_LOOKUP = new Map();
-(initialData.Stock_Actuel || []).forEach((item, idx) => {
-  const refKey = String(item.Ref || item.ref || item['Référence'] || item['Reference'] || '').trim().toLowerCase();
-  const desigKey = String(item['Désignation'] || item.designation || '').trim().toLowerCase();
+const BASELINE_TYPE_COUNTERS = {};
+
+export const BASELINE_STOCK_ITEMS = (initialData.Stock_Actuel || []).map((item, idx) => {
+  const typeName = String(item['Désignation'] || item.type || 'Divers').trim();
+  const lowerType = typeName.toLowerCase();
+  BASELINE_TYPE_COUNTERS[lowerType] = (BASELINE_TYPE_COUNTERS[lowerType] || 0) + 1;
+  const count = BASELINE_TYPE_COUNTERS[lowerType];
+  const pad2 = count < 10 ? `0${count}` : `${count}`;
+  const ref = `${typeName}${count}`;
+  const refPadded = `${typeName}${pad2}`;
+  
+  // The actual technical specification of the article from Excel (e.g. Foret Beton Ø12, 6PK925, etc.)
+  const designation = String(
+    item.Ref != null ? item.Ref : item.ref != null ? item.ref : item['Désignation'] || `Article ${idx + 1}`
+  ).trim();
 
   let initQty = 0;
   if (item.stockInitial != null && item.stockInitial !== '' && !isNaN(Number(item.stockInitial))) {
@@ -43,16 +56,25 @@ const INITIAL_STOCK_LOOKUP = new Map();
   }
 
   const dataObj = {
+    id: idx + 1,
     qty: initQty,
-    ref: item.Ref || item.ref || item['Référence'] || item['Reference'] || `ART${String(idx + 1).padStart(3, '0')}`,
-    designation: item.Ref || item.designation || item['Désignation'] || `Piece ${idx + 1}`,
-    type: item['Désignation'] || item.type || 'Divers',
+    ref,
+    refPadded,
+    designation,
+    type: typeName,
+    id_type: typeName,
     seuil: Number(item["Seuil d'Alerte"] || item.seuil) || 3,
     emplacement: item.Emplacement || item.emplacement || `A${(idx % 8) + 1}-R${(idx % 6) + 1}`,
   };
 
-  if (refKey) INITIAL_STOCK_LOOKUP.set(refKey, dataObj);
-  if (desigKey && !INITIAL_STOCK_LOOKUP.has(desigKey)) INITIAL_STOCK_LOOKUP.set(desigKey, dataObj);
+  INITIAL_STOCK_LOOKUP.set(ref.toLowerCase(), dataObj);
+  INITIAL_STOCK_LOOKUP.set(refPadded.toLowerCase(), dataObj);
+  INITIAL_STOCK_LOOKUP.set(designation.toLowerCase(), dataObj);
+  if (item.Ref) {
+    INITIAL_STOCK_LOOKUP.set(String(item.Ref).trim().toLowerCase(), dataObj);
+  }
+
+  return dataObj;
 });
 
 /**
@@ -103,6 +125,9 @@ export function useGmaoState() {
   const isValidMachineTemplates = (arr) => {
     if (!Array.isArray(arr) || arr.length === 0) return false;
     if (isStockCorrupted(arr)) return false;
+    // Check if it's the old 7 dummy templates
+    const hasOldDummy = arr.some((t) => t.id_templates === 'TPL-RCF100' || t.id_templates === 'TPL-UCP204');
+    if (hasOldDummy || arr.length < 12) return false;
     return arr.every(
       (item) => item && (item.id_templates || item.id) && (item.id_family || item.libelle)
     );
@@ -111,6 +136,9 @@ export function useGmaoState() {
   const isValidMachineFamilies = (arr) => {
     if (!Array.isArray(arr) || arr.length === 0) return false;
     if (isStockCorrupted(arr)) return false;
+    // Check if it's the old 6 dummy families
+    const hasOldDummy = arr.some((f) => f.id_family === 'FAM-EMB' || f.id_family === 'FAM-PAL');
+    if (hasOldDummy || arr.length < 10) return false;
     return arr.every((item) => item && (item.id_family || item.id) && (item.libelle || item.nom));
   };
 
@@ -119,9 +147,7 @@ export function useGmaoState() {
     if (isValidMachineFamilies(candidate)) {
       return candidate;
     }
-    return initialData.Families?.length && isValidMachineFamilies(initialData.Families)
-      ? initialData.Families
-      : INITIAL_FAMILIES;
+    return INITIAL_FAMILIES;
   });
 
   const [templates, setTemplates] = useState(() => {
@@ -132,19 +158,27 @@ export function useGmaoState() {
     if (isStockCorrupted(candidate)) {
       storageService.removeItem('gmao_templates');
     }
-    return initialData.Templates?.length && isValidMachineTemplates(initialData.Templates)
-      ? initialData.Templates
-      : INITIAL_TEMPLATES;
+    return INITIAL_TEMPLATES;
+  });
+
+  const [blueprints, setBlueprints] = useState(() => {
+    const candidate = groupedState.blueprints || storageService.getItem('gmao_blueprints_v1');
+    if (Array.isArray(candidate) && candidate.length > 0) {
+      return candidate;
+    }
+    return INITIAL_BLUEPRINTS;
   });
 
   const [machines, setMachines] = useState(() => {
-    return (
-      groupedState.machines ||
-      storageService.getItem('gmao_machines') ||
-      (initialData.Machines_Registered?.length
-        ? initialData.Machines_Registered
-        : INITIAL_MACHINES_REGISTERED)
-    );
+    const candidate = groupedState.machines || storageService.getItem('gmao_machines');
+    if (
+      Array.isArray(candidate) &&
+      candidate.length >= 80 &&
+      !candidate.some((m) => m.id_machine_registered === 'MCH-001' || m.id === 'MCH-001')
+    ) {
+      return candidate;
+    }
+    return INITIAL_MACHINES_REGISTERED;
   });
 
   const [warehouseItems, setWarehouseItems] = useState(() => {
@@ -191,27 +225,60 @@ export function useGmaoState() {
   });
 
   const [zones, setZones] = useState(() => {
-    return (
+    const raw =
       groupedState.zones ||
-      storageService.getItem('gmao_zones') ||
-      (initialData.Zones?.length ? initialData.Zones : INITIAL_ZONES)
-    );
+      storageService.getItem('gmao_zones');
+    if (
+      Array.isArray(raw) &&
+      raw.length >= 14 &&
+      raw.some((z) => z.id_zone === 'SEC-01' || z.code_zone === 'BAK' || z.id_zone === 'SEC-14')
+    ) {
+      return raw.map((z, idx) => ({
+        ...z,
+        code_zone: z.code_zone || z.code || `SEC-${String(idx + 1).padStart(2, '0')}`,
+        id_zone: z.id_zone || z.code_zone || z.code || `SEC-${String(idx + 1).padStart(2, '0')}`,
+      }));
+    }
+    return INITIAL_ZONES;
   });
 
   const [technicians, setTechnicians] = useState(() => {
-    return (
+    const raw =
       groupedState.technicians ||
       storageService.getItem('gmao_technicians') ||
-      (initialData.Technicians?.length ? initialData.Technicians : INITIAL_TECHNICIANS)
-    );
+      (initialData.Technicians?.length ? initialData.Technicians : INITIAL_TECHNICIANS);
+    if (Array.isArray(raw)) {
+      const hasOldDummyTechs = raw.some(
+        (t) =>
+          (t.id_technician === 'TECH-02' && t.nom === 'Karim') ||
+          (t.id_technician === 'TECH-03' && t.nom === 'Yassine') ||
+          (t.id_technician === 'TECH-04' && t.nom === 'Amine')
+      );
+      if (hasOldDummyTechs) {
+        return INITIAL_TECHNICIANS;
+      }
+      return raw;
+    }
+    return INITIAL_TECHNICIANS;
   });
 
   const [operations, setOperations] = useState(() => {
-    return (
+    const raw =
       groupedState.operations ||
       storageService.getItem('gmao_operations') ||
-      (initialData.Operations?.length ? initialData.Operations : INITIAL_OPERATIONS)
-    );
+      (initialData.Operations?.length ? initialData.Operations : INITIAL_OPERATIONS);
+    if (Array.isArray(raw)) {
+      return raw.filter(
+        (o) =>
+          !(o.id_operation === 'RESP-03' && String(o.nom || '').toLowerCase().includes('karim')) &&
+          !(o.id_operation === 'RESP-04' && String(o.nom || '').toLowerCase().includes('ahmed')) &&
+          !(o.id_operation === 'OP-01' && String(o.nom || '').includes('Anas - ZONE-DET')) &&
+          !(o.id_operation === 'OP-02' && String(o.nom || '').includes('Maintenance Préventive')) &&
+          !(o.id_operation === 'OP-03' && String(o.nom || '').includes('Changement Outils')) &&
+          !(o.id_operation === 'OP-04' && String(o.nom || '').includes('Contrôle Niveaux'))
+      );
+    }
+    return INITIAL_OPERATIONS;
   });
 
   const [mouvements, setMouvements] = useState(() => {
@@ -295,24 +362,20 @@ export function useGmaoState() {
 
   const [rawStock, setRawStock] = useState(() => {
     const saved = groupedState.rawStock || storageService.getItem('gmao_raw_stock_v6');
-    const rawList = saved && Array.isArray(saved) && saved.length > 0 ? saved : initialData.Stock_Actuel || [];
+    const rawList = saved && Array.isArray(saved) && saved.length > 0 ? saved : BASELINE_STOCK_ITEMS;
 
     return rawList
       .map((s, idx) => {
         const itemRef = String(s.ref || s.Ref || s['Référence'] || s['Reference'] || '').trim();
         const refKey = itemRef.toLowerCase();
-        
-        // Find baseline by ref first
-        let baseline = INITIAL_STOCK_LOOKUP.get(refKey);
 
         const itemDesig = String(
           s.designation || s.Ref || s.ref || s['Désignation'] || s['D\u00c3\u00a9signation'] || ''
         ).trim();
         const desigKey = itemDesig.toLowerCase();
         
-        if (!baseline) {
-          baseline = INITIAL_STOCK_LOOKUP.get(desigKey);
-        }
+        // Find baseline by ref or by designation
+        let baseline = INITIAL_STOCK_LOOKUP.get(refKey) || INITIAL_STOCK_LOOKUP.get(desigKey);
 
         let stockInitial = 0;
         let hasExplicitInitial = false;
@@ -336,18 +399,21 @@ export function useGmaoState() {
           stockInitial = baseline.qty;
         }
 
-        const finalRef = itemRef || (baseline ? baseline.ref : `ART${String(idx + 1).padStart(3, '0')}`);
-        
+        let finalRef = itemRef;
         let finalDesignation = itemDesig;
         let finalType = s.type || s.id_type || s['Désignation'];
-        
-        if (s.designation && String(s.designation).trim() !== '') {
-          finalDesignation = String(s.designation).trim();
-          finalType = s.type || s.id_type || (baseline ? baseline.type : 'Divers');
-        } else if (baseline) {
-          finalDesignation = baseline.designation;
-          finalType = baseline.type;
+
+        // If ref is identical to designation or starts with generic ART, restore the authentic type-based ref from baseline
+        if (baseline) {
+          if (!finalRef || finalRef === finalDesignation || finalRef.startsWith('ART') || finalRef === baseline.designation) {
+            finalRef = baseline.ref;
+          }
+          if (!finalDesignation || finalDesignation === finalRef) {
+            finalDesignation = baseline.designation;
+          }
+          finalType = s.type || s.id_type || baseline.type;
         } else {
+          finalRef = finalRef || `ART${String(idx + 1).padStart(3, '0')}`;
           finalDesignation = finalDesignation || finalRef;
           finalType = finalType || 'Divers';
         }
@@ -359,9 +425,7 @@ export function useGmaoState() {
           s.Emplacement ||
           (baseline ? baseline.emplacement : `A${(idx % 8) + 1}-R${(idx % 6) + 1}`);
 
-      
-
-  return {
+        return {
           id: s.id || idx + 1,
           ref: finalRef,
           designation: finalDesignation,
@@ -373,9 +437,11 @@ export function useGmaoState() {
           emplacement: finalEmplacement,
         };
       })
-      .sort((a, b) =>
-        String(a.ref).localeCompare(String(b.ref), undefined, { numeric: true, sensitivity: 'base' })
-      );
+      .sort((a, b) => {
+        const typeComp = String(a.type || '').localeCompare(String(b.type || ''), undefined, { sensitivity: 'base' });
+        if (typeComp !== 0) return typeComp;
+        return String(a.ref || '').localeCompare(String(b.ref || ''), undefined, { numeric: true, sensitivity: 'base' });
+      });
   });
 
   const [designations, setDesignations] = useState(() => {
@@ -448,6 +514,7 @@ export function useGmaoState() {
         designations,
         families,
         templates,
+        blueprints,
         compFamilies,
         compTemplates,
         partTypes,
@@ -463,7 +530,8 @@ export function useGmaoState() {
       // Grouped state save (Task 10)
       storageService.setItem('gmao_full_state_v1', fullState);
 
-      // Dedicated keys for Entrepôt isolation
+      // Dedicated keys for Entrepôt isolation & Blueprints
+      storageService.setItem('gmao_blueprints_v1', blueprints);
       storageService.setItem('gmao_comp_families_v1', compFamilies);
       storageService.setItem('gmao_comp_templates_v1', compTemplates);
       storageService.setItem('gmao_part_types_v1', partTypes);
@@ -473,6 +541,7 @@ export function useGmaoState() {
       indexedDBService.setItem('gmao_full_state_v1', fullState);
 
       // Keep individual DB backups for compatibility with export/import tools if they rely on it
+      indexedDBService.setItem('gmao_blueprints_v1', blueprints);
       indexedDBService.setItem('gmao_warehouse_items_v1', warehouseItems);
       indexedDBService.setItem('gmao_mouvements', mouvements);
       indexedDBService.setItem('gmao_raw_stock_v6', rawStock);
@@ -483,6 +552,7 @@ export function useGmaoState() {
     designations,
     families,
     templates,
+    blueprints,
     compFamilies,
     compTemplates,
     partTypes,
@@ -507,6 +577,7 @@ export function useGmaoState() {
             if (fresh.designations) setDesignations(fresh.designations);
             if (fresh.families && isValidMachineFamilies(fresh.families)) setFamilies(fresh.families);
             if (fresh.templates && isValidMachineTemplates(fresh.templates)) setTemplates(fresh.templates);
+            if (fresh.blueprints && Array.isArray(fresh.blueprints)) setBlueprints(fresh.blueprints);
             if (fresh.compFamilies) setCompFamilies(fresh.compFamilies);
             if (fresh.compTemplates) setCompTemplates(fresh.compTemplates);
             if (fresh.partTypes) setPartTypes(fresh.partTypes);
@@ -590,6 +661,8 @@ export function useGmaoState() {
     setFamilies,
     templates,
     setTemplates,
+    blueprints,
+    setBlueprints,
     compFamilies,
     setCompFamilies,
     compTemplates,

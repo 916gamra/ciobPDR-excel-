@@ -46,11 +46,11 @@ import {
   MoreVertical,
   Activity,
   TrendingUp,
-  SwatchBook,
   Info,
 } from 'lucide-react';
 import { Engine } from '../../components/common/icons/Engine';
 import { CubeIcon } from '../../components/common/icons/CubeIcon';
+import { LayersIcon } from '../../components/common/icons/LayersIcon';
 
 export default function EntrepotView({
   warehouseItems = [],
@@ -89,6 +89,8 @@ export default function EntrepotView({
   onNavigateToFamily,
   onNavigateToTemplate,
   onNavigateToType,
+  onNavigateToPartTypes,
+  onNavigateToPartDesignations,
   onNavigateToDiag,
   onNavigateToZone,
   onNavigateToMachine,
@@ -1001,11 +1003,11 @@ export default function EntrepotView({
               {kpis.parts}
             </span>
             <span className="text-[11px] text-slate-500 mt-0.5 block">
-              Pièces détachées & Composants PDR
+              Pièces détachées & Parts (Entrepôt)
             </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 border border-indigo-200/60">
-            <SwatchBook className="w-5 h-5 text-indigo-700" />
+            <LayersIcon className="w-5 h-5 text-indigo-700" />
           </div>
         </div>
 
@@ -1057,7 +1059,7 @@ export default function EntrepotView({
         <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between gap-1.5">
           <div className="flex items-center justify-between gap-2">
             <div className="text-[10.5px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5 truncate">
-              <SwatchBook className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <LayersIcon className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
               <span className="truncate">Formule Twin Part</span>
             </div>
             <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
@@ -1278,7 +1280,7 @@ export default function EntrepotView({
             <label className="block text-[10.5px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-between">
               {isPartNature(currentNatureFilter) ? (
                 <span className="inline-flex items-center gap-1.5 text-indigo-700">
-                  <SwatchBook className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <LayersIcon className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                   Type de Part
                 </span>
               ) : (
@@ -1709,7 +1711,7 @@ export default function EntrepotView({
                         ) : (
                           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs">
                             <div className="w-6 h-6 rounded-lg bg-indigo-100/80 flex items-center justify-center shrink-0">
-                              <SwatchBook className="w-3.5 h-3.5 text-indigo-600" />
+                              <LayersIcon className="w-3.5 h-3.5 text-indigo-600" />
                             </div>
                             <div>
                               <span className="font-extrabold text-[11px] block leading-tight">PART</span>
@@ -1781,11 +1783,14 @@ export default function EntrepotView({
                           <div className="space-y-1">
                             <button
                               type="button"
-                              onClick={() => onNavigateToType && onNavigateToType(item.id_type)}
+                              onClick={() => {
+                                if (onNavigateToPartTypes) onNavigateToPartTypes(item.id_type);
+                                else if (onNavigateToType) onNavigateToType(item.id_type);
+                              }}
                               className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/70 font-semibold text-[11px] transition cursor-pointer max-w-[190px] truncate"
-                              title={`Type: ${typeObj?.libelle || item.id_type}`}
+                              title={`Type de Part: ${typeObj?.libelle || item.id_type}`}
                             >
-                              <SwatchBook className="w-3 h-3 text-indigo-600 shrink-0" />
+                              <LayersIcon className="w-3 h-3 text-indigo-600 shrink-0" />
                               <span className="truncate">{typeObj?.libelle || item.id_type || 'Type'}</span>
                             </button>
                             {diagObj && (
@@ -2163,7 +2168,7 @@ export default function EntrepotView({
                         : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
-                    <SwatchBook className="w-3.5 h-3.5" />
+                    <LayersIcon className="w-3.5 h-3.5" />
                     <span>Part (Twin Stock)</span>
                   </button>
                 </div>

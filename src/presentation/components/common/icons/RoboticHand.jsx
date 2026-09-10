@@ -1,44 +1,30 @@
 
 /**
- * RoboticHand Icon - Compatible with Lucide React icon standard
- * Represents a robotic arm / robotic gripper hand for Machine Families
+ * AllOutIcon / RoboticHand Icon - Google Material Icons "all_out"
+ * Represents Machine Families (Familles de Machines)
  */
 export function RoboticHand({
   className = 'w-4 h-4',
   size,
   color = 'currentColor',
-  strokeWidth = 2,
   ...props
 }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
       width={size || 24}
       height={size || 24}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      fill={color}
       className={className}
       {...props}
     >
-      {/* Wrist / base actuator */}
-      <path d="M4 18h6v3H4z" />
-      <path d="M7 14v4" />
-      {/* Palm / joint knuckle */}
-      <rect x="7" y="10" width="6" height="4" rx="1" />
-      {/* Left gripper finger / claw */}
-      <path d="M7 10 4.5 6A1.5 1.5 0 0 1 6 4.5L9.5 9" />
-      {/* Right gripper finger / claw */}
-      <path d="M13 10l2.5-4A1.5 1.5 0 0 0 14 4.5L10.5 9" />
-      {/* Center sensor / hydraulic joint */}
-      <circle cx="10" cy="12" r="1" fill="currentColor" />
-      {/* Connection link extension */}
-      <path d="M13 12h7" />
+      <path d="M16.21 4.16l4 4v-4zm4 12l-4 4h4zm-12 4l-4-4v4zm-4-12l4-4h-4zm12.95-.95c-2.73-2.73-7.17-2.73-9.9 0s-2.73 7.17 0 9.9 7.17 2.73 9.9 0 2.73-7.16 0-9.9zm-1.41 8.49c-1.95 1.95-5.12 1.95-7.07 0s-1.95-5.12 0-7.07 5.12-1.95 7.07 0 1.95 5.12 0 7.07z" />
     </svg>
   );
 }
 
+export const AllOutIcon = RoboticHand;
+export const AllOut = RoboticHand;
 export default RoboticHand;
+

@@ -107,7 +107,7 @@ export default function StockView({
   
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState('ref');
+  const [sortField, setSortField] = useState('type');
   const [sortOrder, setSortOrder] = useState('asc');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [activeKpiFilter, setActiveKpiFilter] = useState('ALL'); // ALL | 'OK' | 'ALERTE' | 'RUPTURE'
@@ -190,19 +190,24 @@ export default function StockView({
         const priority = { RUPTURE: 0, ALERTE: 1, OK: 2 };
         valA = priority[a.alerte] ?? 3;
         valB = priority[b.alerte] ?? 3;
+        if (valA !== valB) return sortOrder === 'asc' ? valA - valB : valB - valA;
       } else if (
         ['stockInitial', 'entrees', 'sorties', 'stockActuel', 'seuil'].includes(sortField)
       ) {
         valA = Number(valA || 0);
         valB = Number(valB || 0);
+        if (valA !== valB) return sortOrder === 'asc' ? valA - valB : valB - valA;
+      } else if (sortField === 'type') {
+        const typeComp = String(a.type || '').localeCompare(String(b.type || ''), undefined, { sensitivity: 'base' });
+        if (typeComp !== 0) return sortOrder === 'asc' ? typeComp : -typeComp;
+        return String(a.ref || '').localeCompare(String(b.ref || ''), undefined, { numeric: true, sensitivity: 'base' });
       } else {
-        valA = String(valA || '').toLowerCase();
-        valB = String(valB || '').toLowerCase();
+        const strComp = String(valA || '').localeCompare(String(valB || ''), undefined, { numeric: true, sensitivity: 'base' });
+        if (strComp !== 0) return sortOrder === 'asc' ? strComp : -strComp;
       }
 
-      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
+      // Secondary sort by ref numeric
+      return String(a.ref || '').localeCompare(String(b.ref || ''), undefined, { numeric: true, sensitivity: 'base' });
     });
   }, [effectiveFiltered, sortField, sortOrder]);
 

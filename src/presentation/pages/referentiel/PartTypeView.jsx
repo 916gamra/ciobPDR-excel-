@@ -1,8 +1,8 @@
 import {  useState, useMemo  } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import { PlayingCardsFan } from '../../components/common/icons/PlayingCardsFan';
+import { LayersIcon } from '../../components/common/icons/LayersIcon';
 import {
-  SwatchBook,
   Plus,
   Search,
   ArrowRight,
@@ -110,14 +110,14 @@ export default function PartTypeView({
       <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between gap-3 sm:gap-4 w-full">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shrink-0 shadow-2xs font-bold">
-            <SwatchBook className="w-5 h-5 text-teal-700" />
+            <LayersIcon className="w-5 h-5 text-teal-700" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900 tracking-tight">
               Types de Parts d&apos;Entrepôt
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Nomenclature des catégories de pièces détachées (PDR) gérées au sein du groupe entrepôt.
+              Nomenclature des types et catégories de pièces (Parts) gérées au sein du groupe entrepôt (Distinctes du Stock).
             </p>
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function PartTypeView({
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
         <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 bg-slate-50/50 gap-2">
           <div className="font-bold text-slate-800 text-[13px] flex items-center gap-2">
-            <SwatchBook className="w-4 h-4 text-teal-600" />
+            <LayersIcon className="w-4 h-4 text-teal-600" />
             <span>Tableau Types de Parts (Entrepôt)</span>
           </div>
           <div className="font-mono text-[11px] text-slate-400 hidden lg:block">

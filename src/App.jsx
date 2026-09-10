@@ -33,15 +33,22 @@ import MainLayout from './presentation/components/layout/MainLayout';
 import AppModals from './presentation/modals/AppModals';
 import AppRouter from './presentation/router/AppRouter';
 
-// Baseline stock lookup dictionary to ensure real quantities are permanently preserved
+// Baseline stock lookup dictionary to ensure real quantities and type-based references are permanently preserved
 const INITIAL_STOCK_LOOKUP = new Map();
+const BASELINE_TYPE_COUNTERS = {};
+
 (initialData.Stock_Actuel || []).forEach((item, idx) => {
-  const refKey = String(item.Ref || item.ref || item['Référence'] || item['Reference'] || '')
-    .trim()
-    .toLowerCase();
-  const desigKey = String(item['Désignation'] || item.designation || '')
-    .trim()
-    .toLowerCase();
+  const typeName = String(item['Désignation'] || item.type || 'Divers').trim();
+  const lowerType = typeName.toLowerCase();
+  BASELINE_TYPE_COUNTERS[lowerType] = (BASELINE_TYPE_COUNTERS[lowerType] || 0) + 1;
+  const count = BASELINE_TYPE_COUNTERS[lowerType];
+  const pad2 = count < 10 ? `0${count}` : `${count}`;
+  const ref = `${typeName}${count}`;
+  const refPadded = `${typeName}${pad2}`;
+  
+  const designation = String(
+    item.Ref != null ? item.Ref : item.ref != null ? item.ref : item['Désignation'] || `Article ${idx + 1}`
+  ).trim();
 
   let initQty = 0;
   if (item.stockInitial != null && item.stockInitial !== '' && !isNaN(Number(item.stockInitial))) {
@@ -70,22 +77,23 @@ const INITIAL_STOCK_LOOKUP = new Map();
   }
 
   const dataObj = {
+    id: idx + 1,
     qty: initQty,
-    ref:
-      item.ref ||
-      item.Ref ||
-      item['Référence'] ||
-      item['Reference'] ||
-      `ART${String(idx + 1).padStart(3, '0')}`,
-    designation:
-      item.designation || item.Ref || item.ref || item['Désignation'] || `Piece ${idx + 1}`,
-    type: item.type || item.id_type || item['Désignation'] || 'Divers',
+    ref,
+    refPadded,
+    designation,
+    type: typeName,
+    id_type: typeName,
     seuil: Number(item["Seuil d'Alerte"] || item.seuil) || 3,
     emplacement: item.Emplacement || item.emplacement || `A${(idx % 8) + 1}-R${(idx % 6) + 1}`,
   };
 
-  if (refKey) INITIAL_STOCK_LOOKUP.set(refKey, dataObj);
-  if (desigKey && !INITIAL_STOCK_LOOKUP.has(desigKey)) INITIAL_STOCK_LOOKUP.set(desigKey, dataObj);
+  INITIAL_STOCK_LOOKUP.set(ref.toLowerCase(), dataObj);
+  INITIAL_STOCK_LOOKUP.set(refPadded.toLowerCase(), dataObj);
+  INITIAL_STOCK_LOOKUP.set(designation.toLowerCase(), dataObj);
+  if (item.Ref) {
+    INITIAL_STOCK_LOOKUP.set(String(item.Ref).trim().toLowerCase(), dataObj);
+  }
 });
 
 export default function App() {
@@ -141,6 +149,8 @@ export default function App() {
     setFamilies,
     templates,
     setTemplates,
+    blueprints,
+    setBlueprints,
     machines,
     setMachines,
     warehouseItems,
@@ -234,11 +244,21 @@ export default function App() {
         .trim()
         .toLowerCase();
 
+      // Support matching unpadded and padded variants (e.g. courroie1 vs courroie01)
+      const normRefKey = itemRefKey.replace(/^([a-zA-Z\u00C0-\u017F\s_-]+?)0+(\d+)$/, '$1$2');
+      const padRefKey = itemRefKey.replace(/^([a-zA-Z\u00C0-\u017F\s_-]+?)(\d+)$/, (match, p1, p2) => 
+        p2.length === 1 ? `${p1}0${p2}` : match
+      );
+
       let entrees =
         mvtSummary[itemRefKey]?.entrees ||
+        mvtSummary[normRefKey]?.entrees ||
+        mvtSummary[padRefKey]?.entrees ||
         (itemDesigKey ? mvtSummary[itemDesigKey]?.entrees || 0 : 0);
       let sorties =
         mvtSummary[itemRefKey]?.sorties ||
+        mvtSummary[normRefKey]?.sorties ||
+        mvtSummary[padRefKey]?.sorties ||
         (itemDesigKey ? mvtSummary[itemDesigKey]?.sorties || 0 : 0);
 
       let stockInitial = 0;
@@ -247,6 +267,8 @@ export default function App() {
       } else {
         const baseline =
           INITIAL_STOCK_LOOKUP.get(itemRefKey) ||
+          INITIAL_STOCK_LOOKUP.get(normRefKey) ||
+          INITIAL_STOCK_LOOKUP.get(padRefKey) ||
           (itemDesigKey ? INITIAL_STOCK_LOOKUP.get(itemDesigKey) : null);
         if (baseline && baseline.qty > 0) {
           stockInitial = baseline.qty;
@@ -293,9 +315,9 @@ export default function App() {
   const effectiveFamilies = useMemo(() => {
     if (
       Array.isArray(families) &&
-      families.length > 0 &&
+      families.length >= 10 &&
       !families.some((f) => f.ref || f.stockInitial !== undefined || f.stockActuel !== undefined) &&
-      families.some((f) => f.id_family || f.componentCode)
+      families.some((f) => f.id_family === 'FAM-TR' || f.id_family === 'FAM-PRI')
     ) {
       return families;
     }
@@ -305,11 +327,11 @@ export default function App() {
   const effectiveTemplates = useMemo(() => {
     if (
       Array.isArray(templates) &&
-      templates.length > 0 &&
+      templates.length >= 14 &&
       !templates.some(
         (t) => t.ref || t.stockInitial !== undefined || t.stockActuel !== undefined
       ) &&
-      templates.some((t) => t.id_templates && (t.id_family || t.libelle))
+      templates.some((t) => t.id_templates === 'TPL-TRR' || t.id_templates === 'TPL-PRI')
     ) {
       return templates;
     }
@@ -377,6 +399,8 @@ export default function App() {
   const [opZoneFilter, setOpZoneFilter] = useState('ALL');
   const [techZoneFilter, setTechZoneFilter] = useState('ALL');
   const [templateFamilyFilter, setTemplateFamilyFilter] = useState('ALL');
+  const [blueprintFamilyFilter, setBlueprintFamilyFilter] = useState('ALL');
+  const [blueprintTemplateFilter, setBlueprintTemplateFilter] = useState('ALL');
 
   // Groupe Entrepôt Filter States
   const [whFamilyFilter, setWhFamilyFilter] = useState('ALL');
@@ -442,6 +466,11 @@ export default function App() {
   };
 
   const handleNavigateToDiagFiltered = handleNavigateToDesignationsFiltered;
+
+  const handleNavigateToFamilyFiltered = (familyId) => {
+    setWhSearch(familyId || '');
+    startTransition(() => setCurrentTab('families'));
+  };
 
   const handleNavigateToTemplatesFiltered = (familyId) => {
     setTemplateFamilyFilter(familyId);
@@ -555,6 +584,29 @@ export default function App() {
 
   const handleAddTemplate = (newTpl) => {
     setTemplates((prev) => [...prev, newTpl]);
+  };
+
+  const handleAddBlueprint = (newBlueprint) => {
+    setBlueprints((prev) => [...prev, newBlueprint]);
+    showToast(`Blueprint "${newBlueprint.id_blueprint}" ajouté avec succès !`);
+  };
+
+  const handleUpdateBlueprint = (id, updated) => {
+    setBlueprints((prev) =>
+      prev.map((b) => (b.id_blueprint === id ? { ...b, ...updated } : b))
+    );
+    showToast(`Blueprint "${id}" mis à jour avec succès !`);
+  };
+
+  const handleDeleteBlueprint = (id) => {
+    setBlueprints((prev) => prev.filter((b) => b.id_blueprint !== id));
+    showToast(`Blueprint "${id}" supprimé avec succès !`, 'info');
+  };
+
+  const handleNavigateToBlueprintsFiltered = (familyId, templateId) => {
+    if (familyId) setBlueprintFamilyFilter(familyId);
+    if (templateId) setBlueprintTemplateFilter(templateId);
+    startTransition(() => setCurrentTab('blueprints'));
   };
 
   const handleAddZone = (newZone) => {
@@ -735,6 +787,15 @@ export default function App() {
       );
     }
 
+    // 16. Blueprints (Level 3 Machine Technical Plans)
+    if (blueprints && blueprints.length > 0) {
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(blueprints),
+        'Blueprints'
+      );
+    }
+
     return wb;
   };
 
@@ -814,6 +875,11 @@ export default function App() {
               workbook.Sheets['Part_Designations']
             );
           }
+          if (workbook.SheetNames.includes('Blueprints')) {
+            importedData.Blueprints = XLSX.utils.sheet_to_json(
+              workbook.Sheets['Blueprints']
+            );
+          }
         }
 
         const validation = validateImportedData(importedData);
@@ -842,6 +908,8 @@ export default function App() {
           setFamilies(sanitizeObject(importedData.Families));
         if (importedData.Templates && importedData.Templates.length > 0)
           setTemplates(sanitizeObject(importedData.Templates));
+        if (importedData.Blueprints && importedData.Blueprints.length > 0)
+          setBlueprints(sanitizeObject(importedData.Blueprints));
         if (importedData.Zones && importedData.Zones.length > 0)
           setZones(sanitizeObject(importedData.Zones));
         if (importedData.Technicians && importedData.Technicians.length > 0)
@@ -976,6 +1044,7 @@ export default function App() {
         machines: machines.length,
         families: effectiveFamilies.length,
         templates: effectiveTemplates.length,
+        blueprints: (blueprints || []).length,
         warehouse: warehouseItemsComputed.length,
         entrepot: warehouseItemsComputed.length,
         compFamilies: (compFamilies || []).length,
@@ -1054,20 +1123,39 @@ export default function App() {
             designations, types, search: whSearch, setSearch: setWhSearch, onAddDesignation: handleAddDesignation, onUpdateDesignation: handleUpdateDesignation, onDeleteDesignation: handleDeleteDesignation, onOpenAddTypeModal: () => startTransition(() => setCurrentTab('types')), onNavigateToDiag: handleNavigateToDiagFiltered
           },
           machines: {
-            machines, effectiveFamilies, effectiveTemplates, zones, technicians, search: mchSearch, setSearch: setMchSearch, familyFilter: mchFamilyFilter, setFamilyFilter: setMchFamilyFilter, templateFilter: mchTemplateFilter, setTemplateFilter: setMchTemplateFilter, zoneFilter: mchZoneFilter, setZoneFilter: setMchZoneFilter,
-            onAddMachine: handleAddMachine, onUpdateMachine: handleUpdateMachine, onDeleteMachine: handleDeleteMachine, onOpenAddMachine: () => setShowAddMachineModal(true)
+            machines,
+            families: effectiveFamilies,
+            templates: effectiveTemplates,
+            zones,
+            technicians,
+            mouvements,
+            search: mchSearch,
+            setSearch: setMchSearch,
+            mchFamilyFilter,
+            setMchFamilyFilter,
+            mchTemplateFilter,
+            setMchTemplateFilter,
+            mchZoneFilter,
+            setMchZoneFilter,
+            onAddMachine: handleAddMachine,
+            onUpdateMachine: handleUpdateMachine,
+            onDeleteMachine: handleDeleteMachine,
+            onOpenAddMachine: () => setShowAddMachineModal(true),
+            onNavigateToFamily: handleNavigateToFamilyFiltered,
+            onNavigateToTemplate: handleNavigateToTemplatesFiltered,
+            onNavigateToZone: handleNavigateToMachinesByZone,
           },
           compFamilies: {
             compFamilies, search: whSearch, setSearch: setWhSearch, onAddCompFamily: handleAddCompFamily, onUpdateCompFamily: handleUpdateCompFamily, onDeleteCompFamily: handleDeleteCompFamily, onNavigateToCompTemplates: handleNavigateToCompTemplates
           },
           compTemplates: {
-            compTemplates, compFamilies, search: whSearch, setSearch: setWhSearch, familyFilter: compTemplateFamilyFilter, setFamilyFilter: setCompTemplateFamilyFilter, onAddCompTemplate: handleAddCompTemplate, onUpdateCompTemplate: handleUpdateCompTemplate, onDeleteCompTemplate: handleDeleteCompTemplate, onOpenAddFamilyModal: () => startTransition(() => setCurrentTab('families')), onNavigateToEntrepotByComp: handleNavigateToEntrepotByComp
+            compTemplates, compFamilies, search: whSearch, setSearch: setWhSearch, familyFilter: compTemplateFamilyFilter, setFamilyFilter: setCompTemplateFamilyFilter, onAddCompTemplate: handleAddCompTemplate, onUpdateCompTemplate: handleUpdateCompTemplate, onDeleteCompTemplate: handleDeleteCompTemplate, onOpenAddFamilyModal: () => startTransition(() => setCurrentTab('comp_families')), onNavigateToEntrepotByComp: handleNavigateToEntrepotByComp
           },
           partTypes: {
-            partTypes, search: whSearch, setSearch: setWhSearch, onAddPartType: handleAddPartType, onUpdatePartType: handleUpdatePartType, onDeletePartType: handleDeletePartType, onNavigateToPartDesignations: handleNavigateToPartDesignations
+            partTypes, partDesignations, warehouseItems: warehouseItemsComputed, search: whSearch, setSearch: setWhSearch, onAddPartType: handleAddPartType, onUpdatePartType: handleUpdatePartType, onDeletePartType: handleDeletePartType, onNavigateToPartDesignations: handleNavigateToPartDesignations, onNavigateToEntrepotByType: handleNavigateToEntrepotByType
           },
           partDesignations: {
-            partDesignations, partTypes, search: whSearch, setSearch: setWhSearch, typeFilter: partDesignationTypeFilter, setTypeFilter: setPartDesignationTypeFilter, onAddPartDesignation: handleAddPartDesignation, onUpdatePartDesignation: handleUpdatePartDesignation, onDeletePartDesignation: handleDeletePartDesignation, onOpenAddTypeModal: () => startTransition(() => setCurrentTab('types')), onNavigateToEntrepotByType: handleNavigateToEntrepotByType
+            partDesignations, partTypes, warehouseItems: warehouseItemsComputed, search: whSearch, setSearch: setWhSearch, partDesignationTypeFilter, setPartDesignationTypeFilter, onAddPartDesignation: handleAddPartDesignation, onUpdatePartDesignation: handleUpdatePartDesignation, onDeletePartDesignation: handleDeletePartDesignation, onNavigateToPartTypes: handleNavigateToPartTypes, onNavigateToEntrepotByPart: handleNavigateToEntrepotByPart, onNavigateToEntrepotByType: handleNavigateToEntrepotByType
           },
           families: {
             families: effectiveFamilies,
@@ -1094,13 +1182,41 @@ export default function App() {
             onDeleteTemplate: handleDeleteTemplate,
             onOpenAddFamilyModal: () => startTransition(() => setCurrentTab('families')),
             onNavigateToMachinesByTemplate: handleNavigateToMachinesByTemplate,
-            onNavigateToFamilyFiltered: (famId) => {
-              setWhSearch(famId || '');
-              startTransition(() => setCurrentTab('families'));
-            }
+            onNavigateToFamilyFiltered: handleNavigateToFamilyFiltered,
+            onNavigateToBlueprints: handleNavigateToBlueprintsFiltered,
+          },
+          blueprints: {
+            blueprints,
+            templates: effectiveTemplates,
+            families: effectiveFamilies,
+            machines,
+            blueprintFamilyFilter,
+            setBlueprintFamilyFilter,
+            blueprintTemplateFilter,
+            setBlueprintTemplateFilter,
+            onAddBlueprint: handleAddBlueprint,
+            onUpdateBlueprint: handleUpdateBlueprint,
+            onDeleteBlueprint: handleDeleteBlueprint,
+            onOpenAddFamilyModal: () => startTransition(() => setCurrentTab('families')),
+            onOpenAddTemplateModal: () => startTransition(() => setCurrentTab('templates')),
+            onNavigateToMachinesByTemplate: handleNavigateToMachinesByTemplate,
+            onNavigateToFamily: handleNavigateToFamilyFiltered,
+            onNavigateToTemplate: handleNavigateToTemplatesFiltered,
           },
           zones: {
-            zones, search: whSearch, setSearch: setWhSearch, onAddZone: handleAddZone, onUpdateZone: handleUpdateZone, onDeleteZone: handleDeleteZone, onNavigateToTechs: handleNavigateToTechsByZone, onNavigateToOps: handleNavigateToOpsByZone, onNavigateToMachines: handleNavigateToMachinesByZone, onOpenAddZoneModal: () => setShowAddZoneModal(true)
+            zones,
+            machines,
+            technicians,
+            operations,
+            search: whSearch,
+            setSearch: setWhSearch,
+            onAddZone: handleAddZone,
+            onUpdateZone: handleUpdateZone,
+            onDeleteZone: handleDeleteZone,
+            onNavigateToTechs: handleNavigateToTechsByZone,
+            onNavigateToOps: handleNavigateToOpsByZone,
+            onNavigateToMachines: handleNavigateToMachinesByZone,
+            onOpenAddZoneModal: () => setShowAddZoneModal(true),
           },
           utilisateurs: {
             technicians, operations, zones, mouvements, techZoneFilter, setTechZoneFilter, opZoneFilter, setOpZoneFilter,
@@ -1128,7 +1244,7 @@ export default function App() {
         showAddMachineModal={showAddMachineModal} setShowAddMachineModal={setShowAddMachineModal}
         showAddUserModal={showAddUserModal} setShowAddUserModal={setShowAddUserModal} addUserModalType={addUserModalType} setAddUserModalType={setAddUserModalType}
         showAddZoneModal={showAddZoneModal} setShowAddZoneModal={setShowAddZoneModal}
-        types={types} effectiveFamilies={effectiveFamilies} effectiveTemplates={effectiveTemplates} zones={zones} technicians={technicians} machines={machines} operations={operations}
+        types={types} stockItems={stockItems} effectiveFamilies={effectiveFamilies} effectiveTemplates={effectiveTemplates} zones={zones} technicians={technicians} machines={machines} operations={operations}
         handleAddArticle={handleAddArticle} handleAddMachine={handleAddMachine} handleUpdateMachine={handleUpdateMachine} handleDeleteMachine={handleDeleteMachine}
         handleAddTechnician={handleAddTechnician} handleAddOperation={handleAddOperation} handleAddZone={handleAddZone}
         setCurrentTab={setCurrentTab}
