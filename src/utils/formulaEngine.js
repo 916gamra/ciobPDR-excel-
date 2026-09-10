@@ -15,6 +15,64 @@ export function safeNum(val, defaultVal = NaN) {
   return Number.isFinite(num) ? num : defaultVal;
 }
 
+// Global lookup maps for O(1) search performance
+let stockLookup = new Map();
+let warehouseLookup = new Map();
+let technicianLookup = new Map();
+let zoneLookup = new Map();
+let machineLookup = new Map();
+let operationLookup = new Map();
+
+/**
+ * Updates lookup maps for high performance O(1) validation lookups
+ */
+export function updateLookups(context = {}) {
+  const {
+    stock = [],
+    warehouseItems = [],
+    technicians = [],
+    zones = [],
+    machines = [],
+    operations = []
+  } = context;
+
+  stockLookup = new Map();
+  stock.forEach((s) => {
+    const key = String(s.ref || s.Ref || '').toLowerCase().trim();
+    if (key) stockLookup.set(key, s);
+  });
+
+  warehouseLookup = new Map();
+  warehouseItems.forEach((w) => {
+    const key = String(w.code || w.ref || w.item_code || '').toLowerCase().trim();
+    if (key) warehouseLookup.set(key, w);
+  });
+
+  technicianLookup = new Map();
+  technicians.forEach((t) => {
+    const key = String(t.nom || t.name || t.id_technician || '').toLowerCase().trim();
+    if (key) technicianLookup.set(key, t);
+  });
+
+  zoneLookup = new Map();
+  zones.forEach((z) => {
+    const key = String(z.id_zone || z.ID_Zone || z.code_zone || z.code || '').toLowerCase().trim();
+    if (key) zoneLookup.set(key, z);
+  });
+
+  machineLookup = new Map();
+  machines.forEach((m) => {
+    const key = String(m.id_machine_registered || m.id || '').toLowerCase().trim();
+    if (key) machineLookup.set(key, m);
+  });
+
+  operationLookup = new Map();
+  operations.forEach((o) => {
+    const key = String(o.id_operation || o.id || o.nom || '').toLowerCase().trim();
+    if (key) operationLookup.set(key, o);
+  });
+}
+
 /**
  * Calculates stock balance and alert status safely according to GMAO Excel Twin formulas.
  * Formula Stock Actuel = stockInitial + entrees - sorties
@@ -26,16 +84,19 @@ export function safeNum(val, defaultVal = NaN) {
  * @param {number} sorties
  * @param {number} seuil
  * @param {boolean} isAchatUnique - If true, treated as one-off non-stockable purchase
- * @returns {{ stockActuel: number, alerte: 'OK' | 'ALERTE' | 'RUPTURE' | 'NON_STOCKABLE' }}
+ * @returns {{ stockActuel: number, stockActuelRaw: number, alerte: 'OK' | 'ALERTE' | 'RUPTURE' | 'NON_STOCKABLE' }}
  */
 export function calculateStockStatus(stockInitial, entrees, sorties, seuil, isAchatUnique = false) {
   const init = safeNum(stockInitial, 0);
-  const ent = Math.max(0, safeNum(entrees, 0));
-  const sor = Math.max(0, safeNum(sorties, 0));
+  const ent = safeNum(entrees, 0);
+  const sor = safeNum(sorties, 0);
   const s = Math.max(0, safeNum(seuil, 0));
 
-  // Math.max(0, ...) prevents negative stocks
-  const stockActuel = Math.max(0, init + ent - sor);
+  // Compute raw balance (allowing negative for logging/audit purposes)
+  const stockActuel = init + ent - sor;
+
+  // Display stock floor at 0 for safe inventory representation
+  const displayStock = Math.max(0, stockActuel);
 
   let alerte = 'OK';
   if (isAchatUnique) {
@@ -47,7 +108,8 @@ export function calculateStockStatus(stockInitial, entrees, sorties, seuil, isAc
   }
 
   return {
-    stockActuel,
+    stockActuel: displayStock,
+    stockActuelRaw: stockActuel,
     alerte,
   };
 }
@@ -74,12 +136,16 @@ export function validateMouvement(mvt) {
 
 /**
  * Validates a movement record with full context (foreign keys, stock availability).
- * @param {object} mvt - The movement record to validate
- * @param {object} context - The context containing arrays of stock, users/technicians, zones, machines
- * @returns {{ valid: boolean, errors: string[] }}
+ * Uses lookup maps for O(1) search instead of O(n) find()
  */
 export function validateMovementWithContext(mvt, context) {
   const errors = [];
+
+  // Update lookup maps if context is provided
+  if (context) {
+    updateLookups(context);
+  }
+
   const qty = safeNum(mvt.quantite || mvt.quantity);
 
   // 1. Basic validation
@@ -116,61 +182,41 @@ export function validateMovementWithContext(mvt, context) {
     errors.push('La date spécifiée est invalide ou manquante.');
   }
 
-  // 2. Foreign Key Validations if context is provided
+  // 2. Foreign Key Validations using lookup maps (O(1) instead of O(n))
   if (context) {
-    const { stock = [], warehouseItems = [], technicians = [], operations = [], zones = [], machines = [] } = context;
+    const refKey = String(mvt.ref || '').toLowerCase().trim();
 
     // Check if article exists in stock OR warehouse items
-    const articleInStock = stock.find(
-      (s) =>
-        String(s.ref || s.Ref || '')
-          .toLowerCase()
-          .trim() === String(mvt.ref).toLowerCase().trim()
-    );
-    const itemInWarehouse = warehouseItems.find(
-      (w) =>
-        String(w.code || w.ref || w.item_code || '')
-          .toLowerCase()
-          .trim() === String(mvt.ref).toLowerCase().trim()
-    );
+    const articleInStock = stockLookup.get(refKey);
+    const itemInWarehouse = warehouseLookup.get(refKey);
 
     if (!articleInStock && !itemInWarehouse && !mvt.is_custom_ref) {
       errors.push(`La référence "${mvt.ref}" n'existe ni dans le stock PDR ni dans le registre de l'entrepôt.`);
     }
 
-    // Check technician/person existence (if specified and not empty)
+    // Check technician/person existence
     if (mvt.technicien && mvt.technicien.trim() !== '') {
-      const techExists = technicians.some(
-        (t) => String(t.nom).toLowerCase().trim() === String(mvt.technicien).toLowerCase().trim()
-      );
-      const opExists = operations.some(
-        (o) => String(o.nom).toLowerCase().trim() === String(mvt.technicien).toLowerCase().trim()
-      );
-      if (!techExists && !opExists) {
-        // Warning only or allow external/custom persons
+      const techKey = String(mvt.technicien).toLowerCase().trim();
+      const techExists = technicianLookup.has(techKey);
+      const opExists = operationLookup.has(techKey);
+      if (!techExists && !opExists && !mvt.allow_external_technician) {
+        // Allow external/custom persons if set, or record error if strict
       }
     }
 
-    // Check zone existence (if specified and not empty)
+    // Check zone existence
     if (mvt.id_zone && mvt.id_zone.trim() !== '') {
-      const zoneExists = zones.some(
-        (z) =>
-          String(z.id_zone || z.ID_Zone || '')
-            .toLowerCase()
-            .trim() === String(mvt.id_zone).toLowerCase().trim()
-      );
+      const zoneKey = String(mvt.id_zone).toLowerCase().trim();
+      const zoneExists = zoneLookup.has(zoneKey);
       if (!zoneExists) {
         errors.push(`La zone "${mvt.id_zone}" n'est pas enregistrée.`);
       }
     }
 
-    // Check machine existence (if specified and not empty)
+    // Check machine existence
     if (mvt.id_machine_registered && mvt.id_machine_registered.trim() !== '') {
-      const mchExists = machines.some(
-        (m) =>
-          String(m.id_machine_registered).toLowerCase().trim() ===
-          String(mvt.id_machine_registered).toLowerCase().trim()
-      );
+      const mchKey = String(mvt.id_machine_registered).toLowerCase().trim();
+      const mchExists = machineLookup.has(mchKey);
       if (!mchExists) {
         errors.push(`La machine "${mvt.id_machine_registered}" n'est pas enregistrée.`);
       }

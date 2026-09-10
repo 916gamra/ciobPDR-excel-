@@ -7,6 +7,54 @@ export class BackupService {
   constructor() {
     this.backupInterval = 60 * 60 * 1000; // كل ساعة
     this.maxBackups = 10; // الاحتفاظ بآخر 10 نسخ
+    this._dbPromise = null; // cache للـ DB connection
+    this._dbInstance = null;
+  }
+
+  /**
+   * الحصول على connection إلى IndexedDB
+   */
+  async getDB() {
+    if (this._dbInstance) {
+      return this._dbInstance;
+    }
+
+    if (!this._dbPromise) {
+      this._dbPromise = new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+          reject(new Error('IndexedDB غير مدعوم في هذا المتصفح'));
+          return;
+        }
+
+        const request = window.indexedDB.open('GMAO_Backups', 1);
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains('backups')) {
+            db.createObjectStore('backups', { keyPath: 'id' });
+          }
+        };
+
+        request.onsuccess = (event) => {
+          this._dbInstance = event.target.result;
+          resolve(this._dbInstance);
+        };
+
+        request.onerror = (event) => {
+          this._dbInstance = null;
+          reject(event.target.error);
+        };
+      });
+    }
+
+    try {
+      this._dbInstance = await this._dbPromise;
+      return this._dbInstance;
+    } catch (error) {
+      this._dbInstance = null;
+      this._dbPromise = null;
+      throw error;
+    }
   }
 
   /**
@@ -14,20 +62,28 @@ export class BackupService {
    */
   async createBackup(data, userId = 'system') {
     try {
+      const dataSize = JSON.stringify(data).length;
+      const isLargeData = dataSize > 500000; // 500KB
+
       const backup = {
         id: Date.now(),
         timestamp: new Date().toISOString(),
         userId,
-        data,
-        size: JSON.stringify(data).length,
+        data: isLargeData ? data : LZString.compressToBase64(JSON.stringify(data)),
+        size: dataSize,
         version: '1.0',
+        isCompressed: !isLargeData,
       };
 
-      // حفظ في IndexedDB
+      // حفظ في IndexedDB (دائماً)
       await this.saveBackupToIndexedDB(backup);
 
-      // حفظ في LocalStorage (نسخة مضغوطة)
-      await this.saveBackupToLocalStorage(backup);
+      // حفظ في LocalStorage فقط إذا كانت البيانات صغيرة
+      if (!isLargeData) {
+        await this.saveBackupToLocalStorage(backup);
+      } else {
+        console.log('Skipping LocalStorage backup for large data (size:', dataSize, 'bytes)');
+      }
 
       console.log('تم إنشاء نسخة احتياطية بنجاح');
       return backup;
@@ -61,8 +117,10 @@ export class BackupService {
    */
   async saveBackupToLocalStorage(backup) {
     try {
-      // ضغط البيانات باستخدام LZ-string
-      const compressed = LZString.compressToBase64(JSON.stringify(backup));
+      // ضغط البيانات باستخدام LZ-string إذا لم تكن مضغوطة بالفعل
+      const compressed = backup.isCompressed
+        ? JSON.stringify(backup)
+        : LZString.compressToBase64(JSON.stringify(backup));
       localStorage.setItem(`backup_${backup.id}`, compressed);
     } catch (error) {
       console.warn('لا يمكن حفظ النسخة في LocalStorage:', error);
@@ -73,16 +131,49 @@ export class BackupService {
    * حذف النسخ القديمة
    */
   async cleanOldBackups(store) {
-    const request = store.getAll();
-    request.onsuccess = () => {
-      const backups = request.result
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(this.maxBackups);
+    return new Promise((resolve) => {
+      try {
+        const request = store.getAll();
 
-      backups.forEach((backup) => {
-        store.delete(backup.id);
-      });
-    };
+        request.onsuccess = () => {
+          try {
+            const backups = request.result || [];
+            const sortedBackups = backups
+              .sort((a, b) => {
+                try {
+                  return new Date(b.timestamp) - new Date(a.timestamp);
+                } catch {
+                  return 0;
+                }
+              })
+              .slice(this.maxBackups);
+
+            // حذف النسخ القديمة
+            const deletePromises = sortedBackups.map((backup) => {
+              return new Promise((delResolve) => {
+                try {
+                  const delRequest = store.delete(backup.id);
+                  delRequest.onsuccess = () => delResolve();
+                  delRequest.onerror = () => delResolve();
+                } catch {
+                  delResolve();
+                }
+              });
+            });
+
+            Promise.all(deletePromises).then(() => resolve());
+          } catch (e) {
+            console.error('[BackupService] Error cleaning backups:', e);
+            resolve();
+          }
+        };
+
+        request.onerror = () => resolve();
+      } catch (e) {
+        console.error('[BackupService] Error in cleanOldBackups:', e);
+        resolve();
+      }
+    });
   }
 
   /**
@@ -98,7 +189,15 @@ export class BackupService {
         const request = store.get(backupId);
         request.onsuccess = () => {
           if (request.result) {
-            resolve(request.result.data);
+            let resData = request.result.data;
+            if (request.result.isCompressed && typeof resData === 'string') {
+              try {
+                resData = JSON.parse(LZString.decompressFromBase64(resData));
+              } catch (e) {
+                console.warn('Decompress error', e);
+              }
+            }
+            resolve(resData);
           } else {
             reject(new Error('النسخة الاحتياطية غير موجودة'));
           }
@@ -162,25 +261,6 @@ export class BackupService {
       console.error('خطأ في تصدير النسخة:', error);
       throw error;
     }
-  }
-
-  /**
-   * الحصول على قاعدة البيانات
-   */
-  async getDB() {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('GMAO_Backups', 1);
-
-      request.onupgradeneeded = (e) => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains('backups')) {
-          db.createObjectStore('backups', { keyPath: 'id' });
-        }
-      };
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
   }
 
   /**

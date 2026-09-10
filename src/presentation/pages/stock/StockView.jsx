@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, useDeferredValue } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import CustomSelect from '../../components/common/CustomSelect';
 import QuickMovementModal from '../warehouse/QuickMovementModal';
@@ -83,28 +83,37 @@ export default function StockView({
   
   const deferredStockSearch = useDeferredValue(stockSearch);
   const filteredStock = useMemo(() => {
-    return stockItems.filter((item) => {
-      if (
-        stockTypeFilter !== 'ALL' &&
-        item.id_type !== stockTypeFilter &&
-        item.type !== stockTypeFilter
-      )
-        return false;
-      if (stockAlertOnly && item.alerte === 'OK') return false;
+    if (!stockItems || stockItems.length === 0) return [];
 
-      if (deferredStockSearch) {
-        const s = deferredStockSearch.toLowerCase();
-        return (
-          (item.ref && item.ref.toLowerCase().includes(s)) ||
-          (item.designation && item.designation.toLowerCase().includes(s)) ||
-          (item.emplacement && item.emplacement.toLowerCase().includes(s))
-        );
+    return stockItems.filter((item) => {
+      // Filter by type
+      if (stockTypeFilter !== 'ALL') {
+        const itemType = (item.id_type || item.type || '').toString();
+        if (itemType !== stockTypeFilter) {
+          return false;
+        }
       }
+
+      // Filter by alert status
+      if (stockAlertOnly && item.alerte === 'OK') {
+        return false;
+      }
+
+      // Filter by search
+      if (deferredStockSearch) {
+        const searchLower = deferredStockSearch.toLowerCase();
+        const refMatch = (item.ref || '').toLowerCase().includes(searchLower);
+        const desigMatch = (item.designation || '').toLowerCase().includes(searchLower);
+        const emplMatch = (item.emplacement || '').toLowerCase().includes(searchLower);
+        const typeMatch = (item.type || item.id_type || '').toLowerCase().includes(searchLower);
+
+        return refMatch || desigMatch || emplMatch || typeMatch;
+      }
+
       return true;
     });
   }, [stockItems, stockTypeFilter, stockAlertOnly, deferredStockSearch]);
 
-  
   const [pageSize, setPageSize] = useState(100);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState('type');
@@ -179,9 +188,11 @@ export default function StockView({
     return filteredStock.filter((item) => item.alerte === activeKpiFilter);
   }, [filteredStock, activeKpiFilter]);
 
-  const sortedStock = useMemo(() => {
-    if (!sortField) return effectiveFiltered;
-    const list = [...effectiveFiltered];
+  const sortStock = useCallback((items) => {
+    if (!sortField || !items || items.length === 0) return items || [];
+    const list = [...items];
+    const isAsc = sortOrder === 'asc';
+
     return list.sort((a, b) => {
       let valA = a[sortField];
       let valB = b[sortField];
@@ -190,26 +201,43 @@ export default function StockView({
         const priority = { RUPTURE: 0, ALERTE: 1, OK: 2 };
         valA = priority[a.alerte] ?? 3;
         valB = priority[b.alerte] ?? 3;
-        if (valA !== valB) return sortOrder === 'asc' ? valA - valB : valB - valA;
+        if (valA !== valB) return isAsc ? valA - valB : valB - valA;
       } else if (
         ['stockInitial', 'entrees', 'sorties', 'stockActuel', 'seuil'].includes(sortField)
       ) {
         valA = Number(valA || 0);
         valB = Number(valB || 0);
-        if (valA !== valB) return sortOrder === 'asc' ? valA - valB : valB - valA;
+        if (valA !== valB) return isAsc ? valA - valB : valB - valA;
       } else if (sortField === 'type') {
-        const typeComp = String(a.type || '').localeCompare(String(b.type || ''), undefined, { sensitivity: 'base' });
-        if (typeComp !== 0) return sortOrder === 'asc' ? typeComp : -typeComp;
-        return String(a.ref || '').localeCompare(String(b.ref || ''), undefined, { numeric: true, sensitivity: 'base' });
+        const typeComp = String(a.type || a.id_type || '').localeCompare(
+          String(b.type || b.id_type || ''),
+          undefined,
+          { sensitivity: 'base' }
+        );
+        if (typeComp !== 0) return isAsc ? typeComp : -typeComp;
+        return String(a.ref || '').localeCompare(String(b.ref || ''), undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        });
       } else {
-        const strComp = String(valA || '').localeCompare(String(valB || ''), undefined, { numeric: true, sensitivity: 'base' });
-        if (strComp !== 0) return sortOrder === 'asc' ? strComp : -strComp;
+        const strComp = String(valA || '').localeCompare(String(valB || ''), undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        });
+        if (strComp !== 0) return isAsc ? strComp : -strComp;
       }
 
       // Secondary sort by ref numeric
-      return String(a.ref || '').localeCompare(String(b.ref || ''), undefined, { numeric: true, sensitivity: 'base' });
+      return String(a.ref || '').localeCompare(String(b.ref || ''), undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      });
     });
-  }, [effectiveFiltered, sortField, sortOrder]);
+  }, [sortField, sortOrder]);
+
+  const sortedStock = useMemo(() => {
+    return sortStock(effectiveFiltered);
+  }, [effectiveFiltered, sortStock]);
 
   const totalItems = sortedStock.length;
   const effectivePageSize = pageSize === 0 ? totalItems : pageSize;

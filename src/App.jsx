@@ -96,6 +96,21 @@ const BASELINE_TYPE_COUNTERS = {};
   }
 });
 
+function ErrorBoundary({ children }) {
+  useEffect(() => {
+    const handleError = (event) => {
+      console.error('Global error captured:', event?.error || event?.message);
+    };
+
+    window.addEventListener('error', handleError);
+    return () => {
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
+
+  return children;
+}
+
 export default function App() {
   const { user: currentUser } = useAuth();
 
@@ -1033,10 +1048,11 @@ export default function App() {
   }
 
   return (
-    <MainLayout
-      currentTab={currentTab}
-      setCurrentTab={setCurrentTab}
-      counts={{
+    <ErrorBoundary>
+      <MainLayout
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+        counts={{
         stock: stockItems.length,
         types: types.length,
         designations: effectiveDesignations.length,
@@ -1254,5 +1270,6 @@ export default function App() {
       {/* 100% Offline Status Indicator */}
       <OfflineIndicator />
     </MainLayout>
+    </ErrorBoundary>
   );
 }

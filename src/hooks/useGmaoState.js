@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { storageService } from '../utils/storageService';
 import { indexedDBService } from '../utils/indexedDBService';
 import initialData from '../initialData.json';
@@ -110,37 +110,51 @@ export function useGmaoState() {
     return Array.from(set).map((t) => ({ id_type: t, libelle: t }));
   });
 
-  const isStockCorrupted = (arr) => {
-    if (!Array.isArray(arr) || arr.length === 0) return false;
-    return (
-      arr.length > 100 ||
-      arr.some(
-        (item) =>
-          item &&
-          (item.ref || item.stockActuel !== undefined || item.stockInitial !== undefined)
-      )
-    );
-  };
+  const isStockCorrupted = useCallback((arr) => {
+    if (!Array.isArray(arr)) return true;
+    if (arr.length === 0) return false;
 
-  const isValidMachineTemplates = (arr) => {
+    // Check that at least 90% of items have valid structure
+    const validCount = arr.reduce((count, item) => {
+      if (!item || typeof item !== 'object') return count;
+      if (
+        item.ref ||
+        item.designation ||
+        item.stockActuel !== undefined ||
+        item.stockInitial !== undefined ||
+        item.type
+      ) {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+
+    return (validCount / arr.length) < 0.9;
+  }, []);
+
+  const isValidMachineTemplates = useCallback((arr) => {
     if (!Array.isArray(arr) || arr.length === 0) return false;
     if (isStockCorrupted(arr)) return false;
-    // Check if it's the old 7 dummy templates
-    const hasOldDummy = arr.some((t) => t.id_templates === 'TPL-RCF100' || t.id_templates === 'TPL-UCP204');
-    if (hasOldDummy || arr.length < 12) return false;
+
     return arr.every(
-      (item) => item && (item.id_templates || item.id) && (item.id_family || item.libelle)
+      (item) =>
+        item &&
+        (item.id_templates || item.id) &&
+        (item.id_family || item.libelle || item.family)
     );
-  };
+  }, [isStockCorrupted]);
 
-  const isValidMachineFamilies = (arr) => {
+  const isValidMachineFamilies = useCallback((arr) => {
     if (!Array.isArray(arr) || arr.length === 0) return false;
     if (isStockCorrupted(arr)) return false;
-    // Check if it's the old 6 dummy families
-    const hasOldDummy = arr.some((f) => f.id_family === 'FAM-EMB' || f.id_family === 'FAM-PAL');
-    if (hasOldDummy || arr.length < 10) return false;
-    return arr.every((item) => item && (item.id_family || item.id) && (item.libelle || item.nom));
-  };
+
+    return arr.every(
+      (item) =>
+        item &&
+        (item.id_family || item.id) &&
+        (item.libelle || item.nom || item.name)
+    );
+  }, [isStockCorrupted]);
 
   const [families, setFamilies] = useState(() => {
     const candidate = groupedState.families || storageService.getItem('gmao_families');
@@ -506,47 +520,53 @@ export function useGmaoState() {
     return (initialData.Diagnostics?.length ? initialData.Diagnostics : INITIAL_DIAGNOSTICS);
   });
 
-  // Save to LocalStorage and IndexedDB (Debounced to avoid I/O bottlenecks during fast updates)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const fullState = {
-        types,
-        designations,
-        families,
-        templates,
-        blueprints,
-        compFamilies,
-        compTemplates,
-        partTypes,
-        partDesignations,
-        machines,
-        warehouseItems,
-        zones,
-        technicians,
-        operations,
-        mouvements,
-        rawStock,
-      };
-      // Grouped state save (Task 10)
-      storageService.setItem('gmao_full_state_v1', fullState);
+  // Save to LocalStorage and IndexedDB (Unified Debounced Bulk Save)
+  const saveTimer = useRef(null);
+  const lastSavedState = useRef(null);
 
-      // Dedicated keys for Entrepôt isolation & Blueprints
-      storageService.setItem('gmao_blueprints_v1', blueprints);
-      storageService.setItem('gmao_comp_families_v1', compFamilies);
-      storageService.setItem('gmao_comp_templates_v1', compTemplates);
-      storageService.setItem('gmao_part_types_v1', partTypes);
-      storageService.setItem('gmao_part_designations_v1', partDesignations);
+  const saveAllState = useCallback(() => {
+    const fullState = {
+      types,
+      designations,
+      families,
+      templates,
+      blueprints,
+      compFamilies,
+      compTemplates,
+      partTypes,
+      partDesignations,
+      machines,
+      warehouseItems,
+      zones,
+      technicians,
+      operations,
+      mouvements,
+      rawStock,
+    };
 
-      // High capacity IndexedDB backup
-      indexedDBService.setItem('gmao_full_state_v1', fullState);
+    // Avoid saving if state has not changed
+    const currentStateStr = JSON.stringify(fullState);
+    if (lastSavedState.current === currentStateStr) {
+      return;
+    }
+    lastSavedState.current = currentStateStr;
 
-      // Keep individual DB backups for compatibility with export/import tools if they rely on it
-      indexedDBService.setItem('gmao_blueprints_v1', blueprints);
-      indexedDBService.setItem('gmao_warehouse_items_v1', warehouseItems);
-      indexedDBService.setItem('gmao_mouvements', mouvements);
-      indexedDBService.setItem('gmao_raw_stock_v6', rawStock);
-    }, 250);
-    return () => clearTimeout(timer);
+    // Save unified state to LocalStorage and IndexedDB
+    storageService.setItem('gmao_full_state_v1', fullState);
+    indexedDBService.setItem('gmao_full_state_v1', fullState);
+
+    // Dedicated keys for Entrepôt isolation & Blueprints
+    storageService.setItem('gmao_blueprints_v1', blueprints);
+    storageService.setItem('gmao_comp_families_v1', compFamilies);
+    storageService.setItem('gmao_comp_templates_v1', compTemplates);
+    storageService.setItem('gmao_part_types_v1', partTypes);
+    storageService.setItem('gmao_part_designations_v1', partDesignations);
+
+    // Keep individual DB backups for compatibility with export/import tools
+    indexedDBService.setItem('gmao_blueprints_v1', blueprints);
+    indexedDBService.setItem('gmao_warehouse_items_v1', warehouseItems);
+    indexedDBService.setItem('gmao_mouvements', mouvements);
+    indexedDBService.setItem('gmao_raw_stock_v6', rawStock);
   }, [
     types,
     designations,
@@ -565,6 +585,23 @@ export function useGmaoState() {
     mouvements,
     rawStock,
   ]);
+
+  // Debounce with 1000ms delay to eliminate redundant I/O writes
+  useEffect(() => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+    }
+
+    saveTimer.current = setTimeout(() => {
+      saveAllState();
+    }, 1000);
+
+    return () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+      }
+    };
+  }, [saveAllState]);
 
   // Real-time Multi-Window / Multi-Tab Synchronization
   useEffect(() => {
@@ -600,57 +637,91 @@ export function useGmaoState() {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [isValidMachineFamilies, isValidMachineTemplates]);
 
-
-
-
   useEffect(() => {
+    let isMounted = true;
+    let isSyncing = false;
+
     async function syncEnterpriseDb() {
+      if (isSyncing) return;
+      isSyncing = true;
+
       try {
         const sparePartService = new SparePartApplicationService();
         const machineService = new MachineApplicationService();
         const taskService = new TaskApplicationService();
 
-        const idbParts = await sparePartService.listSpareParts();
-        const idbMachines = await machineService.listMachines();
-        const idbTasks = await taskService.listTasks();
+        const [idbParts, idbMachines, idbTasks] = await Promise.all([
+          sparePartService.listSpareParts(),
+          machineService.listMachines(),
+          taskService.listTasks(),
+        ]);
 
-        if (idbParts.length === 0 && rawStock.length > 0) {
+        if (isMounted && idbParts.length === 0 && rawStock.length > 0) {
+          const existingRefs = new Set(idbParts.map((p) => p.ref || p.id));
+          const partsToCreate = [];
           for (const p of rawStock) {
-            const partId = p.id || p.ref || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `part_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
-            await sparePartService.createSparePart({ ...p, id: partId });
+            if (!existingRefs.has(p.ref) && !existingRefs.has(p.id)) {
+              const partId = p.id || p.ref || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `part_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
+              partsToCreate.push({ ...p, id: partId });
+              existingRefs.add(p.ref);
+            }
           }
-        } else if (idbParts.length > 0 && rawStock.length === 0) {
+          if (partsToCreate.length > 0) {
+            await Promise.all(partsToCreate.map((p) => sparePartService.createSparePart(p)));
+          }
+        } else if (isMounted && idbParts.length > 0 && rawStock.length === 0) {
           setRawStock(idbParts);
         }
 
-        if (idbMachines.length === 0 && machines.length > 0) {
+        if (isMounted && idbMachines.length === 0 && machines.length > 0) {
+          const existingMachines = new Set(idbMachines.map((m) => m.id_machine_registered || m.id));
+          const machinesToCreate = [];
           for (const m of machines) {
-            const mchId = m.id || m.id_machine_registered || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `mch_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
-            await machineService.createMachine({
-              ...m,
-              id: mchId,
-              id_machine_registered: m.id_machine_registered || mchId
-            });
+            if (!existingMachines.has(m.id_machine_registered) && !existingMachines.has(m.id)) {
+              const mchId = m.id || m.id_machine_registered || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `mch_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
+              machinesToCreate.push({
+                ...m,
+                id: mchId,
+                id_machine_registered: m.id_machine_registered || mchId,
+              });
+              existingMachines.add(m.id_machine_registered);
+            }
           }
-        } else if (idbMachines.length > 0 && machines.length === 0) {
+          if (machinesToCreate.length > 0) {
+            await Promise.all(machinesToCreate.map((m) => machineService.createMachine(m)));
+          }
+        } else if (isMounted && idbMachines.length > 0 && machines.length === 0) {
           setMachines(idbMachines);
         }
 
-        if (idbTasks.length === 0 && mouvements.length > 0) {
+        if (isMounted && idbTasks.length === 0 && mouvements.length > 0) {
+          const existingTasks = new Set(idbTasks.map((t) => t.id || t.code_bon));
+          const tasksToCreate = [];
           for (const t of mouvements) {
-            const taskId = t.id || t.code_bon || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `task_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
-            await taskService.createTask({ ...t, id: taskId });
+            if (!existingTasks.has(t.id) && !existingTasks.has(t.code_bon)) {
+              const taskId = t.id || t.code_bon || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `task_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
+              tasksToCreate.push({ ...t, id: taskId });
+              existingTasks.add(t.code_bon);
+            }
           }
-        } else if (idbTasks.length > 0 && mouvements.length === 0) {
+          if (tasksToCreate.length > 0) {
+            await Promise.all(tasksToCreate.map((t) => taskService.createTask(t)));
+          }
+        } else if (isMounted && idbTasks.length > 0 && mouvements.length === 0) {
           setMouvements(idbTasks);
         }
-      } catch(err) {
+      } catch (err) {
         console.error('Enterprise DB Sync Error:', err);
+      } finally {
+        isSyncing = false;
       }
     }
-    // Only run once on mount
+
     syncEnterpriseDb();
-   
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
   return {
     types,
