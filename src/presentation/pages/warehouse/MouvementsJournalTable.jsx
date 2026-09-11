@@ -49,7 +49,10 @@ import {
   Gauge,
   ShieldCheck,
   Puzzle,
+  Printer,
 } from 'lucide-react';
+import MovementVoucherModal from '../../components/warehouse/MovementVoucherModal.jsx';
+import { usePermission } from '../../components/common/PermissionGate.jsx';
 
 /**
  * Smart OT / Commande resolver:
@@ -819,9 +822,16 @@ export default function MouvementsJournalTable({
   const [showTableSortMenu, setShowTableSortMenu] = useState(false);
   const tableSortMenuRef = useRef(null);
 
-  // Pagination State
+  // Pagination State & Page Size
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const [pageSize, setPageSize] = useState(25);
+
+  // Voucher Modal State
+  const [voucherModalMvt, setVoucherModalMvt] = useState(null);
+
+  // RBAC Permission checks
+  const canDeleteMovement = usePermission('movement.delete');
+  const canEditMovement = usePermission('movement.edit');
 
   // Edit / Delete Movement Modals
   const [editingMovement, setEditingMovement] = useState(null);
@@ -1001,11 +1011,12 @@ export default function MouvementsJournalTable({
   ]);
 
   // Pagination Slice
-  const totalPages = Math.ceil(sortedMouvements.length / itemsPerPage) || 1;
-  const startIndex = (currentPage - 1) * itemsPerPage;
+  const effectivePageSize = pageSize === 0 ? sortedMouvements.length : pageSize;
+  const totalPages = pageSize === 0 ? 1 : Math.ceil(sortedMouvements.length / effectivePageSize) || 1;
+  const startIndex = (currentPage - 1) * effectivePageSize;
   const displayedMouvements = useMemo(() => {
-    return sortedMouvements.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedMouvements, startIndex, itemsPerPage]);
+    return pageSize === 0 ? sortedMouvements : sortedMouvements.slice(startIndex, startIndex + effectivePageSize);
+  }, [sortedMouvements, startIndex, effectivePageSize, pageSize]);
 
   // Reset to page 1 on filter/sort change
   useEffect(() => {
@@ -1020,6 +1031,7 @@ export default function MouvementsJournalTable({
     localTableSearchText,
     tableSortField,
     tableSortOrder,
+    pageSize,
   ]);
 
   const handleTableSort = (field) => {
@@ -2062,38 +2074,50 @@ export default function MouvementsJournalTable({
                         <div className="flex items-center justify-center gap-1">
                           <button
                             type="button"
-                            onClick={() => {
-                              setEditingMovement(m);
-                              const curOt = getSmartOtCommande(m);
-                              const curFlux = getSmartFluxType(m);
-                              const artInfo = resolveArticleInfo(m, { stockItems, warehouseItems });
-                              setEditFormData({
-                                ...m,
-                                type: curFlux,
-                                num_commande: curOt !== 'INCONNU' ? curOt : '',
-                                quantite: m.quantite ?? 1,
-                                technicien: m.technicien || '',
-                                id_machine_registered: m.id_machine_registered || '',
-                                id_zone: m.id_zone || '',
-                                commentaire: m.commentaire || '',
-                                date: m.date || new Date().toISOString().split('T')[0],
-                                action_id: m.action_id || 'CORRECTIVE',
-                                designation: artInfo.designation,
-                              });
-                            }}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer"
-                            title="Modifier ce mouvement"
+                            onClick={() => setVoucherModalMvt(m)}
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition cursor-pointer"
+                            title="Imprimer le bon officiel (A4)"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            <Printer className="w-3.5 h-3.5 text-indigo-600" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeletingMovement(m)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
-                            title="Supprimer ce mouvement"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {canEditMovement && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingMovement(m);
+                                const curOt = getSmartOtCommande(m);
+                                const curFlux = getSmartFluxType(m);
+                                const artInfo = resolveArticleInfo(m, { stockItems, warehouseItems });
+                                setEditFormData({
+                                  ...m,
+                                  type: curFlux,
+                                  num_commande: curOt !== 'INCONNU' ? curOt : '',
+                                  quantite: m.quantite ?? 1,
+                                  technicien: m.technicien || '',
+                                  id_machine_registered: m.id_machine_registered || '',
+                                  id_zone: m.id_zone || '',
+                                  commentaire: m.commentaire || '',
+                                  date: m.date || new Date().toISOString().split('T')[0],
+                                  action_id: m.action_id || 'CORRECTIVE',
+                                  designation: artInfo.designation,
+                                });
+                              }}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer"
+                              title="Modifier ce mouvement"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {canDeleteMovement && (
+                            <button
+                              type="button"
+                              onClick={() => setDeletingMovement(m)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                              title="Supprimer ce mouvement"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -2105,9 +2129,28 @@ export default function MouvementsJournalTable({
         </div>
 
         {/* Pagination footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-600 flex items-center justify-between">
-          <div>
-            Total : <b className="text-slate-900">{filteredMouvements.length}</b> mouvements
+        <div className="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-600 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div>
+              Total : <b className="text-slate-900">{filteredMouvements.length}</b> mouvements
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+              <span>Afficher :</span>
+              {[15, 25, 50, 100, 250, 0].map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => setPageSize(size)}
+                  className={`px-2 py-0.5 rounded font-mono font-bold transition cursor-pointer ${
+                    pageSize === size
+                      ? 'bg-slate-900 text-white shadow-2xs'
+                      : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  {size === 0 ? 'Tous' : size}
+                </button>
+              ))}
+            </div>
           </div>
           {totalPages > 1 && (
             <div className="flex items-center gap-2">
@@ -2426,6 +2469,19 @@ export default function MouvementsJournalTable({
             </div>
           </div>
         </div>
+      )}
+
+      {/* MOVEMENT VOUCHER MODAL */}
+      {voucherModalMvt && (
+        <MovementVoucherModal
+          isOpen={Boolean(voucherModalMvt)}
+          onClose={() => setVoucherModalMvt(null)}
+          movement={voucherModalMvt}
+          articleInfo={resolveArticleInfo(voucherModalMvt, { stockItems, warehouseItems })}
+          destinationInfo={resolveDestinationInfo(voucherModalMvt, { machines, zones, technicians, operations })}
+          intervenantInfo={resolveIntervenantInfo(voucherModalMvt, { technicians, operations })}
+          equationInfo={resolveStockEquation(voucherModalMvt, { stockItems, warehouseItems })}
+        />
       )}
     </div>
   );

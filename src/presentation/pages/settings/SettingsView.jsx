@@ -67,6 +67,7 @@ import { dataIntegrityService } from '../../../services/dataIntegrityService';
 import { performanceService } from '../../../services/performanceService';
 import { syncQueueService } from '../../../services/syncQueueService';
 import { useAuth } from '../../../context/AuthContext';
+import BackupManagerModal from '../../components/backup/BackupManagerModal';
 
 
 export default function SettingsView({
@@ -871,6 +872,7 @@ export default function SettingsView({
 
 
   const [backupsList, setBackupsList] = useState([]);
+  const [showBackupManagerModal, setShowBackupManagerModal] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [accessLogs, setAccessLogs] = useState([]);
@@ -2482,13 +2484,23 @@ export default function SettingsView({
             {/* SUBTAB 3: BACKUPS & RESTORE */}
             {auditSubTab === 'backups' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                     Points de Restauration Locaux
                   </h4>
-                  <button onClick={loadBackups} className="text-xs text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 font-bold cursor-pointer">
-                    <RefreshCw className="w-3.5 h-3.5" /> Actualiser
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowBackupManagerModal(true)}
+                      className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition"
+                    >
+                      <Database className="w-3.5 h-3.5" />
+                      Gestionnaire Avancé de Sauvegardes
+                    </button>
+                    <button onClick={loadBackups} className="text-xs text-fuchsia-600 hover:text-fuchsia-700 flex items-center gap-1 font-bold cursor-pointer">
+                      <RefreshCw className="w-3.5 h-3.5" /> Actualiser
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
@@ -3085,6 +3097,20 @@ export default function SettingsView({
           </div>
         )}
       </div>
+
+      {showBackupManagerModal && (
+        <BackupManagerModal
+          isOpen={showBackupManagerModal}
+          onClose={() => setShowBackupManagerModal(false)}
+          onDataRestored={() => {
+            if (showToast) showToast('Données restaurées avec succès !', 'success');
+            loadBackups();
+            setTimeout(() => {
+              window.location.reload();
+            }, 700);
+          }}
+        />
+      )}
     </AnimatedPage>
   );
 }

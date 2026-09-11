@@ -118,4 +118,36 @@ export class DatabaseService {
       throw error;
     }
   }
+
+  /**
+   * Execute atomic transaction across multiple stores
+   */
+  async transaction(storeNames, mode = 'readwrite', callback) {
+    try {
+      const db = await this.dbPromise;
+      const names = Array.isArray(storeNames) ? storeNames : [storeNames];
+      const tx = db.transaction(names, mode);
+
+      return new Promise((resolve, reject) => {
+        let callbackResult;
+        tx.oncomplete = () => resolve(callbackResult);
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(new Error('Transaction aborted'));
+
+        try {
+          const stores = {};
+          names.forEach((name) => {
+            stores[name] = tx.objectStore(name);
+          });
+          callbackResult = callback(stores, tx);
+        } catch (err) {
+          tx.abort();
+          reject(err);
+        }
+      });
+    } catch (error) {
+      Logger.error('Database transaction error:', error);
+      throw error;
+    }
+  }
 }

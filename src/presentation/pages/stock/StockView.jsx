@@ -6,6 +6,7 @@ import EditArticleModal from './EditArticleModal';
 import { useSpareParts } from '../../hooks/useSpareParts';
 import StockKPIBar from './components/StockKPIBar';
 import { multiTokenSearch } from '../../../utils/searchUtils';
+import { usePermission } from '../../components/common/PermissionGate.jsx';
 import {
   Search,
   Plus,
@@ -131,6 +132,9 @@ export default function StockView({
     isOpen: false,
     article: null,
   });
+
+  const canEditStock = usePermission('stock.edit');
+  const canCreateMovement = usePermission('movement.create');
 
   const sortMenuRef = useRef(null);
 
@@ -1026,22 +1030,24 @@ export default function StockView({
                                   </div>
                                 </button>
 
-                                <div className="border-t border-slate-100 my-1 pt-1">
-                                  {/* 5. Modifier la fiche Article */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenEditArticle(item)}
-                                    className="w-full px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition cursor-pointer"
-                                  >
-                                    <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
-                                      <Edit className="w-3.5 h-3.5" />
-                                    </div>
-                                    <div>
-                                      <div className="font-bold text-slate-800">Modifier l'Article</div>
-                                      <div className="text-[10px] text-slate-400">Désignation, Seuil, Emplacement</div>
-                                    </div>
-                                  </button>
-                                </div>
+                                {canEditStock && (
+                                  <div className="border-t border-slate-100 my-1 pt-1">
+                                    {/* 5. Modifier la fiche Article */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEditArticle(item)}
+                                      className="w-full px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition cursor-pointer"
+                                    >
+                                      <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700 shrink-0">
+                                        <Edit className="w-3.5 h-3.5" />
+                                      </div>
+                                      <div>
+                                        <div className="font-bold text-slate-800">Modifier l'Article</div>
+                                        <div className="text-[10px] text-slate-400">Désignation, Seuil, Emplacement</div>
+                                      </div>
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

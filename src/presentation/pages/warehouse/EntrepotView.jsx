@@ -51,6 +51,7 @@ import {
 import { Engine } from '../../components/common/icons/Engine';
 import { CubeIcon } from '../../components/common/icons/CubeIcon';
 import { LayersIcon } from '../../components/common/icons/LayersIcon';
+import { usePermission } from '../../components/common/PermissionGate.jsx';
 
 export default function EntrepotView({
   warehouseItems = [],
@@ -153,6 +154,10 @@ export default function EntrepotView({
   useEffect(() => {
     setLocalSearch(whSearch);
   }, [whSearch]);
+
+  const canDeleteStock = usePermission('stock.delete');
+  const canEditStock = usePermission('stock.edit');
+  const canCreateStock = usePermission('stock.create');
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -2011,26 +2016,30 @@ export default function EntrepotView({
                                   <span>Fiche Technique & Détails</span>
                                 </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEditModal(item)}
-                                  className="w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2 transition cursor-pointer"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5 text-blue-600" />
-                                  <span>Modifier les Paramètres</span>
-                                </button>
+                                {canEditStock && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditModal(item)}
+                                    className="w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2 transition cursor-pointer"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>Modifier les Paramètres</span>
+                                  </button>
+                                )}
 
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setToDelete(item);
-                                    setActiveActionMenuId(null);
-                                  }}
-                                  className="w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:text-rose-800 hover:bg-rose-50 flex items-center gap-2 transition cursor-pointer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                  <span>Supprimer de l'entrepôt</span>
-                                </button>
+                                {canDeleteStock && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setToDelete(item);
+                                      setActiveActionMenuId(null);
+                                    }}
+                                    className="w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:text-rose-800 hover:bg-rose-50 flex items-center gap-2 transition cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                    <span>Supprimer de l'entrepôt</span>
+                                  </button>
+                                )}
                               </div>
                             </div>
                           )}
