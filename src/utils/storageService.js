@@ -34,12 +34,15 @@ function cleanupCache() {
 }
 
 // Periodic cleanup
-if (typeof window !== 'undefined') {
-  setInterval(() => {
+if (typeof window !== 'undefined' && (typeof process === 'undefined' || process.env?.NODE_ENV !== 'test')) {
+  const timer = setInterval(() => {
     if (Date.now() - lastCleanupTime > CACHE_CLEANUP_INTERVAL) {
       cleanupCache();
     }
   }, CACHE_CLEANUP_INTERVAL);
+  if (timer && typeof timer.unref === 'function') {
+    timer.unref();
+  }
 }
 
 // Legacy keys for migration only
