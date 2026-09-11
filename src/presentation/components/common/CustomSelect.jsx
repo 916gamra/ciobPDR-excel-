@@ -28,8 +28,8 @@ export default function CustomSelect({
   prefixIcon: PrefixIcon = null,
   compact = false,
   align = 'left', // 'left' | 'right'
-  onAddNew = null, // Function to trigger when clicking "+ Ajouter / Créer"
-  addNewLabel = '+ Nouveau / Ajouter', // Label for the create button
+  onAddNew = null, // Function to trigger when clicking "Ajouter / Créer"
+  addNewLabel = 'Nouveau / Ajouter', // Label for the create button
   addNewIcon: AddNewIcon = Plus,
 }) {
   const [isOpen, setIsOpen] = useState(false);

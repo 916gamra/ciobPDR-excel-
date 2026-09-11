@@ -1208,6 +1208,13 @@ export default function App() {
             templates: effectiveTemplates,
             families: effectiveFamilies,
             machines,
+            compFamilies,
+            compTemplates,
+            partTypes,
+            partDesignations,
+            stockItems,
+            warehouseItems: warehouseItemsComputed,
+            mouvements,
             blueprintFamilyFilter,
             setBlueprintFamilyFilter,
             blueprintTemplateFilter,
@@ -1220,6 +1227,7 @@ export default function App() {
             onNavigateToMachinesByTemplate: handleNavigateToMachinesByTemplate,
             onNavigateToFamily: handleNavigateToFamilyFiltered,
             onNavigateToTemplate: handleNavigateToTemplatesFiltered,
+            onNavigateToTab: (tab) => startTransition(() => setCurrentTab(tab)),
           },
           zones: {
             zones,
@@ -1251,7 +1259,23 @@ export default function App() {
             onNavigateToWarehouse: () => startTransition(() => setCurrentTab('entrepot'))
           },
           nexus: {
-            types, diagnostics, families: effectiveFamilies, templates: effectiveTemplates, zones, technicians, operations, machines, stockItems
+            types,
+            diagnostics,
+            families: effectiveFamilies,
+            templates: effectiveTemplates,
+            blueprints,
+            zones,
+            technicians,
+            operations,
+            machines,
+            stockItems,
+            compFamilies,
+            compTemplates,
+            partTypes,
+            partDesignations,
+            warehouseItems: warehouseItemsComputed,
+            mouvements,
+            onNavigate: (tab) => startTransition(() => setCurrentTab(tab)),
           },
           guide: {}
         }}

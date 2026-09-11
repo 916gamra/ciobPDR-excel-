@@ -368,7 +368,7 @@ export default function MachinesRegisteredView({
 
         <button
           onClick={onOpenAddMachine}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-black transition shadow-xs shrink-0 cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 transition shadow-xs shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Nouvelle Machine</span>

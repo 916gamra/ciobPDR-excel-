@@ -453,7 +453,7 @@ export default function UtilisateursView({
               setUserToEdit(null);
               setShowAddModal(true);
             }}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-slate-900 hover:bg-black text-white font-bold text-xs rounded-xl shadow-xs transition shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-xs transition shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Ajouter un utilisateur</span>
@@ -1269,7 +1269,7 @@ export default function UtilisateursView({
                             className="text-[10px] text-indigo-600 hover:text-indigo-800 hover:underline font-bold flex items-center gap-0.5 cursor-pointer"
                           >
                             <Plus className="w-3 h-3" />
-                            <span>+ Nouvelle zone</span>
+                            <span>Nouvelle zone</span>
                           </button>
                         )}
                       </div>
@@ -1333,9 +1333,10 @@ export default function UtilisateursView({
                           setShowAddModal(false);
                           onOpenAddZoneModal();
                         }}
-                        className="text-[10px] text-indigo-600 hover:underline font-bold"
+                        className="text-[10px] text-indigo-600 hover:underline font-bold inline-flex items-center gap-0.5"
                       >
-                        + Nouvelle zone
+                        <Plus className="w-3 h-3" />
+                        <span>Nouvelle zone</span>
                       </button>
                     </label>
                     <select

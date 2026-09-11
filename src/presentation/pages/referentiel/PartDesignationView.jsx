@@ -303,7 +303,7 @@ export default function PartDesignationView({
 
                   return (
                     <tr
-                      key={d.ref || d.id_part}
+                      key={`part-desig-row-${d.ref || d.id_part || idx}-${idx}`}
                       className="even:bg-slate-50/80 odd:bg-white hover:bg-slate-100/70 border-b border-slate-200/70 transition-colors"
                     >
                       <td className="py-3 px-3 text-center font-mono text-[11px] font-bold text-slate-400 bg-slate-100/40 border-r border-slate-200/80 shrink-0">
@@ -436,7 +436,7 @@ export default function PartDesignationView({
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
             <h3 className="font-bold text-base text-slate-900 mb-1">
-              + Nouvelle Désignation de Part
+              Nouvelle Désignation de Part
             </h3>
             <p className="text-xs text-slate-500 mb-4">
               Référence et description d&apos;une pièce détachée stockée en entrepôt.

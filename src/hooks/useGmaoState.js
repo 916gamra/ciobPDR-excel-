@@ -27,6 +27,7 @@ import { TaskApplicationService } from '../application/services/TaskApplicationS
 // Build a fast lookup dictionary from initial baseline stock data to ensure original quantities and type-based references are never lost
 const INITIAL_STOCK_LOOKUP = new Map();
 const BASELINE_TYPE_COUNTERS = {};
+const BASELINE_USED_REFS = new Set();
 
 export const BASELINE_STOCK_ITEMS = (initialData.Stock_Actuel || []).map((item, idx) => {
   const typeName = String(item['Désignation'] || item.type || 'Divers').trim();
@@ -34,8 +35,18 @@ export const BASELINE_STOCK_ITEMS = (initialData.Stock_Actuel || []).map((item, 
   BASELINE_TYPE_COUNTERS[lowerType] = (BASELINE_TYPE_COUNTERS[lowerType] || 0) + 1;
   const count = BASELINE_TYPE_COUNTERS[lowerType];
   const pad2 = count < 10 ? `0${count}` : `${count}`;
-  const ref = `${typeName}${count}`;
-  const refPadded = `${typeName}${pad2}`;
+  let ref = `${typeName}${count}`;
+  let refPadded = `${typeName}${pad2}`;
+
+  if (BASELINE_USED_REFS.has(ref.toLowerCase())) {
+    let suffix = 2;
+    while (BASELINE_USED_REFS.has(`${ref}_${suffix}`.toLowerCase())) {
+      suffix++;
+    }
+    ref = `${ref}_${suffix}`;
+    refPadded = `${refPadded}_${suffix}`;
+  }
+  BASELINE_USED_REFS.add(ref.toLowerCase());
   
   // The actual technical specification of the article from Excel (e.g. Foret Beton Ø12, 6PK925, etc.)
   const designation = String(
@@ -158,7 +169,7 @@ export function useGmaoState() {
 
   const [families, setFamilies] = useState(() => {
     const candidate = groupedState.families || storageService.getItem('gmao_families');
-    if (isValidMachineFamilies(candidate)) {
+    if (isValidMachineFamilies(candidate) && !candidate.some((f) => f.id_family === 'FAM-TR' || f.id_family === 'FAM-01')) {
       return candidate;
     }
     return INITIAL_FAMILIES;
@@ -166,7 +177,7 @@ export function useGmaoState() {
 
   const [templates, setTemplates] = useState(() => {
     const candidate = groupedState.templates || storageService.getItem('gmao_templates');
-    if (isValidMachineTemplates(candidate)) {
+    if (isValidMachineTemplates(candidate) && !candidate.some((t) => t.id_family === 'FAM-TR' || t.id_family === 'FAM-01')) {
       return candidate;
     }
     if (isStockCorrupted(candidate)) {
@@ -177,7 +188,7 @@ export function useGmaoState() {
 
   const [blueprints, setBlueprints] = useState(() => {
     const candidate = groupedState.blueprints || storageService.getItem('gmao_blueprints_v1');
-    if (Array.isArray(candidate) && candidate.length > 0) {
+    if (Array.isArray(candidate) && candidate.length > 0 && !candidate.some((b) => b.id_family === 'FAM-TR' || b.id_family === 'FAM-01')) {
       return candidate;
     }
     return INITIAL_BLUEPRINTS;
@@ -188,7 +199,7 @@ export function useGmaoState() {
     if (
       Array.isArray(candidate) &&
       candidate.length >= 80 &&
-      !candidate.some((m) => m.id_machine_registered === 'MCH-001' || m.id === 'MCH-001')
+      !candidate.some((m) => m.id_machine_registered === 'MCH-001' || m.id === 'MCH-001' || m.id_family === 'FAM-TR')
     ) {
       return candidate;
     }
@@ -245,12 +256,12 @@ export function useGmaoState() {
     if (
       Array.isArray(raw) &&
       raw.length >= 14 &&
-      raw.some((z) => z.id_zone === 'SEC-01' || z.code_zone === 'BAK' || z.id_zone === 'SEC-14')
+      raw.some((z) => z.id_zone === 'AMBO' || z.code_zone === 'AMBO')
     ) {
       return raw.map((z, idx) => ({
         ...z,
-        code_zone: z.code_zone || z.code || `SEC-${String(idx + 1).padStart(2, '0')}`,
-        id_zone: z.id_zone || z.code_zone || z.code || `SEC-${String(idx + 1).padStart(2, '0')}`,
+        code_zone: z.code_zone || z.code || z.id_zone,
+        id_zone: z.id_zone || z.code_zone || z.code,
       }));
     }
     return INITIAL_ZONES;
@@ -377,6 +388,8 @@ export function useGmaoState() {
   const [rawStock, setRawStock] = useState(() => {
     const saved = groupedState.rawStock || storageService.getItem('gmao_raw_stock_v6');
     const rawList = saved && Array.isArray(saved) && saved.length > 0 ? saved : BASELINE_STOCK_ITEMS;
+    const usedStockRefs = new Set();
+    const usedStockIds = new Set();
 
     return rawList
       .map((s, idx) => {
@@ -389,7 +402,7 @@ export function useGmaoState() {
         const desigKey = itemDesig.toLowerCase();
         
         // Find baseline by ref or by designation
-        let baseline = INITIAL_STOCK_LOOKUP.get(refKey) || INITIAL_STOCK_LOOKUP.get(desigKey);
+        let baseline = INITIAL_STOCK_LOOKUP.get(refKey) || INITIAL_STOCK_LOOKUP.get(desigKey) || BASELINE_STOCK_ITEMS[idx];
 
         let stockInitial = 0;
         let hasExplicitInitial = false;
@@ -432,6 +445,23 @@ export function useGmaoState() {
           finalType = finalType || 'Divers';
         }
 
+        // Guarantee ref uniqueness
+        let uniqueRef = finalRef;
+        if (usedStockRefs.has(uniqueRef.toLowerCase())) {
+          let suffix = 2;
+          while (usedStockRefs.has(`${uniqueRef}_${suffix}`.toLowerCase())) {
+            suffix++;
+          }
+          uniqueRef = `${uniqueRef}_${suffix}`;
+        }
+        usedStockRefs.add(uniqueRef.toLowerCase());
+
+        let uniqueId = Number(s.id) || idx + 1;
+        if (usedStockIds.has(uniqueId)) {
+          uniqueId = Math.max(...usedStockIds, 0) + 1;
+        }
+        usedStockIds.add(uniqueId);
+
         const finalSeuil =
           Number(s.seuil != null ? s.seuil : s["Seuil d'Alerte"] != null ? s["Seuil d'Alerte"] : (baseline ? baseline.seuil : 3)) || 3;
         const finalEmplacement =
@@ -440,8 +470,8 @@ export function useGmaoState() {
           (baseline ? baseline.emplacement : `A${(idx % 8) + 1}-R${(idx % 6) + 1}`);
 
         return {
-          id: s.id || idx + 1,
-          ref: finalRef,
+          id: uniqueId,
+          ref: uniqueRef,
           designation: finalDesignation,
           id_type: s.id_type || finalType,
           id_diag: s.id_diag || s.diag || s.Diag || '',

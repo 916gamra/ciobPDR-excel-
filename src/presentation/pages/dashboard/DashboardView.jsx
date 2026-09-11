@@ -406,15 +406,15 @@ export default function DashboardView({
             className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-98"
           >
             <ShoppingCart className="w-4 h-4" />
-            <span>+ Nouvelle Commande</span>
+            <span>Nouvelle Commande</span>
           </button>
 
           <button
             onClick={onNavigateToSortie}
-            className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-98"
+            className="px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer active:scale-98"
           >
             <SortieEntreeIcon className="w-4 h-4" />
-            <span>+ Sortie / Entrée Rapide</span>
+            <span>Sortie / Entrée Rapide</span>
           </button>
 
           {onExportExcel && (
@@ -1207,7 +1207,8 @@ export default function DashboardView({
               onClick={onNavigateToSortie}
               className="text-xs font-bold text-blue-600 hover:text-blue-800 inline-flex items-center gap-1"
             >
-              <span>+ Sortie</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Sortie</span>
             </button>
           </div>
 

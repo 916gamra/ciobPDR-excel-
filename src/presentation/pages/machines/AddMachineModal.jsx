@@ -471,7 +471,7 @@ export default function AddMachineModal({
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white font-bold transition shadow-xs cursor-pointer text-xs flex items-center gap-1.5 active:scale-[0.98]"
+              className="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold transition shadow-xs cursor-pointer text-xs flex items-center gap-1.5 active:scale-[0.98]"
             >
               <Plus className="w-4 h-4" />
               <span>Enregistrer la Machine</span>

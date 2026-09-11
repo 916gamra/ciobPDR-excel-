@@ -309,7 +309,7 @@ export default function StockView({
 
         <button
           onClick={onOpenAddArticle}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-black transition shadow-xs flex-shrink-0 cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 transition shadow-xs flex-shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Nouvel Article</span>

@@ -210,7 +210,7 @@ export default function ZonesView({
 
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-black transition shadow-xs shrink-0 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 transition shadow-xs shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Nouvelle Zone</span>
@@ -664,7 +664,7 @@ export default function ZonesView({
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200 flex flex-col max-h-screen">
-            <h3 className="font-bold text-base text-slate-900 mb-1">+ Nouvelle Zone / Atelier</h3>
+            <h3 className="font-bold text-base text-slate-900 mb-1">Nouvelle Zone / Atelier</h3>
             <p className="text-xs text-slate-500 mb-4">
               Créez une zone géographique ou un secteur d&apos;usine.
             </p>
@@ -751,7 +751,7 @@ export default function ZonesView({
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 h-10 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold"
+                    className="flex-1 h-10 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold transition shadow-xs cursor-pointer"
                   >
                     Enregistrer
                   </button>

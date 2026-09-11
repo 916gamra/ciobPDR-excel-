@@ -355,7 +355,7 @@ export default function PartTypeView({
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
             <h3 className="font-bold text-base text-slate-900 mb-1">
-              + Nouveau Type de Part
+              Nouveau Type de Part
             </h3>
             <p className="text-xs text-slate-500 mb-4">
               Catégorie de pièces détachées (PDR) d&apos;entrepôt.

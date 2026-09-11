@@ -79,7 +79,7 @@ function CustomSelect({
   placeholder = 'Sélectionner...',
   disabled = false,
   onAddNew,
-  addNewLabel = '+ Ajouter...',
+  addNewLabel = 'Ajouter...',
   className = '',
   icon = null,
 }) {
