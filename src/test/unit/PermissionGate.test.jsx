@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { usePermission } from '../../presentation/components/common/PermissionGate.jsx';
-import { AuthorizationService, PERMISSIONS } from '../../core/security/AuthorizationService.js';
 import * as AuthContextModule from '../../context/AuthContext.jsx';
 
 describe('UI RBAC Guards & usePermission', () => {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAuth } from '../../../context/AuthContext.jsx';
 import { AuthorizationService } from '../../../core/security/AuthorizationService.js';
 import { ShieldAlert } from 'lucide-react';

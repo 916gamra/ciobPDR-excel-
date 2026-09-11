@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { SparePartApplicationService } from '../../application/services/SparePartApplicationService.js';
 
 export function useSparePartService() {

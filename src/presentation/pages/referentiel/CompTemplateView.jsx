@@ -16,7 +16,6 @@ import {
   ArrowUp,
   ArrowDown,
   X,
-  Tag,
 } from 'lucide-react';
 
 export default function CompTemplateView({

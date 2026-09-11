@@ -1,4 +1,4 @@
-import {  useState, useMemo, useEffect, useRef  } from 'react';
+import {  useState, useMemo, useEffect  } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import {
   Settings as SettingsIcon,
@@ -20,22 +20,14 @@ import {
   CheckCircle2,
   FileCode,
   Trash2,
-  ChevronRight,
-  HelpCircle,
   Clock,
-  MapPin,
-  ClipboardList,
   Activity,
-  ChevronLeft,
   ChevronDown,
-  ArrowUp,
-  ArrowDown,
   UserCheck,
   Lock,
   Unlock,
   Shield,
   Key,
-  Monitor,
   Globe,
   LogIn,
   LogOut as LogOutIcon,
@@ -43,13 +35,10 @@ import {
   ShieldCheck,
   Zap,
   Wifi,
-  WifiOff,
   Gauge,
 } from 'lucide-react';
 
 import {
-  INITIAL_TYPES,
-  INITIAL_DIAGNOSTICS,
   INITIAL_FAMILIES,
   INITIAL_TEMPLATES,
   INITIAL_MACHINES_REGISTERED,
@@ -91,11 +80,8 @@ export default function SettingsView({
   setTypes,
   showToast,
   linkedFileHandle,
-  setLinkedFileHandle,
   linkedFileName,
-  setLinkedFileName,
   onDirectLink,
-  onDirectSave,
 }) {
   const [activeTab, setActiveTab] = useState('overview'); // overview, injection, directory, matching, json-editor
 
@@ -137,7 +123,6 @@ export default function SettingsView({
     user: currentUser,
     getAvailableAccounts,
     updateUserPassword,
-    updateUserProfile,
     resetAllAccountsToDefaults,
     switchSessionToUser,
     hashPasswordBCrypt,
@@ -187,7 +172,7 @@ export default function SettingsView({
   const handleResetAllAccounts = () => {
     if (window.confirm('Voulez-vous réinitialiser tous les comptes système et mots de passe aux valeurs par défaut ?')) {
       if (resetAllAccountsToDefaults) {
-        const reseted = resetAllAccountsToDefaults();
+        resetAllAccountsToDefaults();
         setAccountsList(getAvailableAccounts ? getAvailableAccounts() : []);
         setSelectedAccUsername('magasinier');
         setEditingPassword('magasin123');
@@ -210,7 +195,9 @@ export default function SettingsView({
         if (raw.startsWith('CIOB_GMAO_SECURE_SALT:')) {
           return raw.replace('CIOB_GMAO_SECURE_SALT:', '');
         }
-      } catch (e) {}
+      } catch {
+        // Ignore parsing errors gracefully
+      }
     }
     return '1234';
   });
@@ -465,7 +452,9 @@ export default function SettingsView({
       try {
         session.role = tempRole.trim();
         storageService.setItem('gmao_user_session', session);
-      } catch (e) {}
+      } catch {
+        // Ignore session update errors gracefully
+      }
     }
 
     // Dispatch event to sync state immediately
@@ -573,7 +562,7 @@ export default function SettingsView({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       showToast('Fichier JSON telecharge avec succes.', 'success');
-    } catch (err) {
+    } catch {
       showToast('Erreur lors du telechargement.', 'error');
     }
   };
@@ -1001,7 +990,7 @@ export default function SettingsView({
       if (data.Operations) setOperations(data.Operations);
       showToast('Restauration réussie !', 'success');
       logger.info('Backup restored manually', { backupId: id });
-    } catch (e) {
+    } catch {
       showToast('Erreur lors de la restauration.', 'error');
     }
   };
@@ -1010,7 +999,7 @@ export default function SettingsView({
     try {
       await backupService.exportBackup(id);
       showToast('Export réussi !', 'success');
-    } catch (e) {
+    } catch {
       showToast('Erreur lors de l\'export.', 'error');
     }
   };

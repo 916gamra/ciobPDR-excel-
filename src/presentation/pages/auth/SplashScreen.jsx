@@ -12,7 +12,6 @@ export default function SplashScreen({ onComplete }) {
   const [statusText, setStatusText] = useState(
     'Ouverture du classeur Excel GMAO_Light_Template_V2_Formules.xlsx...'
   );
-  const [activeStepIndex, setActiveStepIndex] = useState(0);
 
   useEffect(() => {
     const steps = [
@@ -27,7 +26,6 @@ export default function SplashScreen({ onComplete }) {
       if (current < steps.length) {
         setProgress(steps[current].p);
         setStatusText(steps[current].text);
-        setActiveStepIndex(current + 1);
         current++;
       } else {
         clearInterval(interval);

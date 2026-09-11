@@ -1,5 +1,5 @@
-import {  useState, useEffect  } from 'react';
-import { Package, CheckCircle2, X, MapPin, Boxes, Radio, ShieldAlert } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Package, CheckCircle2, X, MapPin, Boxes } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 
 export default function EditArticleModal({
@@ -8,7 +8,6 @@ export default function EditArticleModal({
   article,
   types = [],
   onUpdateArticle,
-  onOpenAddTypeModal,
 }) {
   const [form, setForm] = useState({
     ref: article?.ref || '',

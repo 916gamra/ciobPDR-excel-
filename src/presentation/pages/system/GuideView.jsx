@@ -11,7 +11,6 @@ import {
   Package,
   Boxes,
   FileSpreadsheet,
-  ArrowRight,
   CheckCircle2,
   Sparkles,
   Wrench,

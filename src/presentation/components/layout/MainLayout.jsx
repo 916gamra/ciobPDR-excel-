@@ -36,7 +36,7 @@ export default function MainLayout({
         onLogout={() => {
           try {
             localStorage.setItem('gmao_active_tab', 'dashboard');
-          } catch (_e) {
+          } catch {
             /* ignore */
           }
           setCurrentTab('dashboard');

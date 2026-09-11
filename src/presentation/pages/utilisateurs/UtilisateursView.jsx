@@ -40,7 +40,6 @@ export default function UtilisateursView({
   technicians,
   operations,
   zones,
-  mouvements,
   onAddTechnician,
   onUpdateTechnician,
   onDeleteTechnician,

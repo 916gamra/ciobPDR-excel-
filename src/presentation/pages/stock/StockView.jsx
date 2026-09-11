@@ -134,7 +134,6 @@ export default function StockView({
   });
 
   const canEditStock = usePermission('stock.edit');
-  const canCreateMovement = usePermission('movement.create');
 
   const sortMenuRef = useRef(null);
 

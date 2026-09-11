@@ -1,3 +1,5 @@
+import { Logger } from '../core/logger/LoggerService.js';
+
 /**
  * نظام مراقبة الأداء
  */
@@ -18,9 +20,7 @@ export class PerformanceMonitor {
       this.recordMetric(name, duration, 'success');
 
       if (duration > 1000) {
-        console.warn(`⚠️ ${name} استغرق ${duration.toFixed(2)}ms`);
-      } else {
-        // console.log(`✅ ${name} استغرق ${duration.toFixed(2)}ms`);
+        Logger.warn(`⚠️ ${name} استغرق ${duration.toFixed(2)}ms`, 'PerformanceMonitor');
       }
 
       return result;
@@ -65,15 +65,14 @@ export class PerformanceMonitor {
    * طباعة التقرير
    */
   printReport() {
-    console.table(
-      Array.from(this.metrics.entries()).map(([name, metrics]) => ({
-        الاسم: name,
-        'المتوسط (ms)': this.getStats(name)?.avg.toFixed(2),
-        'الحد الأدنى (ms)': this.getStats(name)?.min.toFixed(2),
-        'الحد الأقصى (ms)': this.getStats(name)?.max.toFixed(2),
-        العدد: this.getStats(name)?.count,
-      }))
-    );
+    const report = Array.from(this.metrics.entries()).map(([name]) => ({
+      الاسم: name,
+      'المتوسط (ms)': this.getStats(name)?.avg.toFixed(2),
+      'الحد الأدنى (ms)': this.getStats(name)?.min.toFixed(2),
+      'الحد الأقصى (ms)': this.getStats(name)?.max.toFixed(2),
+      العدد: this.getStats(name)?.count,
+    }));
+    Logger.info('Performance Report:', 'PerformanceMonitor', report);
   }
 }
 

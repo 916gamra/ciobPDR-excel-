@@ -37,7 +37,6 @@ export default function CompFamilyView({
   const [sortOrder, setSortOrder] = useState('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [showSortDropdown, setShowSortDropdown] = useState(false);
 
   // Form state
   const [form, setForm] = useState({

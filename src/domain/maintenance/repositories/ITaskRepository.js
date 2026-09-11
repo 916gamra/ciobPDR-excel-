@@ -1,7 +1,7 @@
 export class ITaskRepository {
-  async create(task) { throw new Error('Not implemented'); }
-  async findById(id) { throw new Error('Not implemented'); }
-  async findAll(filters = {}) { throw new Error('Not implemented'); }
-  async update(id, task) { throw new Error('Not implemented'); }
-  async delete(id) { throw new Error('Not implemented'); }
+  async create(_task) { throw new Error('Not implemented'); }
+  async findById(_id) { throw new Error('Not implemented'); }
+  async findAll(_filters = {}) { throw new Error('Not implemented'); }
+  async update(_id, _task) { throw new Error('Not implemented'); }
+  async delete(_id) { throw new Error('Not implemented'); }
 }

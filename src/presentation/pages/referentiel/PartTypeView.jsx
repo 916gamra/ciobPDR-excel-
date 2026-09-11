@@ -6,7 +6,6 @@ import {
   Plus,
   Search,
   ArrowRight,
-  Package,
   Trash2,
   Edit2,
   Warehouse,

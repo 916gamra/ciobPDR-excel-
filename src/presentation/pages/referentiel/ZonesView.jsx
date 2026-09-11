@@ -539,15 +539,24 @@ export default function ZonesView({
                       {/* Techniciens */}
                       {zoneTechs.length > 0 && (
                         <div className="flex flex-col gap-0.5 mt-0.5">
-                          <div className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide uppercase text-slate-400">
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToTechs && onNavigateToTechs(z.code_zone || z.id_zone)}
+                            className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide uppercase text-slate-400 hover:text-blue-600 transition text-left cursor-pointer"
+                          >
                             <Wrench className="w-3 h-3 text-slate-400 shrink-0" />
-                            <span>TECHNICIEN{zoneTechs.length > 1 ? 'S' : ''}</span>
-                          </div>
+                            <span>TECHNICIEN{zoneTechs.length > 1 ? 'S' : ''} ({zoneTechs.length})</span>
+                          </button>
                           <div className="flex flex-wrap items-center gap-1.5 pl-[1.125rem] mt-0.5">
                             {zoneTechs.map((tech, i) => (
-                              <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-[10px] font-bold text-blue-700 shadow-2xs">
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => onNavigateToTechs && onNavigateToTechs(z.code_zone || z.id_zone)}
+                                className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[10px] font-bold text-blue-700 shadow-2xs cursor-pointer transition"
+                              >
                                 {tech.id_technician || tech.code || 'TECH'}
-                              </span>
+                              </button>
                             ))}
                           </div>
                         </div>
@@ -555,10 +564,14 @@ export default function ZonesView({
 
                       {/* Opérateurs */}
                       {operateursCount > 0 && (
-                        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] font-semibold tracking-wide uppercase text-slate-500">
+                        <button
+                          type="button"
+                          onClick={() => onNavigateToOps && onNavigateToOps(z.code_zone || z.id_zone)}
+                          className="flex items-center gap-1.5 mt-0.5 text-[10px] font-semibold tracking-wide uppercase text-slate-500 hover:text-indigo-600 transition cursor-pointer"
+                        >
                           <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>{operateursCount} OPÉRATEUR{operateursCount > 1 ? 'S' : ''}</span>
-                        </div>
+                        </button>
                       )}
 
                       {/* Fallback */}

@@ -1,4 +1,5 @@
 import LZString from 'lz-string';
+import { Logger } from '../core/logger/LoggerService';
 
 /**
  * خدمة النسخ الاحتياطية
@@ -82,13 +83,13 @@ export class BackupService {
       if (!isLargeData) {
         await this.saveBackupToLocalStorage(backup);
       } else {
-        console.log('Skipping LocalStorage backup for large data (size:', dataSize, 'bytes)');
+        Logger.info('[BackupService] Skipping LocalStorage backup for large data (size:', dataSize, 'bytes)');
       }
 
-      console.log('تم إنشاء نسخة احتياطية بنجاح');
+      Logger.info('[BackupService] Sauvegarde créée avec succès');
       return backup;
     } catch (error) {
-      console.error('خطأ في إنشاء النسخة الاحتياطية:', error);
+      Logger.error('[BackupService] Erreur lors de la sauvegarde:', error);
       throw error;
     }
   }

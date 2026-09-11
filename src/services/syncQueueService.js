@@ -1,3 +1,5 @@
+import { Logger } from '../core/logger/LoggerService';
+
 /**
  * Service de File d'Attente de Synchronisation Hors-Ligne (Offline Sync Queue)
  * Permet d'empiler et de rejouer les opérations critiques lorsque le réseau ou le stockage distant est rétabli.
@@ -71,14 +73,14 @@ class SyncQueueService {
     if (typeof window === 'undefined') return;
 
     window.addEventListener('online', () => {
-      console.log('🌐 Connexion rétablie - Traitement de la file de synchronisation...');
+      Logger.info('[SyncQueueService] 🌐 Connexion rétablie - Traitement de la file de synchronisation...');
       this.isOnline = true;
       this.processQueue();
       this.notifySubscribers();
     });
 
     window.addEventListener('offline', () => {
-      console.log('📡 Passage en mode hors-ligne - Les opérations sont mises en file d’attente.');
+      Logger.info('[SyncQueueService] 📡 Passage en mode hors-ligne - Les opérations sont mises en file d’attente.');
       this.isOnline = false;
       this.notifySubscribers();
     });
@@ -160,7 +162,7 @@ class SyncQueueService {
       this.queue.push(queueItem);
       this.notifySubscribers();
 
-      console.log('📝 Opération ajoutée à la file d’attente:', queueItem);
+      Logger.debug('[SyncQueueService] 📝 Opération ajoutée à la file d’attente:', queueItem);
 
       // Traitement immédiat si en ligne
       if (this.isOnline) {
@@ -169,7 +171,7 @@ class SyncQueueService {
 
       return queueItem;
     } catch (error) {
-      console.error('❌ Erreur lors de l’ajout à la Sync Queue:', error);
+      Logger.error('[SyncQueueService] ❌ Erreur lors de l’ajout à la Sync Queue:', error);
       throw error;
     }
   }
@@ -201,7 +203,7 @@ class SyncQueueService {
       return;
     }
 
-    console.log('🔄 Traitement de la file de synchronisation...');
+    Logger.debug('[SyncQueueService] 🔄 Traitement de la file de synchronisation...');
 
     // Ordonnancement par priorité
     const priorityMap = { high: 1, normal: 2, low: 3 };
@@ -225,7 +227,7 @@ class SyncQueueService {
    */
   async processItem(item) {
     try {
-      console.log('⏳ Traitement de l’opération:', item.id);
+      Logger.debug('[SyncQueueService] ⏳ Traitement de l’opération:', item.id);
 
       const fn = this.inMemoryOperations.get(item.id);
       if (typeof fn === 'function') {
@@ -244,19 +246,19 @@ class SyncQueueService {
         await this.removeItem(item.id);
       }
 
-      console.log('✅ Opération synchronisée avec succès:', item.id);
+      Logger.info('[SyncQueueService] ✅ Opération synchronisée avec succès:', item.id);
     } catch (error) {
-      console.error('❌ Erreur d’exécution de l’opération:', error);
+      Logger.error('[SyncQueueService] ❌ Erreur d’exécution de l’opération:', error);
 
       item.retries = (item.retries || 0) + 1;
       item.error = error?.message || 'Erreur inconnue';
 
       if (item.retries >= this.maxRetries) {
         item.status = 'failed';
-        console.error(`❌ Échec définitif après ${this.maxRetries} tentatives pour l’item ${item.id}`);
+        Logger.error(`[SyncQueueService] ❌ Échec définitif après ${this.maxRetries} tentatives pour l’item ${item.id}`);
       } else {
         item.status = 'pending';
-        console.log(`🔄 Nouvelle tentative programmée (${item.retries}/${this.maxRetries})`);
+        Logger.debug(`[SyncQueueService] 🔄 Nouvelle tentative programmée (${item.retries}/${this.maxRetries})`);
       }
 
       if (this.db) {

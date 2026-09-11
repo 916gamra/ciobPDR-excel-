@@ -1,26 +1,27 @@
-
 import { startTransition } from 'react';
 import { SparePartApplicationService } from '../application/services/SparePartApplicationService';
 import { MachineApplicationService } from '../application/services/MachineApplicationService';
 import { TaskApplicationService } from '../application/services/TaskApplicationService';
+import { Logger } from '../core/logger/LoggerService';
 
 export function useAppComplexHandlers({
   zones, setZones,
   operations, setOperations,
   technicians, setTechnicians,
-  machines, setMachines,
-  mouvements, setMouvements,
-  types, setTypes,
+  _machines, setMachines,
+  _mouvements, setMouvements,
+  setTypes,
   rawStock, setRawStock,
-  designations, setDesignations,
-  families, setFamilies,
-  templates, setTemplates,
-  compFamilies, setCompFamilies,
-  compTemplates, setCompTemplates,
-  partTypes, setPartTypes,
-  partDesignations, setPartDesignations,
-  warehouseItems, setWarehouseItems,
-  showToast, setCurrentTab
+  setDesignations,
+  setFamilies,
+  setTemplates,
+  setCompFamilies,
+  setCompTemplates,
+  setPartTypes,
+  setPartDesignations,
+  setWarehouseItems,
+  showToast,
+  setCurrentTab,
 }) {
   const handleUpdateZone = (id, updatedZone) => {
     setZones((prev) => prev.map((z) => (z.id_zone === id ? updatedZone : z)));
@@ -156,15 +157,23 @@ export function useAppComplexHandlers({
     setCompTemplates((prev) => prev.filter((t) => t.id_templates !== id));
   };
 
-  // PART TYPES & DESIGNATIONS CRUD
+  // PART TYPES & PART DESIGNATIONS CRUD
   const handleUpdatePartType = (id, updatedType) => {
     setPartTypes((prev) => prev.map((t) => (t.id_type === id ? updatedType : t)));
     if (id !== updatedType.id_type) {
       setPartDesignations((prev) =>
-        prev.map((d) => (d.id_type === id ? { ...d, id_type: updatedType.id_type } : d))
+        prev.map((d) =>
+          d.id_type === id
+            ? { ...d, id_type: updatedType.id_type, type: updatedType.id_type }
+            : d
+        )
       );
       setWarehouseItems((prev) =>
-        prev.map((w) => (w.id_type === id ? { ...w, id_type: updatedType.id_type } : w))
+        prev.map((w) =>
+          w.id_type === id
+            ? { ...w, id_type: updatedType.id_type, type: updatedType.id_type }
+            : w
+        )
       );
     }
   };
@@ -172,28 +181,40 @@ export function useAppComplexHandlers({
     setPartTypes((prev) => prev.filter((t) => t.id_type !== id));
   };
 
-  const handleUpdatePartDesignation = (refId, updatedDesig) => {
-    setPartDesignations((prev) =>
-      prev.map((d) => (d.ref === refId || d.id_part === refId ? updatedDesig : d))
+  const handleUpdatePartDesignation = (id, updatedDesig) => {
+    setPartDesignations((prev) => prev.map((d) => (d.id === id || d.ref === id ? updatedDesig : d)));
+    setWarehouseItems((prev) =>
+      prev.map((w) =>
+        w.id_part_designation === id || w.ref === id
+          ? {
+              ...w,
+              ref: updatedDesig.ref || w.ref,
+              designation: updatedDesig.designation || w.designation,
+              id_type: updatedDesig.id_type || w.id_type,
+              type: updatedDesig.id_type || w.type,
+              emplacement: updatedDesig.emplacement || w.emplacement,
+              seuil: updatedDesig.seuil !== undefined ? Number(updatedDesig.seuil) : w.seuil,
+            }
+          : w
+      )
     );
   };
-  const handleDeletePartDesignation = (refId) => {
-    setPartDesignations((prev) => prev.filter((d) => d.ref !== refId && d.id_part !== refId));
+  const handleDeletePartDesignation = (id) => {
+    setPartDesignations((prev) => prev.filter((d) => d.id !== id && d.ref !== id));
   };
 
-  const handleUpdateTemplate = (id, updatedTemplate) => {
-    setTemplates((prev) => prev.map((t) => (t.id_templates === id ? updatedTemplate : t)));
-    if (id !== updatedTemplate.id_templates) {
+  const handleUpdateTemplate = (id, updatedTpl) => {
+    setTemplates((prev) => prev.map((t) => (t.id_templates === id ? updatedTpl : t)));
+    if (id !== updatedTpl.id_templates) {
       setMachines((prev) =>
         prev.map((m) =>
-          m.id_templates === id ? { ...m, id_templates: updatedTemplate.id_templates } : m
+          m.id_templates === id ? { ...m, id_templates: updatedTpl.id_templates } : m
         )
       );
     }
   };
   const handleDeleteTemplate = (id) =>
     setTemplates((prev) => prev.filter((t) => t.id_templates !== id));
-  // ===================================
 
   const handleAddTechnician = (newTech) => {
     setTechnicians((prev) => [...prev, newTech]);
@@ -253,13 +274,12 @@ export function useAppComplexHandlers({
     }
   };
 
-  
   const handleUpdateArticle = async (id, updatedArt) => {
     const service = new SparePartApplicationService();
     try {
       await service.updateSparePart(id, updatedArt);
     } catch (err) {
-      console.warn('SparePart update warning:', err);
+      Logger.warn('[useAppComplexHandlers] SparePart update warning:', err);
     }
     setRawStock((prev) =>
       prev.map((a) =>
@@ -274,18 +294,17 @@ export function useAppComplexHandlers({
     try {
       await service.deleteSparePart(id);
     } catch (err) {
-      console.warn('SparePart delete warning:', err);
+      Logger.warn('[useAppComplexHandlers] SparePart delete warning:', err);
     }
     setRawStock((prev) => prev.filter((a) => a.id !== id && a.ref !== id));
   };
 
-  
   const handleUpdateMouvement = async (id, updatedMvt) => {
     const service = new TaskApplicationService();
     try {
       await service.updateTask(id, updatedMvt);
     } catch (err) {
-      console.warn('Task update warning:', err);
+      Logger.warn('[useAppComplexHandlers] Task update warning:', err);
     }
     setMouvements((prev) =>
       prev.map((m) =>
@@ -300,11 +319,10 @@ export function useAppComplexHandlers({
     try {
       await service.deleteTask(id);
     } catch (err) {
-      console.warn('Task delete warning:', err);
+      Logger.warn('[useAppComplexHandlers] Task delete warning:', err);
     }
     setMouvements((prev) => prev.filter((m) => m.id !== id && m.code_bon !== id));
   };
-
 
   const handleAddWarehouseItem = (newItem) => {
     setWarehouseItems((prev) => [newItem, ...prev]);
@@ -328,8 +346,6 @@ export function useAppComplexHandlers({
   };
 
   const handleDirectAdjustStock = (article, newTargetStock) => {
-    // When directly adjusting real stock balance, calculate new stockInitial so that:
-    // stockActuel (stockInitial + entrees - sorties) equals newTargetStock
     const entrees = Number(article.entrees || 0);
     const sorties = Number(article.sorties || 0);
     const newStockInitial = Math.max(0, Number(newTargetStock) - entrees + sorties);
@@ -343,12 +359,9 @@ export function useAppComplexHandlers({
     );
   };
 
-  const handleQuickSortie = (article) => {
-    // Navigate to Sortie Rapide tab
+  const handleQuickSortie = () => {
     startTransition(() => setCurrentTab('sortie'));
   };
-
-  
 
   return {
     handleUpdateZone, handleDeleteZone,
@@ -368,6 +381,6 @@ export function useAppComplexHandlers({
     handleUpdateArticle, handleDeleteArticle,
     handleUpdateMouvement, handleDeleteMouvement,
     handleAddWarehouseItem, handleUpdateWarehouseItem, handleDeleteWarehouseItem,
-    handleDirectAdjustStock, handleQuickSortie
+    handleDirectAdjustStock, handleQuickSortie,
   };
 }

@@ -13,19 +13,9 @@ import {
   Boxes,
   FingerprintPattern,
   Factory,
-  Search,
   Zap,
-  CheckCircle2,
-  AlertTriangle,
-  ChevronRight,
   ExternalLink,
   ShieldCheck,
-  Flame,
-  RotateCw,
-  Scissors,
-  Sparkles,
-  Sun,
-  Activity,
   ArrowUpRight,
 } from 'lucide-react';
 import { HubIcon } from '../../components/common/icons/HubIcon';
@@ -33,7 +23,6 @@ import { CategoryIcon } from '../../components/common/icons/CategoryIcon';
 import { SpokeIcon } from '../../components/common/icons/SpokeIcon';
 import { CubeIcon } from '../../components/common/icons/CubeIcon';
 import { LayersIcon } from '../../components/common/icons/LayersIcon';
-import PartInfoIcon from '../../components/common/icons/PartInfoIcon';
 
 // Helper: Check if 2 machines/BOMs are identical (Twins)
 export const areBOMsIdentical = (bomA, bomB) => {
@@ -83,13 +72,11 @@ export default function NexusView({
   compFamilies = [],
   compTemplates = [],
   partTypes = [],
-  partDesignations = [],
   warehouseItems = [],
   mouvements = [],
   onNavigate = () => {},
 }) {
   const [selectedMachineCode, setSelectedMachineCode] = useState('');
-  const [machineSearchQuery, setMachineSearchQuery] = useState('');
 
   // Find active selected machine for the Nexus Inspector
   const selectedMachine = useMemo(() => {

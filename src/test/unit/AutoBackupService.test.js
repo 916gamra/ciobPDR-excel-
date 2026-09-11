@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { AutoBackupService, BACKUP_STORAGE_KEY, MAX_SNAPSHOTS } from '../../core/backup/AutoBackupService.js';
+import { AutoBackupService, MAX_SNAPSHOTS } from '../../core/backup/AutoBackupService.js';
 
 describe('AutoBackupService', () => {
   beforeEach(() => {

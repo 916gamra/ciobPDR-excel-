@@ -1,23 +1,17 @@
-import {  useState, useRef, useMemo, useEffect  } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
 import CustomSelect from '../../components/common/CustomSelect';
 import QuickMovementModal from './QuickMovementModal';
-import { generateWarehouseItemCode } from '../../../data/seedData';
 import { storageService } from '../../../utils/storageService';
 import {
   Boxes,
   Plus,
   Search,
-  Filter,
-  ArrowRight,
   MapPin,
-  Users,
   User,
-  FolderTree,
   Layers,
   Wrench,
   CheckCircle2,
-  AlertTriangle,
   Trash2,
   Edit2,
   ChevronLeft,
@@ -29,19 +23,12 @@ import {
   ChevronDown,
   Warehouse,
   Factory,
-  Sparkles,
-  ExternalLink,
-  ShieldCheck,
   Tag,
   Hash,
-  Clock,
   Check,
   X,
-  Building2,
   Scale,
   Package,
-  XCircle,
-  FileSpreadsheet,
   Zap,
   MoreVertical,
   Activity,
@@ -63,7 +50,6 @@ export default function EntrepotView({
   compTemplates = [],
   partTypes = [],
   partDesignations = [],
-  stockItems = [],
   zones = [],
   machines = [],
   technicians = [],
@@ -91,7 +77,6 @@ export default function EntrepotView({
   onNavigateToTemplate,
   onNavigateToType,
   onNavigateToPartTypes,
-  onNavigateToPartDesignations,
   onNavigateToDiag,
   onNavigateToZone,
   onNavigateToMachine,
@@ -193,7 +178,7 @@ export default function EntrepotView({
           }
         }
       }
-    } catch (e) {
+    } catch {
       // Ignore storage errors gracefully
     }
 
@@ -225,7 +210,7 @@ export default function EntrepotView({
   useEffect(() => {
     try {
       storageService.setItem('gmao_family_component_codes_v1', familyComponentCodes);
-    } catch (e) {
+    } catch {
       // Ignore storage errors gracefully
     }
   }, [familyComponentCodes]);
@@ -921,13 +906,15 @@ export default function EntrepotView({
           </div>
         </div>
 
-        <button
-          onClick={handleOpenAddModal}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 transition shadow-xs shrink-0 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Nouveau Component / Part</span>
-        </button>
+        {canCreateStock && (
+          <button
+            onClick={handleOpenAddModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 transition shadow-xs shrink-0 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nouveau Component / Part</span>
+          </button>
+        )}
       </div>
 
       {/* 2. Top Metric Cards (Interactive KPI Filter Bar) */}

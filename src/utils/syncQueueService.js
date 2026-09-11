@@ -57,7 +57,7 @@ export class SyncQueueService {
         await this._syncItem(item);
         item.status = 'SYNCED';
         synced++;
-      } catch (_error) {
+      } catch {
         item.retries++;
 
         if (item.retries >= item.maxRetries) {
@@ -134,7 +134,7 @@ export class SyncQueueService {
       if (!id) return null;
       const foundArticle = (data.articles || []).find(a => a.id === id || a.ref === id);
       return foundArticle || null;
-    } catch (_e) {
+    } catch {
       return null;
     }
   }

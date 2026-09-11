@@ -23,7 +23,6 @@ import {
   ArrowDown,
   ArrowUp,
   TrendingUp,
-  X,
 } from 'lucide-react';
 
 const TYPE_STYLES = {
@@ -229,28 +228,6 @@ export default function DesignationView({
   const startIndex = (currentPage - 1) * effectivePageSize;
   const displayedData =
     pageSize === 0 ? sortedData : sortedData.slice(startIndex, startIndex + effectivePageSize);
-
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
-  };
-
-  const renderSortIcon = (field) => {
-    if (sortField !== field) {
-      return (
-        <ArrowUpDown className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition shrink-0" />
-      );
-    }
-    return sortOrder === 'asc' ? (
-      <ArrowUp className="w-3 h-3 text-cyan-700 shrink-0 font-bold" />
-    ) : (
-      <ArrowDown className="w-3 h-3 text-cyan-700 shrink-0 font-bold" />
-    );
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();

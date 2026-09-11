@@ -1,5 +1,3 @@
-import initialData from '../initialData.json';
-
 export const INITIAL_TYPES = [
   { id_type: 'TYPE-MEC', libelle: 'Mécanique & Transmission' },
   { id_type: 'TYPE-FIX', libelle: 'Fixation & Visserie' },

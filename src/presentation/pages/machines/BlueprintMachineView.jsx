@@ -1,54 +1,26 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import AnimatedPage from '../../components/common/AnimatedPage';
-import CustomSelect from '../../components/common/CustomSelect';
 import SequentialCodePicker from '../../components/common/SequentialCodePicker';
 import {
   FingerprintPattern,
   Layers,
   Plus,
   Search,
-  ArrowRight,
-  FolderTree,
-  Cpu,
   Trash2,
   Edit2,
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal,
   ArrowUpDown,
-  ChevronDown,
-  ArrowDown,
-  ArrowUp,
-  FileText,
-  CheckCircle2,
-  Clock,
   Sparkles,
   Factory,
-  Boxes,
   Wrench,
   Zap,
   Info,
-  Package,
   X,
-  PlusCircle,
-  ExternalLink,
-  ShieldCheck,
 } from 'lucide-react';
-import { HubIcon } from '../../components/common/icons/HubIcon';
-import { CategoryIcon } from '../../components/common/icons/CategoryIcon';
-import { SpokeIcon } from '../../components/common/icons/SpokeIcon';
 import { CubeIcon } from '../../components/common/icons/CubeIcon';
 import { LayersIcon } from '../../components/common/icons/LayersIcon';
-
-const SCHEMA_TYPES = [
-  { value: 'Mécanique', label: 'Mécanique' },
-  { value: 'Électrique', label: 'Électrique' },
-  { value: 'Hydraulique', label: 'Hydraulique' },
-  { value: 'Pneumatique', label: 'Pneumatique' },
-  { value: 'Pneumo-Mécanique', label: 'Pneumo-Mécanique' },
-  { value: 'Synoptique', label: 'Synoptique' },
-];
 
 const STATUS_OPTIONS = [
   { value: 'Approuvé', label: 'Approuvé' },
@@ -56,23 +28,17 @@ const STATUS_OPTIONS = [
   { value: 'Archivé', label: 'Archivé' },
 ];
 
-const CRITICITE_OPTIONS = [
-  { value: 'Haute', label: 'Haute' },
-  { value: 'Moyenne', label: 'Moyenne' },
-  { value: 'Faible', label: 'Faible' },
-];
-
 export default function BlueprintMachineView({
   blueprints = [],
   templates = [],
   families = [],
   machines = [],
-  compFamilies = [],
+  compFamilies: _compFamilies = [],
   compTemplates = [],
   partTypes = [],
   partDesignations = [],
   stockItems = [],
-  warehouseItems = [],
+  warehouseItems: _warehouseItems = [],
   mouvements = [],
   blueprintFamilyFilter = 'ALL',
   setBlueprintFamilyFilter = () => {},
@@ -81,11 +47,11 @@ export default function BlueprintMachineView({
   onAddBlueprint = () => {},
   onUpdateBlueprint = () => {},
   onDeleteBlueprint = () => {},
-  onOpenAddFamilyModal = () => {},
-  onOpenAddTemplateModal = () => {},
-  onNavigateToMachinesByTemplate = () => {},
-  onNavigateToFamily = () => {},
-  onNavigateToTemplate = () => {},
+  onOpenAddFamilyModal: _onOpenAddFamilyModal = () => {},
+  onOpenAddTemplateModal: _onOpenAddTemplateModal = () => {},
+  onNavigateToMachinesByTemplate: _onNavigateToMachinesByTemplate = () => {},
+  onNavigateToFamily: _onNavigateToFamily = () => {},
+  onNavigateToTemplate: _onNavigateToTemplate = () => {},
   onNavigateToTab = () => {},
 }) {
   const [localSearch, setLocalSearch] = useState('');

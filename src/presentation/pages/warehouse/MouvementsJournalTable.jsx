@@ -1,4 +1,4 @@
-import {  useState, useMemo, useRef, useEffect  } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { CubeIcon } from '../../components/common/icons/CubeIcon';
 import {
@@ -6,9 +6,7 @@ import {
   Layers,
   Search,
   Check,
-  AlertTriangle,
   RotateCcw,
-  Plus,
   Trash2,
   Package,
   TrendingDown,
@@ -31,12 +29,9 @@ import {
   Activity,
   Hash,
   Inbox,
-  Send,
-  Wrench,
   UserCheck,
   Flame,
   CheckCircle2,
-  HelpCircle,
   MapPin,
   Tag,
   Barcode,
@@ -1725,7 +1720,6 @@ export default function MouvementsJournalTable({
                 </tr>
               ) : (
                 displayedMouvements.map((m, idx) => {
-                  const isOutflow = String(m.type || '').toLowerCase().includes('sortie');
                   const realIndex = startIndex + idx;
 
                   // Smart Article Lookup (Type, Désignation, Réf, Source)

@@ -1,18 +1,15 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import {
   X,
   Printer,
   FileText,
   Calendar,
   Clock,
-  Wrench,
   Factory,
-  MapPin,
   User,
   ShieldCheck,
   TrendingDown,
   TrendingUp,
-  Truck,
   Download,
   CheckCircle2,
   Package
@@ -38,7 +35,6 @@ export default function MovementVoucherModal({
 
   const isSortie = String(movement.type || '').toLowerCase().includes('sortie');
   const voucherTitle = isSortie ? 'BON DE SORTIE DE STOCK (PDR)' : "BON D'ENTRÉE / RÉCEPTION";
-  const voucherThemeColor = isSortie ? 'rose' : 'emerald';
 
   const handlePrint = () => {
     window.print();

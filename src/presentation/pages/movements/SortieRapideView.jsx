@@ -1,5 +1,4 @@
 import {  useState, useMemo, useEffect, useCallback  } from 'react';
-import * as XLSX from 'xlsx';
 import SequentialCodePicker from '../../components/common/SequentialCodePicker';
 import {
   FileSpreadsheet,
@@ -12,50 +11,30 @@ import {
   Package,
   Wrench,
   Clock,
-  ArrowRight,
   TrendingDown,
   TrendingUp,
   Puzzle,
   MapPin,
   Users,
-  Building2,
   Boxes,
   HelpCircle,
   X,
-  SlidersHorizontal,
   ChevronDown,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  CalendarRange,
-  ChevronLeft,
-  ChevronRight,
   Crown,
   UserCheck,
   ExternalLink,
-  Factory,
   ShoppingCart,
-  Edit2,
   Activity,
   Sparkles,
-  Zap,
   Tag,
-  Hash,
   AlertCircle,
-  FileText,
-  Warehouse,
-  Flame,
   CheckCircle2,
   ClipboardList,
   ShieldAlert,
   Inbox,
-  Send,
   CornerDownRight,
-  Split,
   RefreshCw,
   Scale,
-  ArrowUpRight,
-  ArrowDownLeft,
   ShieldCheck,
   Hammer,
   Truck,
@@ -63,7 +42,6 @@ import {
   Layers,
 } from 'lucide-react';
 
-import { validateMovementWithContext } from '../../../utils/formulaEngine';
 import MouvementsJournalTable from '../warehouse/MouvementsJournalTable';
 
 // Animation wrapper
@@ -211,10 +189,10 @@ export default function SortieRapideView({
   mouvements = [],
   stockItems = [],
   warehouseItems = [],
-  families = [],
-  templates = [],
-  types = [],
-  diagnostics = [],
+  _families = [],
+  _templates = [],
+  _types = [],
+  _diagnostics = [],
   zones = [],
   machines = [],
   technicians = [],
@@ -230,7 +208,7 @@ export default function SortieRapideView({
   onOpenAddTech,
   onOpenAddChef,
   onOpenAddOperator,
-  onNavigateToWarehouse,
+  _onNavigateToWarehouse,
 }) {
   // Navigation Sub-Tabs: 'JOURNAL' | 'COMMANDES' | 'REPARATION_EXTERNE'
   const [activeSubTab, setActiveSubTab] = useState('JOURNAL');
@@ -366,296 +344,6 @@ export default function SortieRapideView({
         ...item,
         source: newItemSource,
       }))
-    );
-  };
-
-  // Helper to smartly extract, infer or repair OT / Commande value
-  const getSmartOtCommande = (m) => {
-    if (!m) return 'INCONNU';
-    const direct = m.num_commande || m.num_ot || m.code_ot || m.ot || m.commande || m.code_commande;
-    if (direct && String(direct).trim() !== '' && String(direct).trim().toUpperCase() !== 'NULL' && String(direct).trim().toUpperCase() !== 'UNDEFINED') {
-      return String(direct).trim();
-    }
-    // Smart inference from commentary: e.g. "OT-1234", "CMD-042", "BC-99", "DA-05"
-    if (m.commentaire) {
-      const match = String(m.commentaire).match(/\b(OT[-_ ]?[0-9A-Za-z]+|CMD[-_ ]?[0-9A-Za-z]+|BC[-_ ]?[0-9A-Za-z]+|DA[-_ ]?[0-9A-Za-z]+)\b/i);
-      if (match) return match[1].toUpperCase();
-    }
-    // Commande type with code_bon
-    if (String(m.type || '').toUpperCase().includes('COMMANDE') && m.code_bon) {
-      return `CMD-${String(m.code_bon).replace(/^Bon-/i, '')}`;
-    }
-    return 'INCONNU';
-  };
-
-  // Helper to smartly resolve article metadata (Type, Désignation, Réf, Source) for any movement
-  const resolveArticleInfo = (m) => {
-    if (!m) return { type: 'PDR Consommable', designation: 'Article non spécifié', ref: '-', sourceCat: 'STOCK_PDR' };
-
-    const rawRef = String(m.ref || m['Référence'] || m['Reference'] || '').trim();
-    const directDesig = String(m.designation || m['Désignation'] || m['Designation'] || '').trim();
-    const directType = String(m.id_type || m.type_article || m.type || m['Type'] || '').trim();
-
-    // Determine Source Category
-    const sourceCat = m.source_category || (
-      rawRef.startsWith('MCH-') || rawRef.startsWith('PARTIE-') || rawRef.startsWith('MOT-') || rawRef.startsWith('POM-')
-        ? 'WAREHOUSE_PARTIE'
-        : rawRef.startsWith('COMP-')
-          ? 'WAREHOUSE_COMPOSANT'
-          : 'STOCK_PDR'
-    );
-
-    const lowerRef = rawRef.toLowerCase();
-    const normRef = lowerRef.replace(/[^a-z0-9]/g, '');
-
-    // 1. Warehouse items match
-    if (warehouseItems && warehouseItems.length > 0) {
-      const whMatch = warehouseItems.find((w) => {
-        const wCode = String(w.id_warehouse_item || w.code || w.ref || '').trim().toLowerCase();
-        return wCode === lowerRef || (normRef && wCode.replace(/[^a-z0-9]/g, '') === normRef);
-      });
-      if (whMatch) {
-        const isPartie = whMatch.category === 'PARTIE' || whMatch.nature === 'PARTIE' || sourceCat === 'WAREHOUSE_PARTIE';
-        return {
-          type: isPartie ? (whMatch.id_family ? `Machine (${whMatch.id_family})` : 'Machine (Partie)') : (whMatch.id_type || 'Composant'),
-          designation: whMatch.designation || whMatch.nom || directDesig || rawRef,
-          ref: rawRef || whMatch.id_warehouse_item,
-          sourceCat: isPartie ? 'WAREHOUSE_PARTIE' : 'WAREHOUSE_COMPOSANT',
-        };
-      }
-    }
-
-    // 2. Stock Items Match
-    if (stockItems && stockItems.length > 0) {
-      // 2a. Exact match
-      const exactStock = stockItems.find((s) => String(s.ref || '').trim().toLowerCase() === lowerRef);
-      if (exactStock) {
-        const typeLabel = exactStock.designation || exactStock.id_type || 'PDR Consommable';
-        const desigLabel = exactStock.ref;
-        return {
-          type: directType && directType !== 'Sortie' && directType !== 'Entrée' ? directType : (typeLabel || 'PDR Consommable'),
-          designation: directDesig || desigLabel || rawRef,
-          ref: rawRef,
-          sourceCat: 'STOCK_PDR',
-        };
-      }
-
-      // 2b. Normalized match (ignoring dashes/spaces)
-      if (normRef) {
-        const normStock = stockItems.find((s) => {
-          const sNorm = String(s.ref || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          return sNorm === normRef;
-        });
-        if (normStock) {
-          return {
-            type: directType && directType !== 'Sortie' && directType !== 'Entrée' ? directType : (normStock.designation || normStock.id_type || 'PDR Consommable'),
-            designation: directDesig || normStock.ref,
-            ref: rawRef,
-            sourceCat: 'STOCK_PDR',
-          };
-        }
-      }
-    }
-
-    // 3. Unified Catalog fallback
-    const catalogMatch = unifiedSearchCatalog.find((c) => String(c.ref || '').toLowerCase() === lowerRef);
-    if (catalogMatch) {
-      return {
-        type: catalogMatch.type || 'PDR Consommable',
-        designation: catalogMatch.designation || rawRef,
-        ref: rawRef,
-        sourceCat: catalogMatch.source || sourceCat,
-      };
-    }
-
-    // 4. If direct designation & type exist and are not equal to rawRef
-    if (directDesig && directDesig !== rawRef && directType && directType !== 'Sortie' && directType !== 'Entrée') {
-      return {
-        type: directType,
-        designation: directDesig,
-        ref: rawRef,
-        sourceCat,
-      };
-    }
-
-    // 5. Intelligent Category & Number Decomposition for GMAO references (e.g. "Raccord04", "Courroie61", "Vis34")
-    const match = rawRef.match(/^([a-zA-Z\s\u00C0-\u017F]+?)[_\-\s]*([0-9]+[a-zA-Z0-9.-]*)$/);
-    if (match) {
-      const rawCat = match[1].trim();
-      const numPart = match[2].trim();
-      const catLower = rawCat.toLowerCase();
-      const catCap = rawCat.charAt(0).toUpperCase() + rawCat.slice(1);
-
-      let richType = catCap;
-      if (catLower.includes('courroie') || catLower.includes('roulement') || catLower.includes('palier')) {
-        richType = 'Mécanique & Transmission';
-      } else if (catLower.includes('vis') || catLower.includes('ecrou') || catLower.includes('rondelle') || catLower.includes('cheville')) {
-        richType = 'Fixation & Visserie';
-      } else if (catLower.includes('foret') || catLower.includes('tarraud') || catLower.includes('meule') || catLower.includes('disque') || catLower.includes('lame')) {
-        richType = 'Coupe & Perçage';
-      } else if (catLower.includes('raccord') || catLower.includes('flexible') || catLower.includes('vérin') || catLower.includes('verin') || catLower.includes('silencieux') || catLower.includes('distributeur') || catLower.includes('vanne')) {
-        richType = 'Pneumatique & Fluides';
-      } else if (catLower.includes('capteur') || catLower.includes('contacteur') || catLower.includes('contacte') || catLower.includes('relais') || catLower.includes('sonde') || catLower.includes('voyant') || catLower.includes('fusible') || catLower.includes('interrupteur') || catLower.includes('fin de course') || catLower.includes('cosse') || catLower.includes('fiche') || catLower.includes('lampe')) {
-        richType = 'Électrique & Capteurs';
-      } else if (catLower.includes('huile') || catLower.includes('scotch') || catLower.includes('charbon') || catLower.includes('pastille') || catLower.includes('joint') || catLower.includes('teflon') || catLower.includes('pile')) {
-        richType = 'Consommables Industriels';
-      } else if (catLower.includes('pistolet') || catLower.includes('visseuse') || catLower.includes('douille') || catLower.includes('lunette') || catLower.includes('tenaille') || catLower.includes('brosse')) {
-        richType = 'Outillage & Équipement';
-      }
-
-      if (stockItems && stockItems.length > 0) {
-        const candidates = stockItems.filter((s) => {
-          const sRef = String(s.ref || '').toLowerCase();
-          const sDes = String(s.designation || '').toLowerCase();
-          return sRef.includes(catLower) || sDes.includes(catLower);
-        });
-
-        if (candidates.length > 0) {
-          const numMatch = candidates.find((c) => {
-            const sRef = String(c.ref || '').toLowerCase();
-            return sRef.includes(numPart.toLowerCase()) || (numPart.startsWith('0') && sRef.includes(numPart.slice(1)));
-          });
-          if (numMatch) {
-            return {
-              type: numMatch.designation || richType,
-              designation: numMatch.ref,
-              ref: rawRef,
-              sourceCat,
-            };
-          }
-        }
-      }
-
-      return {
-        type: richType,
-        designation: `${catCap} - Spécification N° ${numPart}`,
-        ref: rawRef,
-        sourceCat,
-      };
-    }
-
-    return {
-      type: directType && directType !== 'Sortie' && directType !== 'Entrée' ? directType : 'PDR Consommable',
-      designation: directDesig || rawRef || 'Sans désignation',
-      ref: rawRef || '-',
-      sourceCat,
-    };
-  };
-
-  // Helper to smartly normalize flux type (mapping legacy 'Sortie' -> 'Sortie Interne', etc.)
-  const getSmartFluxType = (m) => {
-    if (!m) return 'Sortie Interne';
-    const raw = String(m.type || '').trim();
-    const lower = raw.toLowerCase();
-    if (!raw || lower === 'sortie' || lower === 'sortie interne') {
-      return 'Sortie Interne';
-    }
-    if (lower === 'bon de sortie' || lower === 'sortie externe') {
-      return 'Bon de Sortie';
-    }
-    if (lower === 'entrée interne' || lower === 'entree interne') {
-      return 'Entrée Interne';
-    }
-    if (lower === 'entrée externe' || lower === 'entree externe') {
-      return 'Entrée Externe';
-    }
-    if (lower === 'entrée' || lower === 'entree') {
-      const act = String(m.action_id || '').toUpperCase();
-      if (act === 'REAPPRO' || m.fournisseur) {
-        return 'Entrée Externe';
-      }
-      return 'Entrée Interne';
-    }
-    if (lower.includes('commande') || lower.includes('achat')) {
-      return 'COMMANDE';
-    }
-    if (lower.includes('sort')) {
-      return 'Sortie Interne';
-    }
-    if (lower.includes('entr')) {
-      return 'Entrée Interne';
-    }
-    return raw;
-  };
-
-  // Helper to render flux badge identical to form flow cards with colored icon box and pill tag
-  const renderFluxBadge = (m) => {
-    const fluxType = getSmartFluxType(m);
-
-    if (fluxType === 'Sortie Interne') {
-      return (
-        <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-xl bg-rose-50/90 border border-rose-300 text-rose-950 shadow-2xs">
-          <div className="w-5 h-5 rounded-md bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
-            <TrendingDown className="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
-          </div>
-          <span className="text-[11px] font-bold whitespace-nowrap text-rose-950">Sortie Interne</span>
-          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-rose-200 text-rose-800 font-bold">
-            INTERNE
-          </span>
-        </div>
-      );
-    }
-
-    if (fluxType === 'Entrée Interne') {
-      return (
-        <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-xl bg-cyan-50/90 border border-cyan-300 text-cyan-950 shadow-2xs">
-          <div className="w-5 h-5 rounded-md bg-cyan-100 border border-cyan-200 flex items-center justify-center text-cyan-600 shrink-0">
-            <TrendingUp className="w-3.5 h-3.5 text-cyan-600 stroke-[2.5]" />
-          </div>
-          <span className="text-[11px] font-bold whitespace-nowrap text-cyan-950">Entrée Interne</span>
-          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-200 text-cyan-800 font-bold">
-            INTERNE
-          </span>
-        </div>
-      );
-    }
-
-    if (fluxType === 'Bon de Sortie') {
-      return (
-        <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-xl bg-purple-50/90 border border-purple-300 text-purple-950 shadow-2xs">
-          <div className="w-5 h-5 rounded-md bg-purple-100 border border-purple-200 flex items-center justify-center text-purple-600 shrink-0">
-            <Truck className="w-3.5 h-3.5 text-purple-600 stroke-[2.5]" />
-          </div>
-          <span className="text-[11px] font-bold whitespace-nowrap text-purple-950">Bon de Sortie</span>
-          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-200 text-purple-800 font-bold">
-            EXTERNE
-          </span>
-        </div>
-      );
-    }
-
-    if (fluxType === 'Entrée Externe') {
-      return (
-        <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-xl bg-emerald-50/90 border border-emerald-300 text-emerald-950 shadow-2xs">
-          <div className="w-5 h-5 rounded-md bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
-            <Inbox className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
-          </div>
-          <span className="text-[11px] font-bold whitespace-nowrap text-emerald-950">Entrée Externe</span>
-          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-800 font-bold">
-            EXTERNE
-          </span>
-        </div>
-      );
-    }
-
-    if (fluxType === 'COMMANDE') {
-      return (
-        <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-xl bg-amber-50/90 border border-amber-300 text-amber-950 shadow-2xs">
-          <div className="w-5 h-5 rounded-md bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
-            <ShoppingCart className="w-3.5 h-3.5 text-amber-600 stroke-[2.5]" />
-          </div>
-          <span className="text-[11px] font-bold whitespace-nowrap text-amber-950">COMMANDE</span>
-          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-200 text-amber-800 font-bold">
-            ACHAT
-          </span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700">
-        <span className="text-[11px] font-bold">{fluxType}</span>
-      </div>
     );
   };
 
@@ -867,10 +555,6 @@ export default function SortieRapideView({
     );
   }, [operations]);
 
-  // Backward-compatible aliases for existing references
-  const supervisorsList = responsablesList;
-  const chefsList = responsablesList;
-
   // Helper to extract allowed zones for a given responsable
   const getResponsableAllowedZones = useCallback((resp) => {
     if (!resp) return zones;
@@ -1017,10 +701,6 @@ export default function SortieRapideView({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchActiveTab, setSearchActiveTab] = useState('ALL'); // 'ALL' | 'STOCK_PDR' | 'WAREHOUSE_PARTIE' | 'WAREHOUSE_COMPOSANT'
   const [targetItemIndex, setTargetItemIndex] = useState(0);
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
 
   // Unified items list for search modal (Merging PDR Stock + Warehouse Digital Twin Items)
   const unifiedSearchCatalog = useMemo(() => {

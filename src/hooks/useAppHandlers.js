@@ -1,25 +1,17 @@
-import {  useCallback  } from 'react';
 import { useGenericCRUD } from './useGenericCRUD';
-import { sanitizeObject } from '../utils/sanitize';
-import { calculateStockStatus } from '../utils/formulaEngine';
-
 export function useAppHandlers(state) {
   const {
-    types, setTypes,
-    designations, setDesignations,
-    families, setFamilies,
-    templates, setTemplates,
-    machines, setMachines,
-    warehouseItems, setWarehouseItems,
-    zones, setZones,
-    technicians, setTechnicians,
-    operations, setOperations,
-    mouvements, setMouvements,
-    rawStock, setRawStock,
-    compFamilies, setCompFamilies,
-    compTemplates, setCompTemplates,
-    partTypes, setPartTypes,
-    partDesignations, setPartDesignations,
+    setTypes,
+    setDesignations,
+    setFamilies,
+    setTemplates,
+    setZones,
+    setTechnicians,
+    setOperations,
+    setCompFamilies,
+    setCompTemplates,
+    setPartTypes,
+    setPartDesignations,
   } = state;
 
   const { handleAdd: addCompFam, handleUpdate: updateCompFam, handleDelete: delCompFam } = useGenericCRUD(setCompFamilies, 'id_family');

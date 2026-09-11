@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   X,
   Database,
@@ -11,8 +11,6 @@ import {
   Clock,
   ShieldCheck,
   Plus,
-  Layers,
-  FileSpreadsheet
 } from 'lucide-react';
 import { AutoBackupService } from '../../../core/backup/AutoBackupService.js';
 import { usePermission } from '../common/PermissionGate.jsx';

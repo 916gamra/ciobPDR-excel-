@@ -1,4 +1,4 @@
-import {  useState, useEffect, useMemo  } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Zap,
@@ -11,14 +11,11 @@ import {
   Users,
   RotateCcw,
   Inbox,
-  ClipboardList,
   CheckCircle2,
-  AlertTriangle,
   Factory,
   MapPin,
   Tag,
   Boxes,
-  FileSpreadsheet,
 } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 import SequentialCodePicker from '../../components/common/SequentialCodePicker';
@@ -32,7 +29,6 @@ export default function QuickMovementModal({
   zones = [],
   machines = [],
   technicians = [],
-  operations = [],
   mouvements = [],
   onAddMouvement,
   onDirectAdjustStock,
@@ -521,6 +517,21 @@ export default function QuickMovementModal({
                   }))}
                 />
               </div>
+            </div>
+          )}
+
+          {flowType === 'Entrée Externe' && (
+            <div>
+              <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                Fournisseur / Origine
+              </label>
+              <input
+                type="text"
+                placeholder="Nom du fournisseur..."
+                value={fournisseur}
+                onChange={(e) => setFournisseur(e.target.value)}
+                className="w-full h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs"
+              />
             </div>
           )}
 

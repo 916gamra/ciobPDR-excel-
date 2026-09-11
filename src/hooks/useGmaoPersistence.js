@@ -160,8 +160,8 @@ export function useGmaoPersistence({
             if (fresh.mouvements) setMouvements(fresh.mouvements);
             if (fresh.rawStock) setRawStock(fresh.rawStock);
           }
-        } catch (err) {
-          Logger.error('Failed to sync across tabs:', err);
+        } catch (_err) {
+          Logger.error('Failed to sync across tabs:', _err);
         }
       }
     };
@@ -278,8 +278,8 @@ export function useGmaoPersistence({
         } else if (isMounted && idbTasks.length > 0 && mouvements.length === 0) {
           setMouvements(idbTasks);
         }
-      } catch (err) {
-        Logger.error('Enterprise DB Sync Error:', err);
+      } catch (_err) {
+        Logger.error('Enterprise DB Sync Error:', _err);
       } finally {
         isSyncing = false;
       }

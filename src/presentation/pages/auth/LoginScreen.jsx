@@ -4,7 +4,6 @@ import {
   Key,
   ArrowRight,
   Store,
-  Lock,
   AlertTriangle,
   User,
   Eye,
@@ -14,9 +13,6 @@ import {
   Hash,
   LogIn,
   Users,
-  Shield,
-  Package,
-  Wrench,
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
@@ -112,19 +108,6 @@ export default function LoginScreen() {
       setErrorMsg(err.message || 'Code PIN chiffré invalide');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const getAccountIcon = (role) => {
-    switch (role) {
-      case 'ADMIN':
-        return <Shield className="w-4 h-4 text-emerald-600" />;
-      case 'RESPONSABLE_MAGASIN':
-        return <Package className="w-4 h-4 text-amber-600" />;
-      case 'TECHNICIEN':
-        return <Wrench className="w-4 h-4 text-blue-600" />;
-      default:
-        return <Eye className="w-4 h-4 text-slate-500" />;
     }
   };
 
