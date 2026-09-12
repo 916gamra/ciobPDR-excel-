@@ -8,6 +8,7 @@ import { StockItem } from '../../../core/domain';
 import StockKPIBar from './components/StockKPIBar';
 import { multiTokenSearch } from '../../../utils/searchUtils';
 import { usePermission } from '../../components/common/PermissionGate.jsx';
+import { contextMenu } from '../../../services/ContextMenuService';
 import {
   Search,
   Plus,
@@ -292,6 +293,40 @@ export default function StockView({
       article: item,
     });
     setActiveActionMenuRef(null);
+  };
+
+  const handleRowContextMenu = (e, item) => {
+    contextMenu.show(
+      e,
+      [
+        {
+          id: 'edit',
+          label: 'Modifier l’article',
+          onClick: () => handleOpenEditArticle(item),
+        },
+        {
+          id: 'quick-sortie',
+          label: 'Sortie directe (Sortie PDR)',
+          onClick: () => handleOpenQuickModal(item, 'Sortie', 'CORRECTIVE'),
+        },
+        {
+          id: 'quick-entree',
+          label: 'Entrée directe (Réapprovisionnement)',
+          onClick: () => handleOpenQuickModal(item, 'Entrée', 'REAPPRO'),
+        },
+        { separator: true },
+        {
+          id: 'copy-ref',
+          label: `Copier la référence (${item.ref})`,
+          onClick: () => {
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(item.ref);
+            }
+          },
+        },
+      ],
+      `Article: ${item.ref}`
+    );
   };
 
   return (
@@ -842,6 +877,7 @@ export default function StockView({
                   return (
                     <tr
                       key={`stock-row-${item.id ?? ''}-${item.ref ?? ''}-${rowNum}`}
+                      onContextMenu={(e) => handleRowContextMenu(e, item)}
                       className="even:bg-slate-50/70 odd:bg-white hover:bg-cyan-50/40 border-b border-slate-200/70 transition-colors"
                     >
                       {/* Row N° Column */}

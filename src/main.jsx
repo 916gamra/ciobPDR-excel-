@@ -4,11 +4,16 @@ import App from './App';
 import ErrorBoundary from './presentation/components/common/ErrorBoundary';
 import { storageService } from './utils/storageService';
 import { AuthProvider } from './context/AuthContext';
+import { I18nProvider } from './i18n/I18nContext';
 import { ServiceProvider } from './core/di/ServiceProvider';
 import { Logger } from './core/logger/LoggerService';
+import { errorTracker } from './services/ErrorTrackingService';
+import { analytics } from './services/AnalyticsService';
 
-// Initialize Enterprise Architecture DI Container
+// Initialize Enterprise Architecture DI Container and Error / Analytics Tracking
 ServiceProvider.register();
+errorTracker.init();
+analytics.track('app_started', 'system', { timestamp: Date.now() });
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
@@ -16,9 +21,11 @@ if (rootElement) {
   root.render(
     <StrictMode>
       <ErrorBoundary>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
+        <I18nProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </I18nProvider>
       </ErrorBoundary>
     </StrictMode>
   );

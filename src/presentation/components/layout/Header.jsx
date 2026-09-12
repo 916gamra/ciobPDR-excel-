@@ -5,9 +5,14 @@ import {
   Link,
   Save,
   FileSpreadsheet,
-  Bell
+  Bell,
+  Keyboard
 } from 'lucide-react';
 import PWAInstallButton from '../common/PWAInstallButton';
+import LanguageSwitcher from '../common/LanguageSwitcher';
+import { useTranslation } from '../../../i18n/I18nContext';
+import { analytics } from '../../../services/AnalyticsService';
+import { notificationService } from '../../../services/NotificationService';
 import { getParentModuleForTab } from './navConfig';
 
 export default function Header({
@@ -21,9 +26,37 @@ export default function Header({
   onDirectLink,
   onDirectSave,
   currentUser,
+  onOpenShortcuts,
 }) {
+  const { t } = useTranslation();
   const activeParent = getParentModuleForTab(currentTab);
   const childTabs = activeParent.children || [];
+
+  const onExportWithTracking = () => {
+    analytics.track('excel_exported', 'excel', { timestamp: Date.now() });
+    handleExportExcel?.();
+  };
+
+  const onImportWithTracking = (e) => {
+    analytics.track('excel_imported', 'excel', { fileName: e.target.files?.[0]?.name });
+    handleImportFile?.(e);
+  };
+
+  const onSaveWithTracking = () => {
+    analytics.track('excel_direct_save', 'excel', { fileName: linkedFileName });
+    onDirectSave?.();
+  };
+
+  const handleNotificationClick = async () => {
+    if (notificationService.isSupported()) {
+      const perm = await notificationService.requestPermission();
+      if (perm === 'granted') {
+        notificationService.notify('🔔 Notifications CIOB GMAO', {
+          body: 'Les notifications d’alertes de stock et de sauvegarde sont maintenant actives.',
+        });
+      }
+    }
+  };
 
   const handleChildTabKeyDown = (e, index) => {
     if (childTabs.length === 0) return;
@@ -202,7 +235,7 @@ export default function Header({
           <input
             type="file"
             ref={fileInputRef}
-            onChange={handleImportFile}
+            onChange={onImportWithTracking}
             accept=".json,.xlsx,.xls"
             className="hidden"
             aria-label="Importer un fichier JSON ou Excel"
@@ -219,7 +252,7 @@ export default function Header({
                 <span className="truncate">{linkedFileName}</span>
               </span>
               <button
-                onClick={onDirectSave}
+                onClick={onSaveWithTracking}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 transition shadow-[0_2px_8px_rgba(4,120,87,0.25)] cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
                 title="Sauvegarder directement dans le fichier lié"
                 aria-label="Sauvegarder directement dans le fichier Excel lié"
@@ -242,15 +275,18 @@ export default function Header({
 
           <PWAInstallButton variant="header" />
 
+          {/* Offline Language Switcher */}
+          <LanguageSwitcher className="hidden sm:inline-flex" />
+
           {/* Export Excel Pill */}
           <button
-            onClick={handleExportExcel}
+            onClick={onExportWithTracking}
             className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-[0_2px_8px_rgba(0,0,0,0.18)] cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
-            title="Exporter sous Excel"
-            aria-label="Exporter toutes les données sous format Excel"
+            title={t('header.export_excel')}
+            aria-label={t('header.export_excel')}
           >
             <Download className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-            <span>Export Excel</span>
+            <span>{t('header.export_excel')}</span>
           </button>
 
           {/* Action Icon Circles */}
@@ -264,12 +300,22 @@ export default function Header({
           </button>
 
           <button
+            onClick={onOpenShortcuts}
+            className="hidden sm:flex w-9 h-9 rounded-full bg-white border border-zinc-200 items-center justify-center text-zinc-600 hover:text-black hover:border-zinc-300 transition shadow-[0_2px_6px_rgba(0,0,0,0.04)] hover:shadow-md cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
+            title="Raccourcis clavier (F1 / ?)"
+            aria-label="Afficher la liste des raccourcis clavier"
+          >
+            <Keyboard size={16} aria-hidden="true" />
+          </button>
+
+          <button
+            onClick={handleNotificationClick}
             className="w-9 h-9 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-600 hover:text-black hover:border-zinc-300 transition shadow-[0_2px_6px_rgba(0,0,0,0.04)] hover:shadow-md relative cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
-            title="Notifications"
-            aria-label="Centre de notifications (nouvelles alertes disponibles)"
+            title="Activer les notifications système"
+            aria-label="Centre de notifications et alertes"
           >
             <Bell size={16} aria-hidden="true" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-[#FF4D4D] rounded-full ring-2 ring-white" aria-hidden="true" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white" aria-hidden="true" />
           </button>
 
           {/* User Profile Account Card Pill - Exact match with Mobile/Sidebar Account Card layout & icon */}

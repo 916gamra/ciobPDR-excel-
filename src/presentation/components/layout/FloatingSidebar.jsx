@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Settings, LogOut, Sun, Moon } from 'lucide-react';
 import { PARENT_MODULES, getParentModuleForTab } from './navConfig';
+import { useTranslation } from '../../../i18n/I18nContext';
+import { analytics } from '../../../services/AnalyticsService';
 
 export default function FloatingSidebar({
   currentTab,
   setCurrentTab,
   onLogout,
 }) {
+  const { t } = useTranslation();
   const [sidebarTheme, setSidebarTheme] = useState(() => {
     return localStorage.getItem('gmao_sidebar_theme') || 'light';
   });
@@ -24,6 +27,11 @@ export default function FloatingSidebar({
 
   const handleSelectParent = (module) => {
     const firstChild = module.children[0]?.id || module.id;
+    analytics.track('navigation_tab_changed', 'navigation', {
+      fromTab: currentTab,
+      toTab: firstChild,
+      moduleId: module.id,
+    });
     setCurrentTab(firstChild);
   };
 
@@ -59,6 +67,7 @@ export default function FloatingSidebar({
         {PARENT_MODULES.map((module, index) => {
           const isActive = activeParent.id === module.id;
           const IconComponent = module.icon;
+          const translatedLabel = t(`nav.${module.id}`) !== `nav.${module.id}` ? t(`nav.${module.id}`) : module.label;
 
           return (
             <button
@@ -67,7 +76,7 @@ export default function FloatingSidebar({
               id={`nav-module-${module.id}`}
               aria-selected={isActive}
               aria-current={isActive ? 'page' : undefined}
-              aria-label={module.label}
+              aria-label={translatedLabel}
               tabIndex={isActive ? 0 : -1}
               onKeyDown={(e) => handleModuleKeyDown(e, index)}
               onClick={() => handleSelectParent(module)}
@@ -80,7 +89,7 @@ export default function FloatingSidebar({
                   ? 'hover:bg-slate-800/90'
                   : 'hover:bg-zinc-100 hover:shadow-xs'
               }`}
-              title={module.label}
+              title={translatedLabel}
             >
               <IconComponent
                 size={22}
@@ -102,7 +111,7 @@ export default function FloatingSidebar({
                 role="tooltip"
                 className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900/95 border border-slate-800 text-white text-[11px] font-bold rounded-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-150 whitespace-nowrap z-50 shadow-[0_8px_20px_rgba(0,0,0,0.25)]"
               >
-                {module.label}
+                {translatedLabel}
               </div>
             </button>
           );
@@ -130,8 +139,8 @@ export default function FloatingSidebar({
               ? 'text-slate-400 hover:text-white hover:bg-slate-800'
               : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
           }`}
-          title="Paramètres System"
-          aria-label="Paramètres du système"
+          title={t('nav.settings')}
+          aria-label={t('nav.settings')}
           aria-current={currentTab === 'settings' ? 'page' : undefined}
         >
           <Settings size={19} aria-hidden="true" />
@@ -144,8 +153,8 @@ export default function FloatingSidebar({
               ? 'text-amber-400 hover:bg-slate-800'
               : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
           }`}
-          title={isDark ? 'Mode Light' : 'Mode Dark'}
-          aria-label={isDark ? 'Passer au mode clair' : 'Passer au mode sombre'}
+          title={isDark ? t('nav.theme_light') : t('nav.theme_dark')}
+          aria-label={isDark ? t('nav.theme_light') : t('nav.theme_dark')}
         >
           {isDark ? <Sun size={19} aria-hidden="true" /> : <Moon size={19} aria-hidden="true" />}
         </button>
@@ -154,8 +163,8 @@ export default function FloatingSidebar({
           <button
             onClick={onLogout}
             className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-hidden"
-            title="Déconnexion"
-            aria-label="Se déconnecter de la session"
+            title={t('nav.logout')}
+            aria-label={t('nav.logout')}
           >
             <LogOut size={18} aria-hidden="true" />
           </button>

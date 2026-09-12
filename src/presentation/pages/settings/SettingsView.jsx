@@ -36,6 +36,7 @@ import {
   Zap,
   Wifi,
   Gauge,
+  Bug,
 } from 'lucide-react';
 
 import {
@@ -56,8 +57,11 @@ import { Logger } from '../../../core/logger/LoggerService';
 import { dataIntegrityService } from '../../../services/dataIntegrityService';
 import { performanceService } from '../../../services/performanceService';
 import { syncQueueService } from '../../../services/syncQueueService';
+import { errorTracker } from '../../../services/ErrorTrackingService';
+import { analytics } from '../../../services/AnalyticsService';
 import { useAuth } from '../../../context/AuthContext';
 import BackupManagerModal from '../../components/backup/BackupManagerModal';
+import TelemetryAuditPanel from '../../components/settings/TelemetryAuditPanel';
 
 
 export default function SettingsView({
@@ -866,7 +870,7 @@ export default function SettingsView({
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingAudit, setLoadingAudit] = useState(false);
   const [accessLogs, setAccessLogs] = useState([]);
-  const [auditSubTab, setAuditSubTab] = useState('access'); // 'access' | 'backups' | 'events' | 'integrity' | 'performance'
+  const [auditSubTab, setAuditSubTab] = useState('access'); // 'access' | 'backups' | 'events' | 'integrity' | 'performance' | 'telemetry'
   const [integrityReport, setIntegrityReport] = useState(null);
   const [checkingIntegrity, setCheckingIntegrity] = useState(false);
   const [currentChecksum, setCurrentChecksum] = useState('');
@@ -875,6 +879,47 @@ export default function SettingsView({
     heapMB: 0,
     recalcStats: null,
   });
+  const [errorReports, setErrorReports] = useState(() => errorTracker.getReports());
+  const [analyticsEvents, setAnalyticsEvents] = useState(() => analytics.getEvents());
+
+  const refreshTelemetry = () => {
+    setErrorReports(errorTracker.getReports());
+    setAnalyticsEvents(analytics.getEvents());
+  };
+
+  const handleSimulateError = () => {
+    try {
+      throw new Error(`Erreur Diagnostic Simulée CIOB GMAO [Code: DIAG-${Date.now().toString().slice(-4)}]`);
+    } catch (err) {
+      errorTracker.captureException(err, { source: 'Diagnostic Simulation' });
+      refreshTelemetry();
+      showToast?.('Erreur de test interceptée et enregistrée avec succès dans le journal local !', 'info');
+    }
+  };
+
+  const handleExportErrorReports = () => {
+    const jsonStr = errorTracker.exportReportsAsJson();
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ciob_gmao_error_reports_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast?.('Rapport d\'erreurs exporté en JSON', 'success');
+  };
+
+  const handleClearErrorReports = () => {
+    errorTracker.clearReports();
+    refreshTelemetry();
+    showToast?.('Journal des erreurs vidé avec succès', 'success');
+  };
+
+  const handleClearAnalytics = () => {
+    analytics.clearEvents();
+    refreshTelemetry();
+    showToast?.('Journal des événements analytics réinitialisé', 'success');
+  };
 
 
   const runIntegrityCheck = () => {
@@ -2289,6 +2334,20 @@ export default function SettingsView({
                   <Gauge className="w-3.5 h-3.5 text-amber-600" />
                   <span>Performance & Sync</span>
                 </button>
+                <button
+                  onClick={() => {
+                    setAuditSubTab('telemetry');
+                    refreshTelemetry();
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                    auditSubTab === 'telemetry'
+                      ? 'bg-white text-indigo-700 shadow-xs border border-indigo-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Bug className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Erreurs & Analytics ({errorReports.length})</span>
+                </button>
               </div>
             </div>
 
@@ -2752,6 +2811,19 @@ export default function SettingsView({
                   </p>
                 </div>
               </div>
+            )}
+
+            {/* SUBTAB 6: ERROR TRACKING & USAGE ANALYTICS */}
+            {auditSubTab === 'telemetry' && (
+              <TelemetryAuditPanel
+                errorReports={errorReports}
+                analyticsEvents={analyticsEvents}
+                onSimulateError={handleSimulateError}
+                onExportErrors={handleExportErrorReports}
+                onClearErrors={handleClearErrorReports}
+                onClearAnalytics={handleClearAnalytics}
+                onRefresh={refreshTelemetry}
+              />
             )}
           </div>
         )}

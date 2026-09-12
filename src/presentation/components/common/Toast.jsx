@@ -18,15 +18,25 @@ export default function Toast({ message, type = 'success', onClose }) {
   const IconComponent = Icons[type] || Info;
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 animate-bounce-in">
+    <div
+      role={type === 'error' ? 'alert' : 'status'}
+      aria-live={type === 'error' ? 'assertive' : 'polite'}
+      aria-atomic="true"
+      className="fixed bottom-5 right-5 z-50 animate-bounce-in"
+    >
       <div
         className={`flex items-center gap-3 px-4 py-3 rounded-xl border shadow-xl text-xs font-semibold ${bgColors[type] || bgColors.info}`}
       >
-        <IconComponent className="w-4 h-4 shrink-0" />
+        <IconComponent className="w-4 h-4 shrink-0" aria-hidden="true" />
         <span>{message}</span>
         {onClose && (
-          <button onClick={onClose} className="ml-2 hover:opacity-75 transition">
-            <X className="w-3.5 h-3.5" />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fermer la notification"
+            className="ml-2 hover:opacity-75 transition cursor-pointer p-0.5 rounded focus-visible:ring-1 focus-visible:ring-white"
+          >
+            <X className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         )}
       </div>
