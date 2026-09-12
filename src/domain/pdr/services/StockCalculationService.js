@@ -1,145 +1,207 @@
 import { Logger } from '../../../core/logger/LoggerService.js';
 
 /**
- * StockCalculationService
- * Excel Twin Model: Exact replica of Excel SUMIFS & Stock status logic
- * Ref: GMAO_Light_Template_V2_Formules.xlsx
+ * Stock Calculation Service
+ * ✅ حسابات المخزون مطابقة لـ Excel
  */
 export class StockCalculationService {
   /**
-   * Calculate total entrees for an article (Excel: SUMIFS(Mouvements[Quantite], Mouvements[Ref], [@Ref], Mouvements[Type], "Entrée"))
+   * Calculate total entrees for an article
+   * ✅ مطابق لـ Excel SUMIFS formula
    */
-  static calculateEntrees(ref, movements = []) {
-    if (!ref || !Array.isArray(movements)) return 0;
-    const cleanRef = String(ref).trim().toUpperCase();
-    return movements
-      .filter((m) => {
-        const mRef = String(m.ref || m.id_part || '').trim().toUpperCase();
-        const mType = String(m.type || '').trim().toLowerCase();
-        return mRef === cleanRef && (mType.includes('entrée') || mType.includes('entree') || mType === 'in');
-      })
-      .reduce((sum, m) => sum + (parseFloat(m.quantite) || 0), 0);
-  }
-
-  /**
-   * Calculate total sorties for an article (Excel: SUMIFS(Mouvements[Quantite], Mouvements[Ref], [@Ref], Mouvements[Type], "Sortie"))
-   */
-  static calculateSorties(ref, movements = []) {
-    if (!ref || !Array.isArray(movements)) return 0;
-    const cleanRef = String(ref).trim().toUpperCase();
-    return movements
-      .filter((m) => {
-        const mRef = String(m.ref || m.id_part || '').trim().toUpperCase();
-        const mType = String(m.type || '').trim().toLowerCase();
-        return mRef === cleanRef && (mType.includes('sortie') || mType === 'out');
-      })
-      .reduce((sum, m) => sum + (parseFloat(m.quantite) || 0), 0);
-  }
-
-  /**
-   * Calculate current stock: stockActuel = stockInitial + entrees - sorties
-   */
-  static calculateStockActuel(article, movements = []) {
-    if (!article) return 0;
-    const initial = parseFloat(article.stockInitial ?? article.stock_initial ?? 0) || 0;
-    const entrees = this.calculateEntrees(article.ref, movements);
-    const sorties = this.calculateSorties(article.ref, movements);
-    return Math.round((initial + entrees - sorties) * 100) / 100;
-  }
-
-  /**
-   * Get alert status according to Excel formula:
-   * IF(stockActuel <= 0, "RUPTURE", IF(stockActuel <= seuil, "ALERTE", "OK"))
-   */
-  static getAlertStatus(article, currentStock = null) {
-    if (!article) return 'OK';
-    const stock = currentStock !== null ? currentStock : (parseFloat(article.stockActuel) || 0);
-    const seuil = parseFloat(article.seuil ?? article.minThreshold ?? 5) || 0;
-
-    if (stock < 0) {
-      Logger.warn(`[StockCalculationService] Negative stock detected for ${article.ref}: ${stock}`);
-      return 'RUPTURE';
+  static calculateEntrees(ref, movements) {
+    try {
+      const entrees = movements
+        .filter(m => m.ref === ref && m.type === 'Entrée')
+        .reduce((sum, m) => sum + m.quantite, 0);
+      
+      Logger.debug('Entrees calculated', { ref, entrees });
+      return entrees;
+    } catch (error) {
+      Logger.error('❌ Entrees calculation failed', error);
+      return 0;
     }
-    if (stock === 0) {
-      return 'RUPTURE';
-    }
-    if (stock <= seuil) {
-      return 'ALERTE';
-    }
-    return 'OK';
   }
 
   /**
-   * Verify calculations against Excel data model
+   * Calculate total sorties for an article
+   * ✅ مطابق لـ Excel SUMIFS formula
    */
-  static verifyCalculations(articles = [], movements = []) {
-    const mismatches = [];
+  static calculateSorties(ref, movements) {
+    try {
+      const sorties = movements
+        .filter(m => m.ref === ref && m.type === 'Sortie')
+        .reduce((sum, m) => sum + m.quantite, 0);
+      
+      Logger.debug('Sorties calculated', { ref, sorties });
+      return sorties;
+    } catch (error) {
+      Logger.error('❌ Sorties calculation failed', error);
+      return 0;
+    }
+  }
 
-    for (const article of articles) {
-      const calculatedStock = this.calculateStockActuel(article, movements);
-      const calculatedAlert = this.getAlertStatus(article, calculatedStock);
+  /**
+   * Calculate current stock
+   * ✅ Formula: Initial + Entrees - Sorties
+   */
+  static calculateStockActuel(article, movements) {
+    try {
+      const entrees = this.calculateEntrees(article.ref, movements);
+      const sorties = this.calculateSorties(article.ref, movements);
+      const stockActuel = article.stockInitial + entrees - sorties;
+      
+      Logger.debug('Stock calculated', { 
+        ref: article.ref, 
+        initial: article.stockInitial,
+        entrees,
+        sorties,
+        stockActuel 
+      });
+      
+      return stockActuel;
+    } catch (error) {
+      Logger.error('❌ Stock calculation failed', error);
+      return article.stockInitial;
+    }
+  }
 
-      const recordedStock = parseFloat(article.stockActuel ?? 0);
-      if (Math.abs(recordedStock - calculatedStock) > 0.001) {
-        mismatches.push({
-          ref: article.ref,
-          field: 'stockActuel',
-          recorded: recordedStock,
-          calculated: calculatedStock,
-          difference: recordedStock - calculatedStock
-        });
+  /**
+   * Get alert status
+   * ✅ Logic: RUPTURE (<=0), ALERTE (<=seuil), OK
+   */
+  static getAlertStatus(article, currentStock) {
+    try {
+      if (currentStock < 0) {
+        Logger.warn('⚠️ Negative stock detected', { ref: article.ref, stock: currentStock });
+        return 'RUPTURE';
       }
 
-      if (article.alerte && article.alerte !== calculatedAlert) {
-        mismatches.push({
-          ref: article.ref,
-          field: 'alerte',
-          recorded: article.alerte,
-          calculated: calculatedAlert
-        });
+      if (currentStock === 0) {
+        Logger.warn('⚠️ Zero stock', { ref: article.ref });
+        return 'RUPTURE';
       }
-    }
 
-    if (mismatches.length > 0) {
-      Logger.warn(`[StockCalculationService] Found ${mismatches.length} calculation variance(s)`, mismatches);
-    } else {
-      Logger.info('✅ [StockCalculationService] All calculations matched Excel specifications perfectly');
-    }
+      if (currentStock <= article.minThreshold) {
+        Logger.info('ℹ️ Low stock alert', { 
+          ref: article.ref, 
+          stock: currentStock, 
+          threshold: article.minThreshold 
+        });
+        return 'ALERTE';
+      }
 
-    return {
-      isValid: mismatches.length === 0,
-      totalChecked: articles.length,
-      mismatchCount: mismatches.length,
-      mismatches
-    };
+      return 'OK';
+    } catch (error) {
+      Logger.error('❌ Alert status calculation failed', error);
+      return 'OK';
+    }
   }
 
   /**
-   * Get stock statistics & aggregate metrics
+   * Verify calculations against expected values
+   * ✅ للتحقق من دقة الحسابات
    */
-  static getStockStatistics(articles = [], movements = []) {
-    const stats = {
-      totalArticles: articles.length,
-      totalQuantity: 0,
-      totalValue: 0,
-      articlesInRupture: 0,
-      articlesInAlerte: 0,
-      articlesOK: 0
-    };
+  static async verifyCalculations(articles, movements) {
+    try {
+      const mismatches = [];
 
-    for (const article of articles) {
-      const currentStock = this.calculateStockActuel(article, movements);
-      const status = this.getAlertStatus(article, currentStock);
-      const unitPrice = parseFloat(article.unitPrice ?? article.prix_unitaire ?? 0) || 0;
+      for (const article of articles) {
+        const calculatedStock = this.calculateStockActuel(article, movements);
+        const calculatedAlert = this.getAlertStatus(article, calculatedStock);
 
-      stats.totalQuantity += currentStock;
-      stats.totalValue += currentStock * unitPrice;
+        // Check for stock mismatches
+        if (Math.abs(article.stockActuel - calculatedStock) > 0.01) {
+          mismatches.push({
+            ref: article.ref,
+            field: 'stockActuel',
+            expected: article.stockActuel,
+            calculated: calculatedStock,
+            difference: article.stockActuel - calculatedStock
+          });
+        }
 
-      if (status === 'RUPTURE') stats.articlesInRupture++;
-      else if (status === 'ALERTE') stats.articlesInAlerte++;
-      else stats.articlesOK++;
+        // Check for alert mismatches
+        if (article.alerte !== calculatedAlert) {
+          mismatches.push({
+            ref: article.ref,
+            field: 'alerte',
+            expected: article.alerte,
+            calculated: calculatedAlert
+          });
+        }
+      }
+
+      if (mismatches.length > 0) {
+        Logger.error('❌ Calculation mismatches found', { count: mismatches.length, mismatches });
+        return { isValid: false, mismatches };
+      }
+
+      Logger.info('✅ All calculations verified successfully');
+      return { isValid: true, mismatches: [] };
+    } catch (error) {
+      Logger.error('❌ Verification failed', error);
+      return { isValid: false, error: error.message };
     }
+  }
 
-    return stats;
+  /**
+   * Get stock statistics
+   * ✅ للإحصائيات العامة
+   */
+  static getStockStatistics(articles, movements) {
+    try {
+      const stats = {
+        totalArticles: articles.length,
+        totalValue: 0,
+        articlesInRupture: 0,
+        articlesInAlerte: 0,
+        articlesOK: 0,
+        totalQuantity: 0,
+        ruptureCost: 0,
+        alerteCost: 0
+      };
+
+      for (const article of articles) {
+        const currentStock = this.calculateStockActuel(article, movements);
+        const status = this.getAlertStatus(article, currentStock);
+        const value = currentStock * (article.unitPrice || 0);
+
+        stats.totalValue += value;
+        stats.totalQuantity += currentStock;
+
+        if (status === 'RUPTURE') {
+          stats.articlesInRupture++;
+          stats.ruptureCost += value;
+        } else if (status === 'ALERTE') {
+          stats.articlesInAlerte++;
+          stats.alerteCost += value;
+        } else {
+          stats.articlesOK++;
+        }
+      }
+
+      Logger.info('✅ Stock statistics calculated', stats);
+      return stats;
+    } catch (error) {
+      Logger.error('❌ Statistics calculation failed', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get articles by alert status
+   */
+  static getArticlesByStatus(articles, movements, status) {
+    try {
+      return articles.filter(article => {
+        const currentStock = this.calculateStockActuel(article, movements);
+        const articleStatus = this.getAlertStatus(article, currentStock);
+        return articleStatus === status;
+      });
+    } catch (error) {
+      Logger.error('❌ Failed to get articles by status', error);
+      return [];
+    }
   }
 }

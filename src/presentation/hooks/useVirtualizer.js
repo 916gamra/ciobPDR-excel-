@@ -1,56 +1,47 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { Logger } from '../../core/logger/LoggerService.js';
 
 /**
- * useVirtualizer
- * Lightweight, high-performance table & list virtualization hook
- * Renders only visible rows + overscan buffer to handle 10,000+ items smoothly.
+ * Virtualization Hook
+ * ✅ لتحسين أداء الجداول الكبيرة
  */
 export function useVirtualizer(options = {}) {
   const {
     count = 0,
     getScrollElement = () => null,
-    estimateSize = () => 40,
-    overscan = 6
+    estimateSize = () => 35,
+    overscan = 10
   } = options;
 
   const [scrollOffset, setScrollOffset] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(600);
+  const scrollElement = getScrollElement();
 
   useEffect(() => {
-    const el = getScrollElement();
-    if (!el) return;
-
-    setContainerHeight(el.clientHeight || 600);
+    if (!scrollElement) return;
 
     const handleScroll = () => {
-      setScrollOffset(el.scrollTop);
+      setScrollOffset(scrollElement.scrollTop);
     };
 
-    const handleResize = () => {
-      setContainerHeight(el.clientHeight || 600);
-    };
-
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleResize);
+    scrollElement.addEventListener('scroll', handleScroll);
+    Logger.debug('Virtualizer scroll listener attached');
 
     return () => {
-      el.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleResize);
+      scrollElement.removeEventListener('scroll', handleScroll);
     };
-  }, [getScrollElement]);
-
-  const itemSize = typeof estimateSize === 'function' ? estimateSize() : (estimateSize || 40);
+  }, [scrollElement]);
 
   const getVirtualItems = useCallback(() => {
-    if (count === 0) return [];
+    if (!scrollElement) return [];
 
-    const visibleCount = Math.ceil(containerHeight / itemSize);
+    const itemSize = estimateSize();
+    const visibleCount = Math.ceil(scrollElement.clientHeight / itemSize);
     const startIndex = Math.max(0, Math.floor(scrollOffset / itemSize) - overscan);
     const endIndex = Math.min(count, startIndex + visibleCount + overscan * 2);
 
-    const items = [];
+    const virtualItems = [];
     for (let i = startIndex; i < endIndex; i++) {
-      items.push({
+      virtualItems.push({
         key: i,
         index: i,
         start: i * itemSize,
@@ -59,12 +50,12 @@ export function useVirtualizer(options = {}) {
       });
     }
 
-    return items;
-  }, [count, containerHeight, itemSize, scrollOffset, overscan]);
+    return virtualItems;
+  }, [scrollOffset, scrollElement, count, estimateSize, overscan]);
 
   const getTotalSize = useCallback(() => {
-    return count * itemSize;
-  }, [count, itemSize]);
+    return count * estimateSize();
+  }, [count, estimateSize]);
 
   return {
     getVirtualItems,

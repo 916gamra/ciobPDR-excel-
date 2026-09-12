@@ -1,16 +1,15 @@
 /**
- * Core Application Errors Hierarchy
- * CIOB GMAO Enterprise Architecture
+ * Base Application Error Class
+ * ✅ جميع الأخطاء ترث من هذا الـ Class
  */
-
 export class ApplicationError extends Error {
-  constructor(message, code = 'INTERNAL_ERROR', statusCode = 500, details = {}) {
+  constructor(message, code, statusCode = 500, details = {}) {
     super(message);
     this.name = 'ApplicationError';
     this.code = code;
     this.statusCode = statusCode;
     this.details = details;
-    this.timestamp = new Date().toISOString();
+    this.timestamp = new Date();
   }
 
   toJSON() {
@@ -25,6 +24,9 @@ export class ApplicationError extends Error {
   }
 }
 
+/**
+ * Database Error
+ */
 export class DatabaseError extends ApplicationError {
   constructor(message, details = {}) {
     super(message, 'DB_ERROR', 500, details);
@@ -32,6 +34,9 @@ export class DatabaseError extends ApplicationError {
   }
 }
 
+/**
+ * Validation Error
+ */
 export class ValidationError extends ApplicationError {
   constructor(message, errors = []) {
     super(message, 'VALIDATION_ERROR', 400, { errors });
@@ -39,35 +44,57 @@ export class ValidationError extends ApplicationError {
   }
 }
 
+/**
+ * Not Found Error
+ */
 export class NotFoundError extends ApplicationError {
-  constructor(message, resource = null) {
+  constructor(message, resource) {
     super(message, 'NOT_FOUND', 404, { resource });
     this.name = 'NotFoundError';
   }
 }
 
+/**
+ * Permission Error
+ */
 export class PermissionError extends ApplicationError {
-  constructor(message, permission = null) {
+  constructor(message, permission) {
     super(message, 'PERMISSION_DENIED', 403, { permission });
     this.name = 'PermissionError';
   }
 }
 
+/**
+ * Conflict Error
+ */
 export class ConflictError extends ApplicationError {
-  constructor(message, conflict = null) {
+  constructor(message, conflict) {
     super(message, 'CONFLICT', 409, { conflict });
     this.name = 'ConflictError';
   }
 }
 
+/**
+ * Insufficient Stock Error
+ */
 export class InsufficientStockError extends ApplicationError {
   constructor(ref, available, requested) {
     super(
-      `Stock insuffisant pour l'article ${ref} : disponible ${available}, demandé ${requested}`,
+      `المخزون غير كافي: ${ref}. المتاح: ${available}, المطلوب: ${requested}`,
       'INSUFFICIENT_STOCK',
       400,
-      { ref, available, requested, deficit: requested - available }
+      { ref, available, requested }
     );
     this.name = 'InsufficientStockError';
+  }
+}
+
+/**
+ * Authentication Error
+ */
+export class AuthenticationError extends ApplicationError {
+  constructor(message = 'Authentication failed') {
+    super(message, 'AUTH_ERROR', 401);
+    this.name = 'AuthenticationError';
   }
 }
