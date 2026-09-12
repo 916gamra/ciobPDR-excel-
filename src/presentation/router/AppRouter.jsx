@@ -1,40 +1,26 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import LoadingSkeleton from '../components/common/LoadingSkeleton';
 
-// Helper to auto-retry dynamic import if network or temporary chunk reload issue occurs
-function lazyRetry(importFn) {
-  return lazy(async () => {
-    try {
-      return await importFn();
-    } catch (error) {
-      console.warn('[AppRouter] Chunk load error, retrying import...', error);
-      // Wait 300ms and try one more time before failing
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      return await importFn();
-    }
-  });
-}
-
-const DashboardView = lazyRetry(() => import('../pages/dashboard/DashboardView'));
-const StockView = lazyRetry(() => import('../pages/stock/StockView'));
-const TypeView = lazyRetry(() => import('../pages/referentiel/TypeView'));
-const DesignationView = lazyRetry(() => import('../pages/referentiel/DesignationView'));
-const MachinesRegisteredView = lazyRetry(() => import('../pages/machines/MachinesRegisteredView'));
-const EntrepotView = lazyRetry(() => import('../pages/warehouse/EntrepotView'));
-const CompFamilyView = lazyRetry(() => import('../pages/referentiel/CompFamilyView'));
-const CompTemplateView = lazyRetry(() => import('../pages/referentiel/CompTemplateView'));
-const PartTypeView = lazyRetry(() => import('../pages/referentiel/PartTypeView'));
-const PartDesignationView = lazyRetry(() => import('../pages/referentiel/PartDesignationView'));
-const FamilyView = lazyRetry(() => import('../pages/machines/FamilyView'));
-const TemplatesView = lazyRetry(() => import('../pages/machines/TemplatesView'));
-const BlueprintMachineView = lazyRetry(() => import('../pages/machines/BlueprintMachineView'));
-const ZonesView = lazyRetry(() => import('../pages/referentiel/ZonesView'));
-const UtilisateursView = lazyRetry(() => import('../pages/utilisateurs/UtilisateursView'));
-const SortieRapideView = lazyRetry(() => import('../pages/movements/SortieRapideView'));
-const SettingsView = lazyRetry(() => import('../pages/settings/SettingsView'));
-const NexusView = lazyRetry(() => import('../pages/system/NexusView'));
-const GuideView = lazyRetry(() => import('../pages/system/GuideView'));
+import DashboardView from '../pages/dashboard/DashboardView';
+import StockView from '../pages/stock/StockView';
+import TypeView from '../pages/referentiel/TypeView';
+import DesignationView from '../pages/referentiel/DesignationView';
+import MachinesRegisteredView from '../pages/machines/MachinesRegisteredView';
+import EntrepotView from '../pages/warehouse/EntrepotView';
+import CompFamilyView from '../pages/referentiel/CompFamilyView';
+import CompTemplateView from '../pages/referentiel/CompTemplateView';
+import PartTypeView from '../pages/referentiel/PartTypeView';
+import PartDesignationView from '../pages/referentiel/PartDesignationView';
+import FamilyView from '../pages/machines/FamilyView';
+import TemplatesView from '../pages/machines/TemplatesView';
+import BlueprintMachineView from '../pages/machines/BlueprintMachineView';
+import ZonesView from '../pages/referentiel/ZonesView';
+import UtilisateursView from '../pages/utilisateurs/UtilisateursView';
+import SortieRapideView from '../pages/movements/SortieRapideView';
+import SettingsView from '../pages/settings/SettingsView';
+import NexusView from '../pages/system/NexusView';
+import GuideView from '../pages/system/GuideView';
 
 export default function AppRouter({
   currentTab, setCurrentTab: _setCurrentTab, props

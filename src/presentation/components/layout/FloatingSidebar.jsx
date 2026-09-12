@@ -28,112 +28,102 @@ export default function FloatingSidebar({
   };
 
   return (
-    <aside className="hidden lg:flex fixed left-4 top-4 z-40 w-[72px] h-[calc(100vh-32px)] select-none">
+    <aside className="hidden lg:flex fixed left-4 top-[84px] z-40 w-[72px] h-[calc(100vh-100px)] flex-col items-center justify-between select-none py-2">
+      {/* 1. Primary Page Modules Container Card - Floating Capsule with High-Depth Elevation Shadow */}
       <div
-        className={`w-full h-full rounded-[28px] border flex flex-col items-center justify-between py-5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-colors duration-200 ${
-          isDark ? 'bg-slate-900 border-slate-800' : 'bg-[#F2F2F2] border-[#E8E8E8]'
+        className={`w-[60px] rounded-[28px] border px-2 py-3.5 flex flex-col items-center gap-2 transition-all duration-300 my-auto ${
+          isDark
+            ? 'bg-slate-900/95 border-slate-700/80 shadow-[0_12px_40px_-4px_rgba(0,0,0,0.65),0_4px_16px_rgba(0,0,0,0.4)] backdrop-blur-xl'
+            : 'bg-white/95 border-zinc-200 shadow-[0_12px_32px_-6px_rgba(0,0,0,0.12),0_4px_12px_-2px_rgba(0,0,0,0.06)] backdrop-blur-xl'
         }`}
       >
-        {/* Top Brand Logo & 8 Vertical Module Icons */}
-        <div className="flex flex-col items-center gap-6 w-full">
-          {/* Logo Badge */}
-          <button
-            onClick={() => setCurrentTab('dashboard')}
-            className={`w-10 h-10 rounded-full flex items-center justify-center font-extrabold text-[13px] tracking-tight shadow-xs cursor-pointer transition transform hover:scale-105 ${
-              isDark ? 'bg-white text-slate-900' : 'bg-black text-white'
-            }`}
-            title="GMAO Light V5"
-          >
-            G
-          </button>
+        {PARENT_MODULES.map((module) => {
+          const isActive = activeParent.id === module.id;
+          const IconComponent = module.icon;
 
-          {/* 8 Primary Vertical Icons with Signature Vivid Colors */}
-          <div className="flex flex-col gap-2 w-full px-2.5">
-            {PARENT_MODULES.map((module) => {
-              const isActive = activeParent.id === module.id;
-              const IconComponent = module.icon;
-
-              return (
-                <button
-                  key={module.id}
-                  onClick={() => handleSelectParent(module)}
-                  className={`group relative w-full aspect-square rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
-                    isActive
-                      ? isDark
-                        ? 'bg-white shadow-[0_4px_16px_rgba(255,255,255,0.2)] scale-105'
-                        : 'bg-black shadow-[0_4px_16px_rgba(0,0,0,0.18)] scale-105'
-                      : isDark
-                      ? 'hover:bg-slate-800'
-                      : 'hover:bg-white hover:shadow-xs'
-                  }`}
-                  title={module.label}
-                >
-                  <IconComponent
-                    size={20}
-                    strokeWidth={isActive ? 2.3 : 1.9}
-                    className={
-                      isActive
-                        ? isDark
-                          ? module.color
-                          : module.colorDark
-                        : isDark
-                        ? module.colorDark
-                        : module.color
-                    }
-                  />
-
-                  {/* Tooltip on hover */}
-                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-semibold rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap z-50 shadow-md">
-                    {module.label}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Bottom Controls (Settings & Theme / Logout) */}
-        <div
-          className={`w-[56px] rounded-[20px] border p-1.5 flex flex-col gap-1.5 shadow-xs transition-colors duration-200 ${
-            isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-white border-slate-200'
-          }`}
-        >
-          <button
-            onClick={() => setCurrentTab('settings')}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-              currentTab === 'settings'
-                ? 'bg-black text-amber-400'
-                : isDark
-                ? 'text-slate-400 hover:text-white hover:bg-slate-800'
-                : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
-            }`}
-            title="Paramètres System"
-          >
-            <Settings size={18} />
-          </button>
-
-          <button
-            onClick={toggleSidebarTheme}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-              isDark
-                ? 'text-amber-400 hover:bg-slate-800'
-                : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
-            }`}
-            title={isDark ? 'Mode Light' : 'Mode Dark'}
-          >
-            {isDark ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-
-          {onLogout && (
+          return (
             <button
-              onClick={onLogout}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-              title="Déconnexion"
+              key={module.id}
+              onClick={() => handleSelectParent(module)}
+              className={`group relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                isActive
+                  ? isDark
+                    ? 'bg-white shadow-[0_6px_20px_rgba(255,255,255,0.25)] scale-105 ring-1 ring-white/40'
+                    : 'bg-black shadow-[0_6px_20px_rgba(0,0,0,0.25)] scale-105 ring-1 ring-black/10'
+                  : isDark
+                  ? 'hover:bg-slate-800/90'
+                  : 'hover:bg-zinc-100 hover:shadow-xs'
+              }`}
+              title={module.label}
             >
-              <LogOut size={17} />
+              <IconComponent
+                size={22}
+                strokeWidth={isActive ? 2.3 : 1.9}
+                className={
+                  isActive
+                    ? isDark
+                      ? module.color
+                      : module.colorDark
+                    : isDark
+                    ? module.colorDark
+                    : module.color
+                }
+              />
+
+              {/* Tooltip on hover with floating depth */}
+              <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900/95 border border-slate-800 text-white text-[11px] font-bold rounded-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-150 whitespace-nowrap z-50 shadow-[0_8px_20px_rgba(0,0,0,0.25)]">
+                {module.label}
+              </div>
             </button>
-          )}
-        </div>
+          );
+        })}
+      </div>
+
+      {/* 2. Bottom Controls Container Card (Settings, Theme & Logout) - Floating Capsule Pinned at Bottom */}
+      <div
+        className={`w-[60px] rounded-[24px] border px-1.5 py-2.5 flex flex-col items-center gap-1.5 transition-all duration-300 mt-auto ${
+          isDark
+            ? 'bg-slate-900/95 border-slate-700/80 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.6)] backdrop-blur-xl'
+            : 'bg-white/95 border-zinc-200 shadow-[0_10px_28px_-6px_rgba(0,0,0,0.1),0_4px_10px_-2px_rgba(0,0,0,0.05)] backdrop-blur-xl'
+        }`}
+      >
+        <button
+          onClick={() => {
+            setCurrentTab('settings');
+          }}
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+            currentTab === 'settings'
+              ? 'bg-black text-amber-400 shadow-[0_4px_12px_rgba(0,0,0,0.2)]'
+              : isDark
+              ? 'text-slate-400 hover:text-white hover:bg-slate-800'
+              : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+          }`}
+          title="Paramètres System"
+        >
+          <Settings size={19} />
+        </button>
+
+        <button
+          onClick={toggleSidebarTheme}
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+            isDark
+              ? 'text-amber-400 hover:bg-slate-800'
+              : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
+          }`}
+          title={isDark ? 'Mode Light' : 'Mode Dark'}
+        >
+          {isDark ? <Sun size={19} /> : <Moon size={19} />}
+        </button>
+
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+            title="Déconnexion"
+          >
+            <LogOut size={18} />
+          </button>
+        )}
       </div>
     </aside>
   );

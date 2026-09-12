@@ -31,7 +31,6 @@ export const PARENT_MODULES = [
     children: [
       { id: 'stock', label: 'Stock Articles' },
       { id: 'types', label: 'Types PDR' },
-      { id: 'part_designations', label: 'Désignations Parts' },
       { id: 'sortie', label: 'Mouvements' }
     ]
   },
@@ -59,7 +58,9 @@ export const PARENT_MODULES = [
     children: [
       { id: 'entrepot', label: 'Stock Entrepôt' },
       { id: 'comp_families', label: 'Familles Composants' },
-      { id: 'comp_templates', label: 'Templates Composants' }
+      { id: 'comp_templates', label: 'Templates Composants' },
+      { id: 'part_types', label: 'Types Parts' },
+      { id: 'part_designations', label: 'Désignations Parts' }
     ]
   },
   {
