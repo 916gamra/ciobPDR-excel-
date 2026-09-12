@@ -100,6 +100,12 @@ export function useAppExcelOperations({
         storageService.setItem('gmao_backups_list', updatedList);
         return dateStr;
       } catch (err) {
+      if (err.name === "AbortError") return;
+      if (err.name === "SecurityError" || err.name === "NotAllowedError" || (err.message && err.message.toLowerCase().includes("cross origin"))) {
+        showToast("Liaison bloquée par le navigateur (iframe). Basculement vers l'import classique.", "info");
+        fileInputRef.current?.click();
+        return;
+      }
         Logger.error('[ExcelOperations] Backup creation error:', err);
         return new Date().toLocaleString('fr-FR');
       }
@@ -374,6 +380,12 @@ export function useAppExcelOperations({
           showToast('Import réussi ! (Backup daté du ' + backupDate + ')', 'success');
           Logger.info('[ExcelOperations] File imported successfully', { file: file.name });
         } catch (err) {
+      if (err.name === "AbortError") return;
+      if (err.name === "SecurityError" || err.name === "NotAllowedError" || (err.message && err.message.toLowerCase().includes("cross origin"))) {
+        showToast("Liaison bloquée par le navigateur (iframe). Basculement vers l'import classique.", "info");
+        fileInputRef.current?.click();
+        return;
+      }
           showToast('Erreur lors de la lecture du fichier.', 'error');
           Logger.error('[ExcelOperations] Import error:', err);
         }
@@ -458,6 +470,12 @@ export function useAppExcelOperations({
         'success'
       );
     } catch (err) {
+      if (err.name === "AbortError") return;
+      if (err.name === "SecurityError" || err.name === "NotAllowedError" || (err.message && err.message.toLowerCase().includes("cross origin"))) {
+        showToast("Liaison bloquée par le navigateur (iframe). Basculement vers l'import classique.", "info");
+        fileInputRef.current?.click();
+        return;
+      }
       if (err.name !== 'AbortError') {
         Logger.error('[ExcelOperations] Direct link error:', err);
         showToast("Erreur lors de l'accès au fichier sélectionné.", 'error');
@@ -482,6 +500,12 @@ export function useAppExcelOperations({
 
       showToast(`💾 Écriture directe réussie dans "${linkedFileName}" !`, 'success');
     } catch (err) {
+      if (err.name === "AbortError") return;
+      if (err.name === "SecurityError" || err.name === "NotAllowedError" || (err.message && err.message.toLowerCase().includes("cross origin"))) {
+        showToast("Liaison bloquée par le navigateur (iframe). Basculement vers l'import classique.", "info");
+        fileInputRef.current?.click();
+        return;
+      }
       Logger.error('[ExcelOperations] Direct save error:', err);
       showToast('Écriture directe impossible. Exportation standard...', 'info');
       handleExportExcel();

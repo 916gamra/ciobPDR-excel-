@@ -16,10 +16,11 @@ export default function Sidebar({
       <FloatingSidebar
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
+        currentUser={currentUser}
         onLogout={onLogout}
       />
 
-      {/* Mobile Drawer (100% Original Full Rich Sidebar with Ciob PDR XLS, Badges, Tip Box & Controls) */}
+      {/* Mobile Drawer (100% Original Full Rich Sidebar when opening mobile menu) */}
       <MobileSidebarDrawer
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}

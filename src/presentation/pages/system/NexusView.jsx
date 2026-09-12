@@ -23,40 +23,9 @@ import { CategoryIcon } from '../../components/common/icons/CategoryIcon';
 import { SpokeIcon } from '../../components/common/icons/SpokeIcon';
 import { CubeIcon } from '../../components/common/icons/CubeIcon';
 import { LayersIcon } from '../../components/common/icons/LayersIcon';
+import { Machine } from '../../../core/domain';
 
 // Helper: Check if 2 machines/BOMs are identical (Twins)
-export const areBOMsIdentical = (bomA, bomB) => {
-  if (!bomA || !bomB) return false;
-  const key = (arr, idField) =>
-    JSON.stringify(
-      [...(arr || [])]
-        .map((x) => ({ id: String(x[idField] || '').trim(), q: Number(x.qte || 1) }))
-        .sort((a, b) => a.id.localeCompare(b.id))
-    );
-
-  const compA = bomA.components_theoriques || bomA.components_reels || [];
-  const compB = bomB.components_theoriques || bomB.components_reels || [];
-  const partsA = bomA.parts_theoriques || bomA.parts_reels || [];
-  const partsB = bomB.parts_theoriques || bomB.parts_reels || [];
-  const pdrA = bomA.pdr_theoriques || bomA.pdr_historique || [];
-  const pdrB = bomB.pdr_theoriques || bomB.pdr_historique || [];
-
-  return (
-    key(compA, 'id_component') === key(compB, 'id_component') &&
-    key(partsA, 'id_part') === key(partsB, 'id_part') &&
-    key(pdrA, 'id_pdr') === key(pdrB, 'id_pdr')
-  );
-};
-
-export const areSpecsIdentical = (specsA = {}, specsB = {}) => {
-  const cleanA = Object.fromEntries(
-    Object.entries(specsA).filter(([_, v]) => v != null && String(v).trim() !== '')
-  );
-  const cleanB = Object.fromEntries(
-    Object.entries(specsB).filter(([_, v]) => v != null && String(v).trim() !== '')
-  );
-  return JSON.stringify(cleanA) === JSON.stringify(cleanB);
-};
 
 export default function NexusView({
   types = [],
@@ -89,23 +58,20 @@ export default function NexusView({
   // Extract machine's real lifecycle PDR consumptions from Mouvements
   const machinePdrHistory = useMemo(() => {
     if (!selectedMachine) return [];
-    const code = selectedMachine.id_machine_registered;
-    const relatedMvts = mouvements.filter(
-      (m) =>
-        (m.id_machine_registered === code || m.machine === code) &&
-        (m.type === 'Sortie' || m.quantite > 0)
-    );
+    
+    // Domain-Driven Design: Let the Machine instance figure out its own PDR history
+    const machineInstance = new Machine(selectedMachine);
+    const relatedMvts = machineInstance.getPDRHistory(mouvements);
 
     const map = new Map();
     relatedMvts.forEach((m) => {
       const ref = m.ref || m.id_article || 'PDR-REF';
       const existing = map.get(ref) || { ref, count: 0, totalQty: 0, lastDate: m.date };
       existing.count += 1;
-      existing.totalQty += Math.abs(Number(m.quantite) || 1);
+      existing.totalQty += Math.abs(Number(m.quantite || m.qte) || 1);
       if (m.date && m.date > existing.lastDate) existing.lastDate = m.date;
       map.set(ref, existing);
     });
-
     return Array.from(map.values()).sort((a, b) => b.totalQty - a.totalQty);
   }, [selectedMachine, mouvements]);
 

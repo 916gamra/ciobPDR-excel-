@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { CubeIcon } from '../../components/common/icons/CubeIcon';
+import { Blueprint } from '../../../core/domain';
 import { LayersIcon } from '../../components/common/icons/LayersIcon';
 
 const STATUS_OPTIONS = [
@@ -205,16 +206,15 @@ export default function BlueprintMachineView({
     return sortedBlueprints.slice(start, start + itemsPerPage);
   }, [sortedBlueprints, currentPage, itemsPerPage]);
 
-  // Map of machine counts per blueprint
+  // Map of machine counts per blueprint (using Domain model)
   const blueprintMachineCountMap = useMemo(() => {
     const counts = {};
-    machines.forEach((m) => {
-      if (m.id_blueprint) {
-        counts[m.id_blueprint] = (counts[m.id_blueprint] || 0) + 1;
-      }
+    blueprints.forEach((b) => {
+      const bp = new Blueprint(b);
+      counts[b.id_blueprint] = bp.getMachinesLieesCount(machines);
     });
     return counts;
-  }, [machines]);
+  }, [blueprints, machines]);
 
   // Open Add Modal
   const handleOpenAddModal = () => {

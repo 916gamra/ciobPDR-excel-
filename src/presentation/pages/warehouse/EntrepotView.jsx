@@ -3,6 +3,7 @@ import AnimatedPage from '../../components/common/AnimatedPage';
 import CustomSelect from '../../components/common/CustomSelect';
 import QuickMovementModal from './QuickMovementModal';
 import { storageService } from '../../../utils/storageService';
+import { EntrepotItem } from '../../../core/domain';
 import {
   Boxes,
   Plus,
@@ -1656,6 +1657,7 @@ export default function EntrepotView({
                 </tr>
               ) : (
                 displayedData.map((item, idx) => {
+                  const domainItem = new EntrepotItem(item);
                   const realIndex = startIndex + idx;
                   const isCompItem = isComponentNature(item.nature);
                   const famObj = families.find((f) => f.id_family === item.id_family);
@@ -1900,7 +1902,7 @@ export default function EntrepotView({
                                   : 'bg-emerald-50 text-emerald-800 border border-emerald-200/80'
                             }`}
                           >
-                            {item.stockActuel != null ? item.stockActuel : (item.stockInitial || 1)} u
+                            {domainItem.getStockActuel()} u
                           </span>
                           <span className="text-[9.5px] font-mono text-slate-400 mt-0.5">
                             Init: {item.stockInitial || 1} • Seuil: {item.seuil || 2}

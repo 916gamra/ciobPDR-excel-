@@ -4,6 +4,7 @@ import CustomSelect from '../../components/common/CustomSelect';
 import QuickMovementModal from '../warehouse/QuickMovementModal';
 import EditArticleModal from './EditArticleModal';
 import { useSpareParts } from '../../hooks/useSpareParts';
+import { StockItem } from '../../../core/domain';
 import StockKPIBar from './components/StockKPIBar';
 import { multiTokenSearch } from '../../../utils/searchUtils';
 import { usePermission } from '../../components/common/PermissionGate.jsx';
@@ -97,7 +98,8 @@ export default function StockView({
       }
 
       // Filter by alert status
-      if (stockAlertOnly && item.alerte === 'OK') {
+      const domainItem = new StockItem(item);
+      if (stockAlertOnly && domainItem.getCriticite() === 'OK') {
         return false;
       }
 
@@ -830,6 +832,7 @@ export default function StockView({
                 </tr>
               ) : (
                 displayedStock.map((item, idx) => {
+                  const domainItem = new StockItem(item);
                   const typeObj = types.find(
                     (t) => t.id_type === item.id_type || t.libelle === item.type
                   );
@@ -892,30 +895,30 @@ export default function StockView({
                       {/* Actuel (H) */}
                       <td className="py-3 px-2.5 text-right font-mono font-black text-slate-900 text-sm">
                         <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200">
-                          {item.stockActuel}
+                          {domainItem.getActuel()}
                         </span>
                       </td>
 
                       {/* Seuil (I) */}
                       <td className="py-3 px-2.5 text-right font-mono text-slate-500 font-semibold">
-                        {item.seuil}
+                        {domainItem.getSeuilAlerte()}
                       </td>
 
                       {/* Alerte Badge (J) */}
                       <td className="py-3 px-3 text-center whitespace-nowrap">
-                        {item.alerte === 'RUPTURE' && (
+                        {domainItem.getCriticite() === 'RUPTURE' && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-rose-50 text-rose-700 border border-rose-300">
                             <XCircle className="w-3.5 h-3.5" />
                             <span>RUPTURE</span>
                           </span>
                         )}
-                        {item.alerte === 'ALERTE' && (
+                        {domainItem.getCriticite() === 'ALERTE' && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-50 text-amber-700 border border-amber-300">
                             <AlertTriangle className="w-3.5 h-3.5" />
                             <span>ALERTE</span>
                           </span>
                         )}
-                        {item.alerte === 'OK' && (
+                        {domainItem.getCriticite() === 'OK' && (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>OK</span>
