@@ -1,3 +1,5 @@
+import { Logger } from '../core/logger/LoggerService.js';
+
 /**
  * خدمة تسجيل التدقيق (Audit Trail)
  */
@@ -43,7 +45,7 @@ export class AuditService {
       const store = tx.objectStore('auditLog');
       store.add(entry);
     } catch (error) {
-      console.error('خطأ في حفظ سجل التدقيق:', error);
+      Logger.error('خطأ في حفظ سجل التدقيق:', error, 'AuditService');
     }
   }
 
@@ -104,7 +106,7 @@ export class AuditService {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error('خطأ في جلب السجل:', error);
+      Logger.error('خطأ في جلب السجل:', error, 'AuditService');
       return [];
     }
   }

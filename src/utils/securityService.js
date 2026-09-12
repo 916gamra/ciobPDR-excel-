@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import CryptoJS from 'crypto-js';
+import { Logger } from '../core/logger/LoggerService.js';
 
 /**
  * Security Service for Hashing, Encryption and Local Storage protection
@@ -19,7 +20,7 @@ export class SecurityService {
     try {
       return CryptoJS.AES.encrypt(JSON.stringify(data), secretKey).toString();
     } catch (e) {
-      console.error('Encryption error:', e);
+      Logger.error('Encryption error:', e, 'SecurityService');
       return null;
     }
   }
@@ -30,7 +31,7 @@ export class SecurityService {
       const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
       return decryptedData ? JSON.parse(decryptedData) : null;
     } catch (e) {
-      console.error('Decryption error:', e);
+      Logger.error('Decryption error:', e, 'SecurityService');
       return null;
     }
   }

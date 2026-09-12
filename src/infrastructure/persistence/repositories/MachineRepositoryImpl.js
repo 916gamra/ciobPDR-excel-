@@ -2,6 +2,7 @@ import { IMachineRepository } from '../../../domain/machines/repositories/IMachi
 import { MachineEntity } from '../../../domain/machines/entities/MachineEntity.js';
 import { DatabaseService } from '../../../core/database/DatabaseService.js';
 import { INITIAL_MACHINES_REGISTERED } from '../../../data/seedData.js';
+import { Logger } from '../../../core/logger/LoggerService.js';
 
 export class MachineRepositoryImpl extends IMachineRepository {
   constructor() {
@@ -32,7 +33,7 @@ export class MachineRepositoryImpl extends IMachineRepository {
         }
         all = await this.db.getAll(this.storeName);
       } catch (err) {
-        console.warn('Failed to seed machines in IndexedDB, using in-memory INITIAL_MACHINES_REGISTERED:', err);
+        Logger.warn('Failed to seed machines in IndexedDB, using in-memory INITIAL_MACHINES_REGISTERED:', err, 'MachineRepository');
         all = INITIAL_MACHINES_REGISTERED.map(m => ({ ...m, id: m.id_machine_registered || m.id }));
       }
     }

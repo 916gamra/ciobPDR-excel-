@@ -80,6 +80,32 @@ export class Logger {
     }
   }
 
+  static table(data, namespace = 'GMAO') {
+    if (Logger.currentLevel <= Logger.levels.INFO) {
+      if (typeof console !== 'undefined' && console.table) {
+        console.table(data);
+      } else if (typeof console !== 'undefined' && console.log) {
+        console.log(`${Logger.formatPrefix(namespace)} [TABLE]`, data);
+      }
+    }
+  }
+
+  static group(label, namespace = 'GMAO') {
+    if (Logger.currentLevel <= Logger.levels.INFO) {
+      if (typeof console !== 'undefined' && console.group) {
+        console.group(`${Logger.formatPrefix(namespace)} ${label}`);
+      }
+    }
+  }
+
+  static groupEnd() {
+    if (Logger.currentLevel <= Logger.levels.INFO) {
+      if (typeof console !== 'undefined' && console.groupEnd) {
+        console.groupEnd();
+      }
+    }
+  }
+
   // Instance adapter for object-oriented consumers (e.g. new Logger('SyncQueue'))
   constructor(namespace = 'GMAO') {
     this.namespace = namespace;

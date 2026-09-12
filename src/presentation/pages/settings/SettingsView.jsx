@@ -52,6 +52,7 @@ import { backupService } from '../../../utils/BackupService';
 import { auditService } from '../../../utils/AuditService';
 import { accessLogService } from '../../../utils/AccessLogService';
 import { logger } from '../../../utils/Logger';
+import { Logger } from '../../../core/logger/LoggerService';
 import { dataIntegrityService } from '../../../services/dataIntegrityService';
 import { performanceService } from '../../../services/performanceService';
 import { syncQueueService } from '../../../services/syncQueueService';
@@ -626,7 +627,7 @@ export default function SettingsView({
             date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
           setFileDetails({ size: `${sizeMB} Mo`, lastModified: formattedDate });
         } catch (e) {
-          console.error(e);
+          Logger.error('Failed to get linked file details:', e, 'SettingsView');
         }
       }
     }
@@ -885,7 +886,7 @@ export default function SettingsView({
         setIntegrityReport(rep);
         setCurrentChecksum(cs);
       } catch (err) {
-        console.error('Erreur diagnostic intégrité:', err);
+        Logger.error('Erreur diagnostic intégrité:', err, 'SettingsView');
       } finally {
         setCheckingIntegrity(false);
       }
@@ -920,7 +921,7 @@ export default function SettingsView({
       refreshPerformanceMetrics();
       showToast('Benchmark de performance calculé avec succès.', 'success');
     } catch (e) {
-      console.error(e);
+      Logger.error('Performance benchmark error:', e, 'SettingsView');
     }
   };
 
@@ -950,7 +951,7 @@ export default function SettingsView({
       const list = await backupService.getBackupsList();
       setBackupsList(list || []);
     } catch (e) {
-      console.error(e);
+      Logger.error('Failed to load backups list:', e, 'SettingsView');
     }
   };
 
@@ -960,7 +961,7 @@ export default function SettingsView({
       const list = await auditService.getLog();
       setAuditLogs(list || []);
     } catch (e) {
-      console.error(e);
+      Logger.error('Failed to load audit logs:', e, 'SettingsView');
     } finally {
       setLoadingAudit(false);
     }

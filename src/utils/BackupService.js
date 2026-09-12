@@ -124,7 +124,7 @@ export class BackupService {
         : LZString.compressToBase64(JSON.stringify(backup));
       localStorage.setItem(`backup_${backup.id}`, compressed);
     } catch (error) {
-      console.warn('لا يمكن حفظ النسخة في LocalStorage:', error);
+      Logger.warn('لا يمكن حفظ النسخة في LocalStorage:', error, 'BackupService');
     }
   }
 
@@ -164,14 +164,14 @@ export class BackupService {
 
             Promise.all(deletePromises).then(() => resolve());
           } catch (e) {
-            console.error('[BackupService] Error cleaning backups:', e);
+            Logger.error('Error cleaning backups:', e, 'BackupService');
             resolve();
           }
         };
 
         request.onerror = () => resolve();
       } catch (e) {
-        console.error('[BackupService] Error in cleanOldBackups:', e);
+        Logger.error('Error in cleanOldBackups:', e, 'BackupService');
         resolve();
       }
     });
@@ -195,7 +195,7 @@ export class BackupService {
               try {
                 resData = JSON.parse(LZString.decompressFromBase64(resData));
               } catch (e) {
-                console.warn('Decompress error', e);
+                Logger.warn('Decompress error', e, 'BackupService');
               }
             }
             resolve(resData);
@@ -206,7 +206,7 @@ export class BackupService {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error('خطأ في استرجاع النسخة الاحتياطية:', error);
+      Logger.error('خطأ في استرجاع النسخة الاحتياطية:', error, 'BackupService');
       throw error;
     }
   }
@@ -237,7 +237,7 @@ export class BackupService {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error('خطأ في جلب قائمة النسخ:', error);
+      Logger.error('خطأ في جلب قائمة النسخ:', error, 'BackupService');
       return [];
     }
   }
@@ -259,7 +259,7 @@ export class BackupService {
 
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('خطأ في تصدير النسخة:', error);
+      Logger.error('خطأ في تصدير النسخة:', error, 'BackupService');
       throw error;
     }
   }
@@ -272,7 +272,7 @@ export class BackupService {
     this.intervalId = setInterval(() => {
       const data = dataFn();
       this.createBackup(data, userId).catch((error) => {
-        console.error('فشل النسخ الاحتياطية التلقائية:', error);
+        Logger.error('فشل النسخ الاحتياطية التلقائية:', error, 'BackupService');
       });
     }, this.backupInterval);
   }

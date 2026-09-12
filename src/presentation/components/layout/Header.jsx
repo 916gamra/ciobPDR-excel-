@@ -25,16 +25,39 @@ export default function Header({
   const activeParent = getParentModuleForTab(currentTab);
   const childTabs = activeParent.children || [];
 
+  const handleChildTabKeyDown = (e, index) => {
+    if (childTabs.length === 0) return;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const nextIdx = (index + 1) % childTabs.length;
+      setCurrentTab(childTabs[nextIdx].id);
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const prevIdx = (index - 1 + childTabs.length) % childTabs.length;
+      setCurrentTab(childTabs[prevIdx].id);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setCurrentTab(childTabs[0].id);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      setCurrentTab(childTabs[childTabs.length - 1].id);
+    }
+  };
+
   return (
-    <header className="sticky top-2 sm:top-3 z-30 w-[calc(100%-0.75rem)] sm:w-[calc(100%-1.25rem)] lg:w-[calc(100%-1.5rem)] max-w-[1840px] mx-auto rounded-[22px] sm:rounded-full bg-white/95 backdrop-blur-xl border border-zinc-200/90 shadow-[0_12px_32px_-6px_rgba(0,0,0,0.12),0_4px_12px_-2px_rgba(0,0,0,0.06)] select-none transition-all my-2 sm:my-3">
+    <header
+      role="banner"
+      className="sticky top-2 sm:top-3 z-30 w-[calc(100%-0.75rem)] sm:w-[calc(100%-1.25rem)] lg:w-[calc(100%-1.5rem)] max-w-[1840px] mx-auto rounded-[22px] sm:rounded-full bg-white/95 backdrop-blur-xl border border-zinc-200/90 shadow-[0_12px_32px_-6px_rgba(0,0,0,0.12),0_4px_12px_-2px_rgba(0,0,0,0.06)] select-none transition-all my-2 sm:my-3"
+    >
       <div className="px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-2 sm:gap-4 w-full">
         {/* Left: Desktop Brand Pill Capsule + Mobile Menu Button & Parent Module Title badge */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="lg:hidden w-9 sm:w-10 h-9 sm:h-10 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-700 hover:text-black shadow-xs hover:shadow-md cursor-pointer transition-all"
-            aria-label="Ouvrir le menu"
+            className="lg:hidden w-9 sm:w-10 h-9 sm:h-10 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-700 hover:text-black shadow-xs hover:shadow-md cursor-pointer transition-all focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
+            aria-label="Ouvrir le menu de navigation"
+            aria-haspopup="dialog"
           >
             <Menu size={18} />
           </button>
@@ -42,8 +65,9 @@ export default function Header({
           {/* Brand Capsule Pill (Matching Header Pills Style + Exact Mobile Sidebar Branding) */}
           <button
             onClick={() => setCurrentTab('dashboard')}
-            className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3.5 py-1.5 rounded-full bg-white border border-zinc-200/90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:border-emerald-300 hover:shadow-[0_4px_14px_rgba(16,185,129,0.12)] transition-all cursor-pointer shrink-0 group"
+            className="flex items-center gap-2 sm:gap-2.5 px-2.5 sm:px-3.5 py-1.5 rounded-full bg-white border border-zinc-200/90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:border-emerald-300 hover:shadow-[0_4px_14px_rgba(16,185,129,0.12)] transition-all cursor-pointer shrink-0 group focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
             title="CIOB GMAO Light - Dashboard"
+            aria-label="Tableau de bord CIOB GMAO Light"
           >
             {/* Dedicated 3D-styled green Excel workbook SVG Icon */}
             <div className="relative w-7 sm:w-8 h-7 sm:h-8 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white shadow-xs shrink-0 ring-2 ring-emerald-500/20 overflow-hidden group-hover:scale-105 transition-transform">
@@ -123,8 +147,12 @@ export default function Header({
           </button>
 
           {/* Module Indicator Badge Capsule */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-zinc-200/90 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <div
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-zinc-200/90 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+            role="status"
+            aria-label={`Module actif : ${activeParent.label}`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true" />
             <span className="text-xs font-bold text-zinc-900 tracking-tight">
               {activeParent.label}
             </span>
@@ -132,16 +160,30 @@ export default function Header({
         </div>
 
         {/* Center: Finexy/Quixotic Style Top Bar Pill Navigation with Floating Depth */}
-        <div className="flex items-center justify-center flex-1 max-w-2xl mx-auto">
+        <nav
+          role="navigation"
+          aria-label="Sous-onglets de navigation"
+          className="flex items-center justify-center flex-1 max-w-2xl mx-auto"
+        >
           {childTabs.length > 0 && (
-            <div className="inline-flex items-center p-1.5 rounded-full bg-[#EFEFEE] border border-[#E5E5E3] shadow-[inset_0_1px_2px_rgba(0,0,0,0.06),0_2px_10px_rgba(0,0,0,0.03)] overflow-x-auto max-w-full scrollbar-none">
-              {childTabs.map((child) => {
+            <div
+              role="tablist"
+              aria-label={activeParent.label}
+              className="inline-flex items-center p-1.5 rounded-full bg-[#EFEFEE] border border-[#E5E5E3] shadow-[inset_0_1px_2px_rgba(0,0,0,0.06),0_2px_10px_rgba(0,0,0,0.03)] overflow-x-auto max-w-full scrollbar-none"
+            >
+              {childTabs.map((child, index) => {
                 const isActive = currentTab === child.id;
                 return (
                   <button
                     key={child.id}
+                    role="tab"
+                    id={`tab-${child.id}`}
+                    aria-selected={isActive}
+                    aria-current={isActive ? 'page' : undefined}
+                    tabIndex={isActive ? 0 : -1}
+                    onKeyDown={(e) => handleChildTabKeyDown(e, index)}
                     onClick={() => setCurrentTab(child.id)}
-                    className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[12.5px] font-semibold transition-all duration-200 cursor-pointer ${
+                    className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[12.5px] font-semibold transition-all duration-200 cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden ${
                       isActive
                         ? 'bg-[#111111] text-white shadow-[0_4px_14px_rgba(0,0,0,0.25)] scale-[1.02]'
                         : 'text-zinc-500 hover:text-zinc-900 hover:bg-white/60'
@@ -153,7 +195,7 @@ export default function Header({
               })}
             </div>
           )}
-        </div>
+        </nav>
 
         {/* Right: Actions, Excel Integration, Search, Notification & Profile */}
         <div className="flex items-center gap-2 shrink-0">
@@ -163,6 +205,7 @@ export default function Header({
             onChange={handleImportFile}
             accept=".json,.xlsx,.xls"
             className="hidden"
+            aria-label="Importer un fichier JSON ou Excel"
           />
           {/* Direct Link / Direct Save Button */}
           {linkedFileName ? (
@@ -170,26 +213,29 @@ export default function Header({
               <span
                 className="hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/90 shadow-2xs truncate max-w-[150px]"
                 title={`Fichier lié : ${linkedFileName}`}
+                aria-label={`Fichier lié : ${linkedFileName}`}
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden="true" />
                 <span className="truncate">{linkedFileName}</span>
               </span>
               <button
                 onClick={onDirectSave}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 transition shadow-[0_2px_8px_rgba(4,120,87,0.25)] cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 transition shadow-[0_2px_8px_rgba(4,120,87,0.25)] cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
                 title="Sauvegarder directement dans le fichier lié"
+                aria-label="Sauvegarder directement dans le fichier Excel lié"
               >
-                <Save className="w-3.5 h-3.5" />
+                <Save className="w-3.5 h-3.5" aria-hidden="true" />
                 <span className="hidden sm:inline">Enregistrer</span>
               </button>
             </div>
           ) : (
             <button
               onClick={onDirectLink}
-              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 transition shrink-0 cursor-pointer shadow-2xs"
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 transition shrink-0 cursor-pointer shadow-2xs focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
               title="Lier un fichier Excel (.xlsx)"
+              aria-label="Lier directement un fichier Excel .xlsx"
             >
-              <Link className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <Link className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden="true" />
               <span>Lien Direct</span>
             </button>
           )}
@@ -199,38 +245,42 @@ export default function Header({
           {/* Export Excel Pill */}
           <button
             onClick={handleExportExcel}
-            className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-[0_2px_8px_rgba(0,0,0,0.18)] cursor-pointer"
+            className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-white bg-slate-900 hover:bg-black transition shadow-[0_2px_8px_rgba(0,0,0,0.18)] cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
             title="Exporter sous Excel"
+            aria-label="Exporter toutes les données sous format Excel"
           >
-            <Download className="w-3.5 h-3.5 shrink-0" />
+            <Download className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
             <span>Export Excel</span>
           </button>
 
           {/* Action Icon Circles */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="w-9 h-9 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-600 hover:text-black hover:border-zinc-300 transition shadow-[0_2px_6px_rgba(0,0,0,0.04)] hover:shadow-md cursor-pointer"
+            className="w-9 h-9 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-600 hover:text-black hover:border-zinc-300 transition shadow-[0_2px_6px_rgba(0,0,0,0.04)] hover:shadow-md cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
             title="Importer JSON / Excel"
+            aria-label="Importer un fichier de données JSON ou Excel"
           >
-            <Upload size={16} />
+            <Upload size={16} aria-hidden="true" />
           </button>
 
           <button
-            className="w-9 h-9 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-600 hover:text-black hover:border-zinc-300 transition shadow-[0_2px_6px_rgba(0,0,0,0.04)] hover:shadow-md relative cursor-pointer"
+            className="w-9 h-9 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-zinc-600 hover:text-black hover:border-zinc-300 transition shadow-[0_2px_6px_rgba(0,0,0,0.04)] hover:shadow-md relative cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
             title="Notifications"
+            aria-label="Centre de notifications (nouvelles alertes disponibles)"
           >
-            <Bell size={16} />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-[#FF4D4D] rounded-full ring-2 ring-white" />
+            <Bell size={16} aria-hidden="true" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-[#FF4D4D] rounded-full ring-2 ring-white" aria-hidden="true" />
           </button>
 
           {/* User Profile Account Card Pill - Exact match with Mobile/Sidebar Account Card layout & icon */}
           <button
             onClick={() => setCurrentTab('settings')}
-            className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white border border-zinc-200/90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:border-emerald-300 hover:shadow-[0_4px_14px_rgba(16,185,129,0.12)] transition-all cursor-pointer shrink-0 ml-1 group"
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white border border-zinc-200/90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:border-emerald-300 hover:shadow-[0_4px_14px_rgba(16,185,129,0.12)] transition-all cursor-pointer shrink-0 ml-1 group focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden"
             title="Mon Compte / Paramètres"
+            aria-label={`Compte utilisateur de ${currentUser?.name || 'Achraf'} - Accéder aux paramètres`}
           >
             {/* Rounded Emerald Avatar Icon matching sidebar */}
-            <div className="w-7 h-7 rounded-lg bg-emerald-700 text-white font-extrabold text-[10.5px] flex items-center justify-center shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
+            <div className="w-7 h-7 rounded-lg bg-emerald-700 text-white font-extrabold text-[10.5px] flex items-center justify-center shadow-2xs shrink-0 group-hover:scale-105 transition-transform" aria-hidden="true">
               {currentUser?.avatar || 'RM'}
             </div>
             {/* User Name & Role matching sidebar typography */}

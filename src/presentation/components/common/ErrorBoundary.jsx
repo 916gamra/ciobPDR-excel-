@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { Logger } from '../../../core/logger/LoggerService';
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -12,7 +13,7 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('[ErrorBoundary] Captured runtime error:', error, errorInfo);
+    Logger.error('Captured runtime error:', { error, errorInfo }, 'ErrorBoundary');
   }
 
   handleRetry = () => {

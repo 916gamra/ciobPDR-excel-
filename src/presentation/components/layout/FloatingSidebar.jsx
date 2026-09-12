@@ -27,25 +27,51 @@ export default function FloatingSidebar({
     setCurrentTab(firstChild);
   };
 
+  const handleModuleKeyDown = (e, index) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextIdx = (index + 1) % PARENT_MODULES.length;
+      handleSelectParent(PARENT_MODULES[nextIdx]);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prevIdx = (index - 1 + PARENT_MODULES.length) % PARENT_MODULES.length;
+      handleSelectParent(PARENT_MODULES[prevIdx]);
+    }
+  };
+
   return (
-    <aside className="hidden lg:flex fixed left-4 top-[84px] z-40 w-[72px] h-[calc(100vh-100px)] flex-col items-center justify-between select-none py-2">
+    <aside
+      role="navigation"
+      aria-label="Navigation principale"
+      className="hidden lg:flex fixed left-4 top-[84px] z-40 w-[72px] h-[calc(100vh-100px)] flex-col items-center justify-between select-none py-2"
+    >
       {/* 1. Primary Page Modules Container Card - Floating Capsule with High-Depth Elevation Shadow */}
       <div
+        role="tablist"
+        aria-label="Modules principaux"
+        aria-orientation="vertical"
         className={`w-[60px] rounded-[28px] border px-2 py-3.5 flex flex-col items-center gap-2 transition-all duration-300 my-auto ${
           isDark
             ? 'bg-slate-900/95 border-slate-700/80 shadow-[0_12px_40px_-4px_rgba(0,0,0,0.65),0_4px_16px_rgba(0,0,0,0.4)] backdrop-blur-xl'
             : 'bg-white/95 border-zinc-200 shadow-[0_12px_32px_-6px_rgba(0,0,0,0.12),0_4px_12px_-2px_rgba(0,0,0,0.06)] backdrop-blur-xl'
         }`}
       >
-        {PARENT_MODULES.map((module) => {
+        {PARENT_MODULES.map((module, index) => {
           const isActive = activeParent.id === module.id;
           const IconComponent = module.icon;
 
           return (
             <button
               key={module.id}
+              role="tab"
+              id={`nav-module-${module.id}`}
+              aria-selected={isActive}
+              aria-current={isActive ? 'page' : undefined}
+              aria-label={module.label}
+              tabIndex={isActive ? 0 : -1}
+              onKeyDown={(e) => handleModuleKeyDown(e, index)}
               onClick={() => handleSelectParent(module)}
-              className={`group relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
+              className={`group relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden ${
                 isActive
                   ? isDark
                     ? 'bg-white shadow-[0_6px_20px_rgba(255,255,255,0.25)] scale-105 ring-1 ring-white/40'
@@ -59,6 +85,7 @@ export default function FloatingSidebar({
               <IconComponent
                 size={22}
                 strokeWidth={isActive ? 2.3 : 1.9}
+                aria-hidden="true"
                 className={
                   isActive
                     ? isDark
@@ -71,7 +98,10 @@ export default function FloatingSidebar({
               />
 
               {/* Tooltip on hover with floating depth */}
-              <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900/95 border border-slate-800 text-white text-[11px] font-bold rounded-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-150 whitespace-nowrap z-50 shadow-[0_8px_20px_rgba(0,0,0,0.25)]">
+              <div
+                role="tooltip"
+                className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900/95 border border-slate-800 text-white text-[11px] font-bold rounded-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-150 whitespace-nowrap z-50 shadow-[0_8px_20px_rgba(0,0,0,0.25)]"
+              >
                 {module.label}
               </div>
             </button>
@@ -81,6 +111,8 @@ export default function FloatingSidebar({
 
       {/* 2. Bottom Controls Container Card (Settings, Theme & Logout) - Floating Capsule Pinned at Bottom */}
       <div
+        role="toolbar"
+        aria-label="Actions du système"
         className={`w-[60px] rounded-[24px] border px-1.5 py-2.5 flex flex-col items-center gap-1.5 transition-all duration-300 mt-auto ${
           isDark
             ? 'bg-slate-900/95 border-slate-700/80 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.6)] backdrop-blur-xl'
@@ -91,7 +123,7 @@ export default function FloatingSidebar({
           onClick={() => {
             setCurrentTab('settings');
           }}
-          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden ${
             currentTab === 'settings'
               ? 'bg-black text-amber-400 shadow-[0_4px_12px_rgba(0,0,0,0.2)]'
               : isDark
@@ -99,29 +131,33 @@ export default function FloatingSidebar({
               : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
           }`}
           title="Paramètres System"
+          aria-label="Paramètres du système"
+          aria-current={currentTab === 'settings' ? 'page' : undefined}
         >
-          <Settings size={19} />
+          <Settings size={19} aria-hidden="true" />
         </button>
 
         <button
           onClick={toggleSidebarTheme}
-          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+          className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-hidden ${
             isDark
               ? 'text-amber-400 hover:bg-slate-800'
               : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100'
           }`}
           title={isDark ? 'Mode Light' : 'Mode Dark'}
+          aria-label={isDark ? 'Passer au mode clair' : 'Passer au mode sombre'}
         >
-          {isDark ? <Sun size={19} /> : <Moon size={19} />}
+          {isDark ? <Sun size={19} aria-hidden="true" /> : <Moon size={19} aria-hidden="true" />}
         </button>
 
         {onLogout && (
           <button
             onClick={onLogout}
-            className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-hidden"
             title="Déconnexion"
+            aria-label="Se déconnecter de la session"
           >
-            <LogOut size={18} />
+            <LogOut size={18} aria-hidden="true" />
           </button>
         )}
       </div>

@@ -2,6 +2,7 @@
  * IndexedDB Service for CIOB GMAO Light
  * High performance, high capacity 100% offline data store using browser native IndexedDB.
  */
+import { Logger } from '../core/logger/LoggerService.js';
 
 const DB_NAME = 'CIOB_GMAO_LIGHT_DB';
 const DB_VERSION = 1;
@@ -57,12 +58,12 @@ export const indexedDBService = {
           req.onsuccess = () => resolve(req.result !== undefined ? req.result : fallback);
           req.onerror = () => resolve(fallback);
         } catch (e) {
-          console.warn('[IndexedDB] getItem error:', e);
+          Logger.warn('getItem error:', e, 'IndexedDB');
           resolve(fallback);
         }
       });
     } catch (e) {
-      console.warn('[IndexedDB] Fallback getItem error:', e);
+      Logger.warn('Fallback getItem error:', e, 'IndexedDB');
       return fallback;
     }
   },
@@ -78,12 +79,12 @@ export const indexedDBService = {
           req.onsuccess = () => resolve(true);
           req.onerror = () => resolve(false);
         } catch (e) {
-          console.warn('[IndexedDB] setItem error:', e);
+          Logger.warn('setItem error:', e, 'IndexedDB');
           resolve(false);
         }
       });
     } catch (e) {
-      console.warn('[IndexedDB] Fallback setItem error:', e);
+      Logger.warn('Fallback setItem error:', e, 'IndexedDB');
       return false;
     }
   },
@@ -99,12 +100,12 @@ export const indexedDBService = {
           req.onsuccess = () => resolve(true);
           req.onerror = () => resolve(false);
         } catch (e) {
-          console.warn('[IndexedDB] removeItem error:', e);
+          Logger.warn('removeItem error:', e, 'IndexedDB');
           resolve(false);
         }
       });
     } catch (e) {
-      console.warn('[IndexedDB] Fallback removeItem error:', e);
+      Logger.warn('Fallback removeItem error:', e, 'IndexedDB');
       return false;
     }
   },
@@ -120,12 +121,12 @@ export const indexedDBService = {
           req.onsuccess = () => resolve(true);
           req.onerror = () => resolve(false);
         } catch (e) {
-          console.warn('[IndexedDB] clear error:', e);
+          Logger.warn('clear error:', e, 'IndexedDB');
           resolve(false);
         }
       });
     } catch (e) {
-      console.warn('[IndexedDB] Fallback clear error:', e);
+      Logger.warn('Fallback clear error:', e, 'IndexedDB');
       return false;
     }
   },
@@ -152,16 +153,16 @@ export const indexedDBService = {
 
           tx.oncomplete = () => resolve(true);
           tx.onerror = (e) => {
-            console.warn('[IndexedDB] setItemsBatch transaction error:', e);
+            Logger.warn('setItemsBatch transaction error:', e, 'IndexedDB');
             resolve(false);
           };
         } catch (e) {
-          console.warn('[IndexedDB] setItemsBatch error:', e);
+          Logger.warn('setItemsBatch error:', e, 'IndexedDB');
           resolve(false);
         }
       });
     } catch (e) {
-      console.warn('[IndexedDB] Fallback setItemsBatch error:', e);
+      Logger.warn('Fallback setItemsBatch error:', e, 'IndexedDB');
       return false;
     }
   },
@@ -204,12 +205,12 @@ export const indexedDBService = {
             };
           }
         } catch (e) {
-          console.warn('[IndexedDB] getItemsBatch error:', e);
+          Logger.warn('getItemsBatch error:', e, 'IndexedDB');
           resolve({});
         }
       });
     } catch (e) {
-      console.warn('[IndexedDB] Fallback getItemsBatch error:', e);
+      Logger.warn('Fallback getItemsBatch error:', e, 'IndexedDB');
       return {};
     }
   },
@@ -224,7 +225,7 @@ export const indexedDBService = {
         dbInstance = null;
         dbPromise = null;
       } catch (e) {
-        console.warn('[IndexedDB] Error closing database:', e);
+        Logger.warn('Error closing database:', e, 'IndexedDB');
       }
     }
   },

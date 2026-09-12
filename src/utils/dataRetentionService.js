@@ -1,3 +1,5 @@
+import { Logger } from '../core/logger/LoggerService.js';
+
 /**
  * Data Retention Service for cleaning up old logs and cache
  */
@@ -12,7 +14,7 @@ export class DataRetentionService {
       localStorage.setItem('gmao_audit_logs', JSON.stringify(filtered));
       return logs.length - filtered.length;
     } catch (e) {
-      console.error('Error cleaning logs:', e);
+      Logger.error('Error cleaning logs:', e, 'DataRetentionService');
       return 0;
     }
   }

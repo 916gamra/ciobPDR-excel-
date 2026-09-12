@@ -46,6 +46,18 @@ export default function MobileSidebarDrawer({
     localStorage.setItem('gmao_sidebar_theme', sidebarTheme);
   }, [sidebarTheme]);
 
+  // Accessibility: Close mobile drawer on Escape key
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen, setMobileMenuOpen]);
+
   const toggleSidebarTheme = () => {
     setSidebarTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
@@ -105,6 +117,9 @@ export default function MobileSidebarDrawer({
 
       {/* Mobile Sidebar Container - 100% Exact Original Design */}
       <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu principal de navigation"
         className={`fixed top-0 bottom-0 left-0 z-50 w-[270px] flex flex-col transition-all duration-200 ease-in-out lg:hidden ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         } ${

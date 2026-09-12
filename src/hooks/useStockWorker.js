@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
+import { Logger } from '../core/logger/LoggerService.js';
 
 /**
  * Custom React hook to execute heavy calculations in a background Web Worker.
@@ -33,12 +34,12 @@ export function useStockWorker() {
         };
 
         worker.onerror = (err) => {
-          console.warn('[useStockWorker] Worker error:', err);
+          Logger.warn('Worker error:', err, 'useStockWorker');
         };
 
         workerRef.current = worker;
       } catch (e) {
-        console.warn('[useStockWorker] Could not initialize Web Worker, using main thread fallback:', e);
+        Logger.warn('Could not initialize Web Worker, using main thread fallback:', e, 'useStockWorker');
       }
     }
 

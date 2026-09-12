@@ -1,3 +1,5 @@
+import { Logger } from '../core/logger/LoggerService.js';
+
 /**
  * Service de Surveillance et Mesure des Performances (Performance Monitoring)
  * Permet d'analyser le temps d'exécution des calculs Excel Twin, la consommation mémoire et la latence UI.
@@ -34,9 +36,9 @@ class PerformanceService {
 
       // Avertissements en cas de dépassement de seuil
       if (duration > this.thresholds.verySlow) {
-        console.error(`⚠️ Opération très lente: ${name} a pris ${duration.toFixed(2)}ms`);
+        Logger.error(`⚠️ Opération très lente: ${name} a pris ${duration.toFixed(2)}ms`, null, 'Performance');
       } else if (duration > this.thresholds.slow) {
-        console.warn(`⚠️ Opération lente: ${name} a pris ${duration.toFixed(2)}ms`);
+        Logger.warn(`⚠️ Opération lente: ${name} a pris ${duration.toFixed(2)}ms`, null, 'Performance');
       }
 
       return result;
@@ -123,7 +125,7 @@ class PerformanceService {
    * Affichage console du rapport global
    */
   printReport() {
-    console.group('📊 Rapport de Performance CIOB GMAO');
+    Logger.group('📊 Rapport de Performance CIOB GMAO', 'Performance');
 
     const data = Array.from(this.metrics.entries()).map(([name]) => {
       const stats = this.getStats(name);
@@ -138,12 +140,8 @@ class PerformanceService {
       };
     });
 
-    if (console.table) {
-      console.table(data);
-    } else {
-      console.log(data);
-    }
-    console.groupEnd();
+    Logger.table(data, 'Performance');
+    Logger.groupEnd();
   }
 
   /**

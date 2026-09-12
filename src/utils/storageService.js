@@ -1,5 +1,6 @@
 import CryptoJS from 'crypto-js';
 import bcrypt from 'bcryptjs';
+import { Logger } from '../core/logger/LoggerService.js';
 
 // Cache configuration
 const MAX_CACHE_SIZE = 50;
@@ -71,7 +72,7 @@ try {
     }
   }
 } catch (e) {
-  console.warn('[storageService] Initial localStorage read error:', e);
+  Logger.warn('Initial localStorage read error:', e, 'storageService');
 }
 
 // Resilient IDB helper with strict timeout to prevent hangs in iframes
@@ -188,7 +189,7 @@ export const storageService = {
           }
         }
       } catch (e) {
-        console.warn('[storageService] Error checking localStorage:', e);
+        Logger.warn('Error checking localStorage:', e, 'storageService');
       }
 
       if (hasWcItems && typeof crypto !== 'undefined' && crypto.subtle) {
@@ -198,7 +199,7 @@ export const storageService = {
             webCryptoKey = key;
           }
         } catch (e) {
-          console.warn('[storageService] Error getting WebCrypto key:', e);
+          Logger.warn('Error getting WebCrypto key:', e, 'storageService');
         }
       }
 
@@ -229,7 +230,7 @@ export const storageService = {
               const dec = new TextDecoder();
               decryptedObj = JSON.parse(dec.decode(decryptedBuffer));
             } catch (e) {
-              console.warn(`[storageService] WC migration skipped for ${k}:`, e);
+              Logger.warn(`WC migration skipped for ${k}:`, e, 'storageService');
             }
           } else if (item.startsWith('U2FsdGVkX1')) {
             try {
@@ -237,7 +238,7 @@ export const storageService = {
               const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
               if (decryptedText) decryptedObj = JSON.parse(decryptedText);
             } catch (e) {
-              console.warn(`[storageService] Legacy AES migration skipped for ${k}:`, e);
+              Logger.warn(`Legacy AES migration skipped for ${k}:`, e, 'storageService');
             }
           }
 
@@ -250,11 +251,11 @@ export const storageService = {
             } catch {}
           }
         } catch (e) {
-          console.warn(`[storageService] Error migrating key ${k}:`, e);
+          Logger.warn(`Error migrating key ${k}:`, e, 'storageService');
         }
       }
     } catch (e) {
-      console.warn('[storageService] Safe background init completed:', e);
+      Logger.warn('Safe background init completed with notice:', e, 'storageService');
     } finally {
       this._isInitializing = false;
     }
@@ -320,7 +321,7 @@ export const storageService = {
         }
       }
     } catch (e) {
-      console.warn(`[storageService] localStorage write error for ${key}:`, e);
+      Logger.warn(`localStorage write error for ${key}:`, e, 'storageService');
       memoryCache.delete(key);
     }
     return true;

@@ -47,7 +47,7 @@ class SyncQueueService {
       };
 
       request.onerror = () => {
-        console.warn('⚠️ Impossible d’initialiser IndexedDB pour la SyncQueue, fallback en mémoire:', request.error);
+        Logger.warn('Impossible d’initialiser IndexedDB pour la SyncQueue, fallback en mémoire:', request.error, 'SyncQueueService');
         resolve(null);
       };
     });
@@ -62,7 +62,7 @@ class SyncQueueService {
       this.queue = items || [];
       this.notifySubscribers();
     } catch (e) {
-      console.warn('Erreur chargement SyncQueue depuis DB:', e);
+      Logger.warn('Erreur chargement SyncQueue depuis DB:', e, 'SyncQueueService');
     }
   }
 
@@ -101,7 +101,7 @@ class SyncQueueService {
       try {
         cb(state);
       } catch (err) {
-        console.error('Erreur subscriber SyncQueue:', err);
+        Logger.error('Erreur subscriber SyncQueue:', err, 'SyncQueueService');
       }
     });
   }

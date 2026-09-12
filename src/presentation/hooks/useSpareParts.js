@@ -3,6 +3,7 @@ import { Container } from '../../core/di/Container.js';
 import { SparePartApplicationService } from '../../application/services/SparePartApplicationService.js';
 import { TaskApplicationService } from '../../application/services/TaskApplicationService.js';
 import { calculateStockStatus } from '../../utils/formulaEngine.js';
+import { Logger } from '../../core/logger/LoggerService.js';
 
 export function useSpareParts() {
   const [stockItems, setStockItems] = useState([]);
@@ -57,7 +58,7 @@ export function useSpareParts() {
       setStockItems(calculatedItems);
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch stock:', err);
+      Logger.error('Failed to fetch stock:', err, 'useSpareParts');
       setError(err);
     } finally {
       setLoading(false);
@@ -75,7 +76,7 @@ export function useSpareParts() {
       await fetchStock(); // Recalculate
       return updated;
     } catch (err) {
-      console.error('Failed to update article:', err);
+      Logger.error('Failed to update article:', err, 'useSpareParts');
       throw err;
     }
   };
@@ -91,7 +92,7 @@ export function useSpareParts() {
       await sparePartService.updateSparePart(article.id, updatedItem);
       await fetchStock();
     } catch (err) {
-      console.error('Failed to adjust stock:', err);
+      Logger.error('Failed to adjust stock:', err, 'useSpareParts');
       throw err;
     }
   };

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Container } from '../../core/di/Container.js';
 import { MachineApplicationService } from '../../application/services/MachineApplicationService.js';
+import { Logger } from '../../core/logger/LoggerService.js';
 
 export function useMachines() {
   const [machines, setMachines] = useState([]);
@@ -17,7 +18,7 @@ export function useMachines() {
       setMachines(data || []);
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch machines:', err);
+      Logger.error('Failed to fetch machines:', err, 'useMachines');
       setError(err);
     } finally {
       setLoading(false);
@@ -38,7 +39,7 @@ export function useMachines() {
       setMachines(prev => [...prev, created]);
       return created;
     } catch (err) {
-      console.error('Failed to add machine:', err);
+      Logger.error('Failed to add machine:', err, 'useMachines');
       throw err;
     }
   };
@@ -50,7 +51,7 @@ export function useMachines() {
       setMachines(prev => prev.map(m => m.id === id ? updated : m));
       return updated;
     } catch (err) {
-      console.error('Failed to update machine:', err);
+      Logger.error('Failed to update machine:', err, 'useMachines');
       throw err;
     }
   };
@@ -61,7 +62,7 @@ export function useMachines() {
       await machineService.deleteMachine(id);
       setMachines(prev => prev.filter(m => m.id !== id));
     } catch (err) {
-      console.error('Failed to delete machine:', err);
+      Logger.error('Failed to delete machine:', err, 'useMachines');
       throw err;
     }
   };

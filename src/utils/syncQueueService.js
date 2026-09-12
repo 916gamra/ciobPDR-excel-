@@ -1,3 +1,5 @@
+import { Logger } from '../core/logger/LoggerService.js';
+
 /**
  * خدمة قائمة الانتظار للمزامنة
  * تدير العمليات المعلقة عند العمل offline مع حل النزاعات (Conflict Resolution)
@@ -152,7 +154,7 @@ export class SyncQueueService {
       localStorage.setItem('gmao_light_data', JSON.stringify(stored));
       return data;
     } catch (error) {
-      console.error('Error updating server storage:', error);
+      Logger.error('Error updating server storage:', error, 'SyncQueue');
       throw error;
     }
   }
@@ -161,7 +163,7 @@ export class SyncQueueService {
     try {
       localStorage.setItem('sync_queue', JSON.stringify(this.queue));
     } catch (error) {
-      console.error('Error persisting queue:', error);
+      Logger.error('Error persisting queue:', error, 'SyncQueue');
     }
   }
 
@@ -170,7 +172,7 @@ export class SyncQueueService {
       const data = localStorage.getItem('sync_queue');
       this.queue = data ? JSON.parse(data) : [];
     } catch (error) {
-      console.error('Error loading queue:', error);
+      Logger.error('Error loading queue:', error, 'SyncQueue');
       this.queue = [];
     }
   }

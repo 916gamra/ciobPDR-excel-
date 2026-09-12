@@ -5,6 +5,7 @@ import ErrorBoundary from './presentation/components/common/ErrorBoundary';
 import { storageService } from './utils/storageService';
 import { AuthProvider } from './context/AuthContext';
 import { ServiceProvider } from './core/di/ServiceProvider';
+import { Logger } from './core/logger/LoggerService';
 
 // Initialize Enterprise Architecture DI Container
 ServiceProvider.register();
@@ -26,7 +27,7 @@ if (rootElement) {
 
 // Background initialization for storage migrations
 storageService.init().catch((err) => {
-  console.warn('[storageService] Initialization notice:', err);
+  Logger.warn('Initialization notice:', err, 'storageService');
 });
 
 // Enregistrement du Service Worker pour le mode 100% Offline et PWA
@@ -35,10 +36,10 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     navigator.serviceWorker
       .register('/service-worker.js')
       .then((registration) => {
-        console.log('✅ CIOB GMAO Service Worker enregistré:', registration.scope);
+        Logger.info(`Service Worker enregistré: ${registration.scope}`, null, 'PWA');
       })
       .catch((error) => {
-        console.warn('⚠️ Erreur enregistrement Service Worker:', error);
+        Logger.warn('Erreur enregistrement Service Worker:', error, 'PWA');
       });
   });
 }
